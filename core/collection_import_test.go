@@ -2,6 +2,7 @@ package core_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -202,11 +203,15 @@ func TestImportCollections(t *testing.T) {
 			if hasErr != s.expectError {
 				t.Fatalf("Expected hasErr to be %v, got %v (%v)", s.expectError, hasErr, err)
 			}
+			fmt.Println("Error:", err)
 
 			// check collections count
 			collections := []*core.Collection{}
 			if err := testApp.CollectionQuery().All(&collections); err != nil {
 				t.Fatal(err)
+			}
+			for _, collection := range collections {
+				println(collection.Name, collection.Id)
 			}
 			if len(collections) != s.expectCollectionsCount {
 				t.Fatalf("Expected %d collections, got %d", s.expectCollectionsCount, len(collections))
