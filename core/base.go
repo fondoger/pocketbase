@@ -8,6 +8,7 @@ import (
 	"log"
 	"log/slog"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -23,6 +24,7 @@ import (
 	"github.com/pocketbase/pocketbase/tools/logger"
 	"github.com/pocketbase/pocketbase/tools/mailer"
 	"github.com/pocketbase/pocketbase/tools/routine"
+	"github.com/pocketbase/pocketbase/tools/security"
 	"github.com/pocketbase/pocketbase/tools/store"
 	"github.com/pocketbase/pocketbase/tools/subscriptions"
 	"github.com/pocketbase/pocketbase/tools/types"
@@ -62,6 +64,9 @@ type BaseAppConfig struct {
 	DataMaxIdleConns int
 	AuxMaxOpenConns  int
 	AuxMaxIdleConns  int
+	PostgresURL      string // eg: "postgres://user:pass@localhost:5432?sslmode=disable"
+	PostgresDataDB   string // eg: "data"
+	PostgresAuxDB    string // eg: "auxiliary"
 	IsDev            bool
 }
 
@@ -204,7 +209,7 @@ func NewBaseApp(config BaseAppConfig) *BaseApp {
 
 	// apply config defaults
 	if app.config.DBConnect == nil {
-		app.config.DBConnect = DefaultDBConnect
+		app.config.DBConnect = PostgresDBConnectFunc(app.config.PostgresURL)
 	}
 	if app.config.DataMaxOpenConns <= 0 {
 		app.config.DataMaxOpenConns = DefaultDataMaxOpenConns
@@ -226,6 +231,31 @@ func NewBaseApp(config BaseAppConfig) *BaseApp {
 	app.registerBaseHooks()
 
 	return app
+}
+
+func NewBaseAppForTest(config BaseAppConfig) (*BaseApp, func()) {
+	var randomStr = security.RandomString(4)
+	var testAuxDB = "pb_test_" + randomStr + "_auxiliary_db"
+	var testDataDB = "pb_test_" + randomStr + "_data_db"
+
+	exec.Command("sh", "-c", "PGPASSWORD=pass dropdb -h localhost -p 5432 -U user "+testAuxDB).Run()
+	exec.Command("sh", "-c", "PGPASSWORD=pass dropdb -h localhost -p 5432 -U user "+testDataDB).Run()
+	exec.Command("sh", "-c", "PGPASSWORD=pass createdb -h localhost -p 5432 -U user "+testAuxDB).Run()
+	exec.Command("sh", "-c", "PGPASSWORD=pass createdb -h localhost -p 5432 -U user "+testDataDB).Run()
+
+	config.PostgresURL = "postgres://user:pass@localhost:5432/postgres?sslmode=disable"
+	config.PostgresAuxDB = testAuxDB
+	config.PostgresDataDB = testDataDB
+
+	app := NewBaseApp(config)
+
+	cleanup := func() {
+		defer app.ResetBootstrapState()
+		defer exec.Command("sh", "-c", "PGPASSWORD=pass dropdb -h localhost -p 5432 -U user "+app.config.PostgresDataDB).Run()
+		defer exec.Command("sh", "-c", "PGPASSWORD=pass dropdb -h localhost -p 5432 -U user "+app.config.PostgresAuxDB).Run()
+	}
+
+	return app, cleanup
 }
 
 // initHooks initializes all app hook handlers.
@@ -412,6 +442,14 @@ func (app *BaseApp) Bootstrap() error {
 			return err
 		}
 
+		// fix uuid_generate_v7 function if it is not already created
+		if err := createGenerateUuidV7Function(app.DB()); err != nil {
+			return fmt.Errorf("create uuid_generate_v7 function error: %w", err)
+		}
+		if err := createGenerateUuidV7Function(app.AuxDB()); err != nil {
+			return fmt.Errorf("create uuid_generate_v7 function error: %w", err)
+		}
+
 		if err := app.RunSystemMigrations(); err != nil {
 			return err
 		}
@@ -577,6 +615,16 @@ func (app *BaseApp) AuxNonconcurrentDB() dbx.Builder {
 // DataDir returns the app data directory path.
 func (app *BaseApp) DataDir() string {
 	return app.config.DataDir
+}
+
+// PostgresDataDB returns the name of the main data db (default `data`) used by the app.
+func (app *BaseApp) PostgresDataDB() string {
+	return app.config.PostgresDataDB
+}
+
+// PostgresAuxDB returns the name of the auxiliary db (default `auxiliary`) used by the app.
+func (app *BaseApp) PostgresAuxDB() string {
+	return app.config.PostgresAuxDB
 }
 
 // EncryptionEnv returns the name of the app secret env key
@@ -1170,9 +1218,7 @@ func (app *BaseApp) OnBatchRequest() *hook.Hook[*BatchRequestEvent] {
 // -------------------------------------------------------------------
 
 func (app *BaseApp) initDataDB() error {
-	dbPath := filepath.Join(app.DataDir(), "data.db")
-
-	concurrentDB, err := app.config.DBConnect(dbPath)
+	concurrentDB, err := app.config.DBConnect(app.config.PostgresDataDB)
 	if err != nil {
 		return err
 	}
@@ -1180,7 +1226,7 @@ func (app *BaseApp) initDataDB() error {
 	concurrentDB.DB().SetMaxIdleConns(app.config.DataMaxIdleConns)
 	concurrentDB.DB().SetConnMaxIdleTime(3 * time.Minute)
 
-	nonconcurrentDB, err := app.config.DBConnect(dbPath)
+	nonconcurrentDB, err := app.config.DBConnect(app.config.PostgresDataDB)
 	if err != nil {
 		return err
 	}
@@ -1190,10 +1236,18 @@ func (app *BaseApp) initDataDB() error {
 
 	if app.IsDev() {
 		nonconcurrentDB.QueryLogFunc = func(ctx context.Context, t time.Duration, sql string, rows *sql.Rows, err error) {
-			color.HiBlack("[%.2fms] %v\n", float64(t.Milliseconds()), normalizeSQLLog(sql))
+			if err != nil {
+				color.HiRed("[%.2fms] %v, err: %v\n", float64(t.Milliseconds()), normalizeSQLLog(sql), err)
+			} else {
+				color.HiBlack("[%.2fms] %v\n", float64(t.Milliseconds()), normalizeSQLLog(sql))
+			}
 		}
 		nonconcurrentDB.ExecLogFunc = func(ctx context.Context, t time.Duration, sql string, result sql.Result, err error) {
-			color.HiBlack("[%.2fms] %v\n", float64(t.Milliseconds()), normalizeSQLLog(sql))
+			if err != nil {
+				color.HiRed("[%.2fms] %v, err: %v\n", float64(t.Milliseconds()), normalizeSQLLog(sql), err)
+			} else {
+				color.HiBlack("[%.2fms] %v\n", float64(t.Milliseconds()), normalizeSQLLog(sql))
+			}
 		}
 		concurrentDB.QueryLogFunc = nonconcurrentDB.QueryLogFunc
 		concurrentDB.ExecLogFunc = nonconcurrentDB.ExecLogFunc
@@ -1205,6 +1259,7 @@ func (app *BaseApp) initDataDB() error {
 	return nil
 }
 
+/* SQLite:
 var sqlLogReplacements = []struct {
 	pattern     *regexp.Regexp
 	replacement string
@@ -1215,6 +1270,20 @@ var sqlLogReplacements = []struct {
 	{regexp.MustCompile(`\}\}([^'"])?`), "`$1"},
 	{regexp.MustCompile(`([^'"])?\[\[`), "$1`"},
 	{regexp.MustCompile(`\]\]([^'"])?`), "`$1"},
+	{regexp.MustCompile(`<nil>`), "NULL"},
+}
+*/
+// PostgreSQL:
+var sqlLogReplacements = []struct {
+	pattern     *regexp.Regexp
+	replacement string
+}{
+	{regexp.MustCompile(`\[\[([^\[\]\{\}\.]+)\.([^\[\]\{\}\.]+)\]\]`), `"$1"."$2"`},
+	{regexp.MustCompile(`\{\{([^\[\]\{\}\.]+)\.([^\[\]\{\}\.]+)\}\}`), `"$1"."$2"`},
+	{regexp.MustCompile(`([^'"])\{\{`), `$1"`},
+	{regexp.MustCompile(`\}\}([^'"])`), `"$1`},
+	{regexp.MustCompile(`([^'"])\[\[`), `$1"`},
+	{regexp.MustCompile(`\]\]([^'"])`), `"$1`},
 	{regexp.MustCompile(`<nil>`), "NULL"},
 }
 
@@ -1232,9 +1301,7 @@ func normalizeSQLLog(sql string) string {
 func (app *BaseApp) initAuxDB() error {
 	// note: renamed to "auxiliary" because "aux" is a reserved Windows filename
 	// (see https://github.com/pocketbase/pocketbase/issues/5607)
-	dbPath := filepath.Join(app.DataDir(), "auxiliary.db")
-
-	concurrentDB, err := app.config.DBConnect(dbPath)
+	concurrentDB, err := app.config.DBConnect(app.config.PostgresAuxDB)
 	if err != nil {
 		return err
 	}
@@ -1242,7 +1309,7 @@ func (app *BaseApp) initAuxDB() error {
 	concurrentDB.DB().SetMaxIdleConns(app.config.AuxMaxIdleConns)
 	concurrentDB.DB().SetConnMaxIdleTime(3 * time.Minute)
 
-	nonconcurrentDB, err := app.config.DBConnect(dbPath)
+	nonconcurrentDB, err := app.config.DBConnect(app.config.PostgresAuxDB)
 	if err != nil {
 		return err
 	}
@@ -1436,7 +1503,7 @@ func (app *BaseApp) initLogger() error {
 				model := &Log{}
 				for _, l := range logs {
 					model.MarkAsNew()
-					model.Id = GenerateDefaultRandomId()
+					model.Id = GenerateNewUUIDV7()
 					model.Level = int(l.Level)
 					model.Message = l.Message
 					model.Data = l.Data
