@@ -13,18 +13,18 @@ import (
 func TestGenerateDefaultRandomId(t *testing.T) {
 	t.Parallel()
 
-	id1 := core.GenerateDefaultRandomId()
-	id2 := core.GenerateDefaultRandomId()
+	id1 := core.GenerateNewUUIDV7()
+	id2 := core.GenerateNewUUIDV7()
 
 	if id1 == id2 {
 		t.Fatalf("Expected id1 and id2 to differ, got %q", id1)
 	}
 
-	if l := len(id1); l != 15 {
+	if l := len(id1); l != 36 {
 		t.Fatalf("Expected id1 length %d, got %d", 15, l)
 	}
 
-	if l := len(id2); l != 15 {
+	if l := len(id2); l != 36 {
 		t.Fatalf("Expected id2 length %d, got %d", 15, l)
 	}
 }
@@ -46,7 +46,7 @@ func TestModelQuery(t *testing.T) {
 		t.Fatalf("AuxModelQuery() is not using app.AuxDB()")
 	}
 
-	expectedSQL := "SELECT {{_collections}}.* FROM `_collections`"
+	expectedSQL := `SELECT {{_collections}}.* FROM "_collections"`
 	for i, q := range []*dbx.SelectQuery{modelsQuery, logsModelQuery} {
 		sql := q.Build().SQL()
 		if sql != expectedSQL {

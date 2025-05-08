@@ -118,10 +118,18 @@ func TestSyncRecordTableSchema(t *testing.T) {
 func getTotalViews(app core.App) (int, error) {
 	var total int
 
+	/* SQLite:
 	err := app.DB().Select("count(*)").
 		From("sqlite_master").
 		AndWhere(dbx.NewExp("sql is not null")).
 		AndWhere(dbx.HashExp{"type": "view"}).
+		Row(&total)
+	*/
+	// PostgreSQL:
+	// count user created views.
+	err := app.DB().Select("count(*)").
+		From("information_schema.views").
+		AndWhere(dbx.NotIn("table_schema", "pg_catalog", "information_schema")).
 		Row(&total)
 
 	return total, err
@@ -180,13 +188,13 @@ func TestSingleVsMultipleValuesNormalization(t *testing.T) {
 	}
 
 	tableInfoExpectations := map[string]string{
-		"select_one":   `'[]'`,
-		"select_many":  `''`,
-		"file_one":     `'[]'`,
-		"file_many":    `''`,
-		"rel_one":      `'[]'`,
-		"rel_many":     `''`,
-		"new_multiple": `'[]'`,
+		"select_one":   `'[]'::json`, // maxSelect=2, json type
+		"select_many":  `''::text`,   // maxSelect=1, text type
+		"file_one":     `'[]'::json`, // maxSelect=2, json type
+		"file_many":    `''::text`,   // maxSelect=1, text type
+		"rel_one":      `'[]'::json`, // maxSelect=2, json type
+		"rel_many":     `''::text`,   // maxSelect=1, text type
+		"new_multiple": `'[]'::json`, // maxSelect=3, json type
 	}
 	for col, dflt := range tableInfoExpectations {
 		t.Run("check default for "+col, func(t *testing.T) {

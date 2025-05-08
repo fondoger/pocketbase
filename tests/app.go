@@ -2,8 +2,10 @@
 package tests
 
 import (
+	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"runtime"
@@ -11,6 +13,7 @@ import (
 
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tools/hook"
+	"github.com/pocketbase/pocketbase/tools/security"
 
 	_ "github.com/pocketbase/pocketbase/migrations"
 )
@@ -26,6 +29,8 @@ type TestApp struct {
 	EventCalls map[string]int
 
 	TestMailer *TestMailer
+
+	KeepTestPostgresDB bool
 }
 
 // Cleanup resets the test application state and removes the test
@@ -46,6 +51,12 @@ func (t *TestApp) Cleanup() {
 
 	if t.DataDir() != "" {
 		os.RemoveAll(t.DataDir())
+	}
+
+	// Drop the temporary Postgres dbs
+	if !t.KeepTestPostgresDB && (t.PostgresDataDB() != "" || t.PostgresAuxDB() != "") {
+		exec.Command("sh", "-c", fmt.Sprintf("PGPASSWORD=pass dropdb --if-exists -h 127.0.0.1 -U user %s", t.PostgresDataDB())).Run()
+		exec.Command("sh", "-c", fmt.Sprintf("PGPASSWORD=pass dropdb --if-exists -h 127.0.0.1 -U user %s", t.PostgresAuxDB())).Run()
 	}
 }
 
@@ -77,9 +88,12 @@ func NewTestApp(optTestDataDir ...string) (*TestApp, error) {
 		testDataDir = optTestDataDir[0]
 	}
 
+	// docker run -d --rm --name postgres -e POSTGRES_USER=user -e POSTGRES_PASSWORD=pass -p 5432:5432 postgres:alpine
 	return NewTestAppWithConfig(core.BaseAppConfig{
 		DataDir:       testDataDir,
 		EncryptionEnv: "pb_test_env",
+		PostgresURL:   "postgres://user:pass@127.0.0.1:5432/postgres?sslmode=disable",
+		IsDev:         true,
 	})
 }
 
@@ -106,11 +120,17 @@ func NewTestAppWithConfig(config core.BaseAppConfig) (*TestApp, error) {
 	// replace with the clone
 	config.DataDir = tempDir
 
+	// Copy postgres data
+	config.PostgresDataDB, config.PostgresAuxDB, err = CopyTempPostgresDB(config.DataDir, config.PostgresURL)
+	if err != nil {
+		return nil, err
+	}
+
 	app := core.NewBaseApp(config)
 
 	// load data dir and db connections
 	if err := app.Bootstrap(); err != nil {
-		return nil, err
+		panic(err)
 	}
 
 	// ensure that the Dao and DB configurations are properly loaded
@@ -824,6 +844,40 @@ func TempDirClone(dirToClone string) (string, error) {
 	}
 
 	return tempDir, nil
+}
+
+func CopyTempPostgresDB(testDataPath string, postgresURL string) (string, string, error) {
+	dbPrefix := "pb_test_" + security.RandomString(5) + "_"
+	dataDbName := dbPrefix + "data"
+	auxiliaryDbName := dbPrefix + "auxiliary"
+	// Run `cd tests/data && make dump`
+	commands := []any{
+		fmt.Sprintf("PGPASSWORD=pass createdb -h 127.0.0.1 -U user %s", dataDbName),
+		fmt.Sprintf("PGPASSWORD=pass createdb -h 127.0.0.1 -U user %s", auxiliaryDbName),
+		fmt.Sprintf("PGPASSWORD=pass psql -h 127.0.0.1 -U user -d %s < data.pg-dump.sql", dataDbName),
+		fmt.Sprintf("PGPASSWORD=pass psql -h 127.0.0.1 -U user -d %s < auxiliary.pg-dump.sql", auxiliaryDbName),
+	}
+	// Execute the commands
+	for _, cmd := range commands {
+		switch cmd := cmd.(type) {
+		case func():
+			cmd()
+		case string:
+			fmt.Println("Running command:", cmd)
+			command := exec.Command("sh", "-c", cmd)
+			command.Dir = testDataPath
+			command.Stdout = os.Stdout
+			command.Stderr = os.Stderr
+			err := command.Run()
+			if err != nil {
+				panic(err.Error())
+			}
+			if command.ProcessState.ExitCode() != 0 {
+				return "", "", fmt.Errorf("command failed with exit code %d", command.ProcessState.ExitCode())
+			}
+		}
+	}
+	return dataDbName, auxiliaryDbName, nil
 }
 
 // -------------------------------------------------------------------

@@ -51,7 +51,7 @@ func recordRequestOTP(e *core.RequestEvent) error {
 		if e.Record == nil {
 			// write a dummy 200 response as a very rudimentary emails enumeration "protection"
 			e.JSON(http.StatusOK, map[string]string{
-				"otpId": core.GenerateDefaultRandomId(),
+				"otpId": core.GenerateNewUUIDV7(),
 			})
 
 			return fmt.Errorf("missing or invalid %s OTP auth record with email %s", collection.Name, form.Email)

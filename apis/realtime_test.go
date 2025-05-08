@@ -657,7 +657,7 @@ func TestRealtimeRecordResolve(t *testing.T) {
 
 	const testCollectionName = "realtime_test_collection"
 
-	testRecordId := core.GenerateDefaultRandomId()
+	testRecordId := core.GenerateNewUUIDV7()
 
 	client0 := subscriptions.NewDefaultClient()
 	client0.Subscribe(testCollectionName + "/*")

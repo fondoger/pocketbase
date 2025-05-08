@@ -15,6 +15,7 @@ import (
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core/validators"
+	"github.com/pocketbase/pocketbase/tools/dbutils"
 	"github.com/pocketbase/pocketbase/tools/filesystem"
 	"github.com/pocketbase/pocketbase/tools/hook"
 	"github.com/pocketbase/pocketbase/tools/inflector"
@@ -1530,8 +1531,13 @@ func cascadeRecordDelete(app App, mainRecord *Record, refs map[*Collection][]Fie
 				query.AndWhere(dbx.HashExp{prefixedFieldName: mainRecord.Id})
 			} else {
 				query.AndWhere(dbx.Exists(dbx.NewExp(fmt.Sprintf(
+					/* SQLite:
 					`SELECT 1 FROM json_each(CASE WHEN json_valid([[%s]]) THEN [[%s]] ELSE json_array([[%s]]) END) {{__je__}} WHERE [[__je__.value]]={:jevalue}`,
 					prefixedFieldName, prefixedFieldName, prefixedFieldName,
+					*/
+					// PostgreSQL:
+					`SELECT 1 FROM %s {{__je__}} WHERE [[__je__.value]]::text={:jevalue}`,
+					dbutils.JSONEach(prefixedFieldName),
 				), dbx.Params{
 					"jevalue": mainRecord.Id,
 				})))

@@ -21,11 +21,12 @@ func TestNewBaseApp(t *testing.T) {
 	const testDataDir = "./pb_base_app_test_data_dir/"
 	defer os.RemoveAll(testDataDir)
 
-	app := core.NewBaseApp(core.BaseAppConfig{
+	app, cleanup := core.NewBaseAppForTest(core.BaseAppConfig{
 		DataDir:       testDataDir,
 		EncryptionEnv: "test_env",
 		IsDev:         true,
 	})
+	defer cleanup()
 
 	if app.DataDir() != testDataDir {
 		t.Fatalf("expected DataDir %q, got %q", testDataDir, app.DataDir())
@@ -60,10 +61,11 @@ func TestBaseAppBootstrap(t *testing.T) {
 	const testDataDir = "./pb_base_app_test_data_dir/"
 	defer os.RemoveAll(testDataDir)
 
-	app := core.NewBaseApp(core.BaseAppConfig{
+	app, cleanup := core.NewBaseAppForTest(core.BaseAppConfig{
 		DataDir: testDataDir,
 	})
 	defer app.ResetBootstrapState()
+	defer cleanup()
 
 	if app.IsBootstrapped() {
 		t.Fatal("Didn't expect the application to be bootstrapped.")
@@ -132,10 +134,10 @@ func TestNewBaseAppIsTransactional(t *testing.T) {
 	const testDataDir = "./pb_base_app_test_data_dir/"
 	defer os.RemoveAll(testDataDir)
 
-	app := core.NewBaseApp(core.BaseAppConfig{
+	app, cleanup := core.NewBaseAppForTest(core.BaseAppConfig{
 		DataDir: testDataDir,
 	})
-	defer app.ResetBootstrapState()
+	defer cleanup()
 
 	if err := app.Bootstrap(); err != nil {
 		t.Fatal(err)
@@ -158,11 +160,11 @@ func TestBaseAppNewMailClient(t *testing.T) {
 	const testDataDir = "./pb_base_app_test_data_dir/"
 	defer os.RemoveAll(testDataDir)
 
-	app := core.NewBaseApp(core.BaseAppConfig{
+	app, cleanup := core.NewBaseAppForTest(core.BaseAppConfig{
 		DataDir:       testDataDir,
 		EncryptionEnv: "pb_test_env",
 	})
-	defer app.ResetBootstrapState()
+	defer cleanup()
 
 	client1 := app.NewMailClient()
 	m1, ok := client1.(*mailer.Sendmail)
@@ -189,10 +191,10 @@ func TestBaseAppNewFilesystem(t *testing.T) {
 	const testDataDir = "./pb_base_app_test_data_dir/"
 	defer os.RemoveAll(testDataDir)
 
-	app := core.NewBaseApp(core.BaseAppConfig{
+	app, cleanup := core.NewBaseAppForTest(core.BaseAppConfig{
 		DataDir: testDataDir,
 	})
-	defer app.ResetBootstrapState()
+	defer cleanup()
 
 	// local
 	local, localErr := app.NewFilesystem()
@@ -218,10 +220,10 @@ func TestBaseAppNewBackupsFilesystem(t *testing.T) {
 	const testDataDir = "./pb_base_app_test_data_dir/"
 	defer os.RemoveAll(testDataDir)
 
-	app := core.NewBaseApp(core.BaseAppConfig{
+	app, cleanup := core.NewBaseAppForTest(core.BaseAppConfig{
 		DataDir: testDataDir,
 	})
-	defer app.ResetBootstrapState()
+	defer cleanup()
 
 	// local
 	local, localErr := app.NewBackupsFilesystem()
@@ -343,11 +345,11 @@ func TestBaseAppRefreshSettingsLoggerMinLevelEnabled(t *testing.T) {
 			const testDataDir = "./pb_base_app_test_data_dir/"
 			defer os.RemoveAll(testDataDir)
 
-			app := core.NewBaseApp(core.BaseAppConfig{
+			app, cleanup := core.NewBaseAppForTest(core.BaseAppConfig{
 				DataDir: testDataDir,
 				IsDev:   s.isDev,
 			})
-			defer app.ResetBootstrapState()
+			defer cleanup()
 
 			if err := app.Bootstrap(); err != nil {
 				t.Fatal(err)

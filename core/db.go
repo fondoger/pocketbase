@@ -11,8 +11,8 @@ import (
 	"strings"
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
+	"github.com/google/uuid"
 	"github.com/pocketbase/dbx"
-	"github.com/pocketbase/pocketbase/tools/security"
 	"github.com/spf13/cast"
 )
 
@@ -51,10 +51,18 @@ type PostValidator interface {
 	PostValidate(ctx context.Context, app App) error
 }
 
+/* SQLite:
 // GenerateDefaultRandomId generates a default random id string
 // (note: the generated random string is not intended for security purposes).
 func GenerateDefaultRandomId() string {
 	return security.PseudorandomStringWithAlphabet(DefaultIdLength, DefaultIdAlphabet)
+}
+*/
+// PostgreSQL:
+// GenerateNewUUIDV7 generates a default random id string in uuid v7 format
+func GenerateNewUUIDV7() string {
+	id, _ := uuid.NewV7()
+	return id.String()
 }
 
 // crc32Checksum generates a stringified crc32 checksum from the provided plain string.
