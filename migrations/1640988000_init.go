@@ -33,8 +33,7 @@ func init() {
 		}
 
 		// -----------------------------------------------------------
-
-		_, execerr := txApp.DB().NewQuery(`
+		/*
 			CREATE TABLE {{_collections}} (
 				[[id]]         TEXT PRIMARY KEY DEFAULT ('r'||lower(hex(randomblob(7)))) NOT NULL,
 				[[system]]     BOOLEAN DEFAULT FALSE NOT NULL,
@@ -51,7 +50,25 @@ func init() {
 				[[created]]    TEXT DEFAULT (strftime('%Y-%m-%d %H:%M:%fZ')) NOT NULL,
 				[[updated]]    TEXT DEFAULT (strftime('%Y-%m-%d %H:%M:%fZ')) NOT NULL
 			);
-
+			CREATE INDEX IF NOT EXISTS idx__collections_type on {{_collections}} ([[type]]);
+		*/
+		_, execerr := txApp.DB().NewQuery(`
+			CREATE TABLE {{_collections}} (
+				[[id]]         TEXT PRIMARY KEY DEFAULT ('r'||lower(hex(randomblob(7)))) NOT NULL,
+				[[system]]     BOOLEAN DEFAULT FALSE NOT NULL,
+				[[type]]       TEXT DEFAULT 'base' NOT NULL,
+				[[name]]       TEXT UNIQUE NOT NULL,
+				[[fields]]     JSONB DEFAULT '[]' NOT NULL,
+				[[indexes]]    JSONB DEFAULT '[]' NOT NULL,
+				[[listRule]]   TEXT DEFAULT NULL,
+				[[viewRule]]   TEXT DEFAULT NULL,
+				[[createRule]] TEXT DEFAULT NULL,
+				[[updateRule]] TEXT DEFAULT NULL,
+				[[deleteRule]] TEXT DEFAULT NULL,
+				[[options]]    JSONB DEFAULT '{}' NOT NULL,
+				[[created]]    TIMESTAMP DEFAULT now() NOT NULL,
+				[[updated]]    TIMESTAMP DEFAULT now() NOT NULL
+			);
 			CREATE INDEX IF NOT EXISTS idx__collections_type on {{_collections}} ([[type]]);
 		`).Execute()
 		if execerr != nil {
@@ -105,12 +122,23 @@ func init() {
 }
 
 func createParamsTable(txApp core.App) error {
+	/* SQLite:
 	_, execErr := txApp.DB().NewQuery(`
 		CREATE TABLE {{_params}} (
 			[[id]]      TEXT PRIMARY KEY DEFAULT ('r'||lower(hex(randomblob(7)))) NOT NULL,
 			[[value]]   JSON DEFAULT NULL,
 			[[created]] TEXT DEFAULT (strftime('%Y-%m-%d %H:%M:%fZ')) NOT NULL,
 			[[updated]] TEXT DEFAULT (strftime('%Y-%m-%d %H:%M:%fZ')) NOT NULL
+		);
+	`).Execute()
+	*/
+	// PostgreSQL:
+	_, execErr := txApp.DB().NewQuery(`
+		CREATE TABLE {{_params}} (
+			[[id]]      TEXT PRIMARY KEY DEFAULT ('r'||lower(hex(randomblob(7)))) NOT NULL,
+			[[value]]   TEXT DEFAULT NULL,  -- Use TEXT because we need to cover encrypted values, which is not a valid JSON.
+			[[created]] TIMESTAMP DEFAULT NOW() NOT NULL,
+			[[updated]] TIMESTAMP DEFAULT NOW() NOT NULL
 		);
 	`).Execute()
 
