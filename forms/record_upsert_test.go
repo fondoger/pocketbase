@@ -207,7 +207,7 @@ func TestRecordUpsertDrySubmitFailure(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		originalId := "imy661ixudk5izi"
+		originalId := "0196afca-7951-7a62-9100-f77edbf6f060"
 
 		record, err := testApp.FindRecordById(col, originalId)
 		if err != nil {
@@ -361,7 +361,7 @@ func TestRecordUpsertDrySubmitUpdateSuccess(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		record, err := testApp.FindRecordById(col, "imy661ixudk5izi")
+		record, err := testApp.FindRecordById(col, "0196afca-7951-7a62-9100-f77edbf6f060")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -448,7 +448,7 @@ func TestRecordUpsertSubmitValidations(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	demo2Rec, err := app.FindRecordById(demo2Col, "llvuca81nly1qls")
+	demo2Rec, err := app.FindRecordById(demo2Col, "0196afca-7951-70d0-bcc5-206ed6a14bea")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -458,7 +458,7 @@ func TestRecordUpsertSubmitValidations(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	userRec, err := app.FindRecordById(usersCol, "4q1xlclmfloku33")
+	userRec, err := app.FindRecordById(usersCol, "0196afca-7951-76f3-b344-ae38a366ade2")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -770,7 +770,7 @@ func TestRecordUpsertSubmitFailure(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	record, err := testApp.FindRecordById(col, "imy661ixudk5izi")
+	record, err := testApp.FindRecordById(col, "0196afca-7951-7a62-9100-f77edbf6f060")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -833,7 +833,7 @@ func TestRecordUpsertSubmitSuccess(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	record, err := testApp.FindRecordById(col, "imy661ixudk5izi")
+	record, err := testApp.FindRecordById(col, "0196afca-7951-7a62-9100-f77edbf6f060")
 	if err != nil {
 		t.Fatal(err)
 	}

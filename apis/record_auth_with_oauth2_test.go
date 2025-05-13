@@ -129,7 +129,7 @@ func TestRecordAuthWithOAuth2(t *testing.T) {
 			Headers: map[string]string{
 				// users, test2@example.com
 				// (auth with some other user from the same collection to ensure that it is ignored)
-				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6Im9hcDY0MGNvdDR5cnUycyIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoiX3BiX3VzZXJzX2F1dGhfIiwiZXhwIjoyNTI0NjA0NDYxLCJyZWZyZXNoYWJsZSI6dHJ1ZX0.GfJo6EHIobgas_AXt-M-tj5IoQendPnrkMSe9ExuSEY",
+				"Authorization": tests.NewAuthTokenForTest("users", "test2@example.com"),
 			},
 			BeforeTestFunc: func(t testing.TB, app *tests.TestApp, e *core.ServeEvent) {
 				user, err := app.FindAuthRecordByEmail("users", "test@example.com")
@@ -196,7 +196,7 @@ func TestRecordAuthWithOAuth2(t *testing.T) {
 				`"token":"`,
 				`"meta":{`,
 				`"email":"test@example.com"`,
-				`"id":"4q1xlclmfloku33"`,
+				`"id":"0196afca-7951-76f3-b344-ae38a366ade2"`,
 				`"id":"test_id"`,
 				`"verified":false`, // shouldn't change
 			},
@@ -309,7 +309,7 @@ func TestRecordAuthWithOAuth2(t *testing.T) {
 				`"meta":{`,
 				`"isNew":false`,
 				`"email":"test2@example.com"`,
-				`"id":"oap640cot4yru2s"`,
+				`"id":"0196afca-7951-77d1-ba15-923db9b774b2"`,
 				`"id":"test_id"`,
 				`"verified":true`,
 			},
@@ -401,7 +401,7 @@ func TestRecordAuthWithOAuth2(t *testing.T) {
 				`"meta":{`,
 				`"isNew":false`,
 				`"email":"test@example.com"`,
-				`"id":"4q1xlclmfloku33"`,
+				`"id":"0196afca-7951-76f3-b344-ae38a366ade2"`,
 				`"id":"test_id"`,
 				`"verified":true`, // should be updated
 			},
@@ -460,7 +460,7 @@ func TestRecordAuthWithOAuth2(t *testing.T) {
 			}`),
 			Headers: map[string]string{
 				// users, test@example.com
-				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6IjRxMXhsY2xtZmxva3UzMyIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoiX3BiX3VzZXJzX2F1dGhfIiwiZXhwIjoyNTI0NjA0NDYxLCJyZWZyZXNoYWJsZSI6dHJ1ZX0.ZT3F0Z3iM-xbGgSG3LEKiEzHrPHr8t8IuHLZGGNuxLo",
+				"Authorization": tests.NewAuthTokenForTest("users", "test@example.com"),
 			},
 			BeforeTestFunc: func(t testing.TB, app *tests.TestApp, e *core.ServeEvent) {
 				user, err := app.FindAuthRecordByEmail("users", "test@example.com")
@@ -507,7 +507,7 @@ func TestRecordAuthWithOAuth2(t *testing.T) {
 				`"meta":{`,
 				`"isNew":false`,
 				`"email":"test@example.com"`,
-				`"id":"4q1xlclmfloku33"`,
+				`"id":"0196afca-7951-76f3-b344-ae38a366ade2"`,
 				`"id":"test_id"`,
 				`"verified":false`, // shouldn't change because the OAuth2 user email is different
 			},
@@ -559,7 +559,7 @@ func TestRecordAuthWithOAuth2(t *testing.T) {
 			}`),
 			Headers: map[string]string{
 				// users, test@example.com
-				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6IjRxMXhsY2xtZmxva3UzMyIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoiX3BiX3VzZXJzX2F1dGhfIiwiZXhwIjoyNTI0NjA0NDYxLCJyZWZyZXNoYWJsZSI6dHJ1ZX0.ZT3F0Z3iM-xbGgSG3LEKiEzHrPHr8t8IuHLZGGNuxLo",
+				"Authorization": tests.NewAuthTokenForTest("users", "test@example.com"),
 			},
 			BeforeTestFunc: func(t testing.TB, app *tests.TestApp, e *core.ServeEvent) {
 				user, err := app.FindAuthRecordByEmail("users", "test@example.com")
@@ -621,7 +621,7 @@ func TestRecordAuthWithOAuth2(t *testing.T) {
 				`"meta":{`,
 				`"isNew":false`,
 				`"email":"test_oauth2@example.com"`,
-				`"id":"4q1xlclmfloku33"`,
+				`"id":"0196afca-7951-76f3-b344-ae38a366ade2"`,
 				`"id":"test_id"`,
 				`"verified":true`,
 			},
@@ -680,7 +680,7 @@ func TestRecordAuthWithOAuth2(t *testing.T) {
 			}`),
 			Headers: map[string]string{
 				// users, test@example.com
-				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6IjRxMXhsY2xtZmxva3UzMyIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoiX3BiX3VzZXJzX2F1dGhfIiwiZXhwIjoyNTI0NjA0NDYxLCJyZWZyZXNoYWJsZSI6dHJ1ZX0.ZT3F0Z3iM-xbGgSG3LEKiEzHrPHr8t8IuHLZGGNuxLo",
+				"Authorization": tests.NewAuthTokenForTest("users", "test@example.com"),
 			},
 			BeforeTestFunc: func(t testing.TB, app *tests.TestApp, e *core.ServeEvent) {
 				user, err := app.FindAuthRecordByEmail("users", "test@example.com")
@@ -727,7 +727,7 @@ func TestRecordAuthWithOAuth2(t *testing.T) {
 				`"meta":{`,
 				`"isNew":false`,
 				`"email":"test@example.com"`,
-				`"id":"4q1xlclmfloku33"`,
+				`"id":"0196afca-7951-76f3-b344-ae38a366ade2"`,
 				`"id":"test_id"`,
 				`"verified":true`,
 			},
@@ -981,7 +981,7 @@ func TestRecordAuthWithOAuth2(t *testing.T) {
 					"passwordConfirm": "1234567890",
 					"name": "test_name",
 					"username": "test_username",
-					"rel": "0yxhwia2amd8gec"
+					"rel": "0196afca-7951-753b-abd9-264df800cf28"
 				}
 			}`),
 			BeforeTestFunc: func(t testing.TB, app *tests.TestApp, e *core.ServeEvent) {
@@ -1018,7 +1018,7 @@ func TestRecordAuthWithOAuth2(t *testing.T) {
 				`"name":"test_name"`,
 				`"username":"test_username"`,
 				`"verified":true`,
-				`"rel":"0yxhwia2amd8gec"`,
+				`"rel":"0196afca-7951-753b-abd9-264df800cf28"`,
 			},
 			NotExpectedContent: []string{
 				// hidden fields
@@ -1075,7 +1075,7 @@ func TestRecordAuthWithOAuth2(t *testing.T) {
 					"passwordConfirm": "1234567890",
 					"name": "test_name",
 					"username": "test_username",
-					"rel": "0yxhwia2amd8gec"
+					"rel": "0196afca-7951-753b-abd9-264df800cf28"
 				}
 			}`),
 			BeforeTestFunc: func(t testing.TB, app *tests.TestApp, e *core.ServeEvent) {
@@ -1114,7 +1114,7 @@ func TestRecordAuthWithOAuth2(t *testing.T) {
 				`"name":"test_name"`,
 				`"username":"test_username"`,
 				`"verified":false`,
-				`"rel":"0yxhwia2amd8gec"`,
+				`"rel":"0196afca-7951-753b-abd9-264df800cf28"`,
 			},
 			NotExpectedContent: []string{
 				// hidden fields
@@ -1160,7 +1160,7 @@ func TestRecordAuthWithOAuth2(t *testing.T) {
 				"createData": {
 					"name": "test_name",
 					"emailVisibility": true,
-					"rel": "0yxhwia2amd8gec"
+					"rel": "0196afca-7951-753b-abd9-264df800cf28"
 				}
 			}`),
 			BeforeTestFunc: func(t testing.TB, app *tests.TestApp, e *core.ServeEvent) {
@@ -1207,7 +1207,7 @@ func TestRecordAuthWithOAuth2(t *testing.T) {
 				`"name":"test_name"`,
 				`"username":"oauth2_username"`,
 				`"verified":true`,
-				`"rel":"0yxhwia2amd8gec"`,
+				`"rel":"0196afca-7951-753b-abd9-264df800cf28"`,
 				`"avatar":"oauth2_avatar_`,
 			},
 			NotExpectedContent: []string{

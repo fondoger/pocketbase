@@ -42,22 +42,22 @@ func TestEnrichRecords(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	usersRecords, err := app.FindRecordsByIds("users", []string{"4q1xlclmfloku33", "bgs820n361vj1qd"})
+	usersRecords, err := app.FindRecordsByIds("users", []string{"0196afca-7951-76f3-b344-ae38a366ade2", "0196afca-7951-7232-8306-426702662b74"})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	nologinRecords, err := app.FindRecordsByIds("nologin", []string{"dc49k6jgejn40h3", "oos036e9xvqeexy"})
+	nologinRecords, err := app.FindRecordsByIds("nologin", []string{"0196afca-7951-7d0f-a64c-cd080e9956d5", "0196afca-7951-7fad-814b-51ca64402271"})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	demo1Records, err := app.FindRecordsByIds("demo1", []string{"al1h9ijdeojtsjy", "84nmscqy84lsi1t"})
+	demo1Records, err := app.FindRecordsByIds("demo1", []string{"0196afca-7951-752e-972d-502c0843467d", "0196afca-7951-7ba1-8cef-b59777e4d838"})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	demo5Records, err := app.FindRecordsByIds("demo5", []string{"la4y2w4o98acwuj", "qjeql998mtp1azp"})
+	demo5Records, err := app.FindRecordsByIds("demo5", []string{"0196afca-7951-7501-9fa3-ac7aae30f3d3", "0196afca-7951-73fc-a188-a989856a8167"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -146,8 +146,8 @@ func TestEnrichRecords(t *testing.T) {
 				`"test@example.com"`,
 			},
 			notExpected: []string{
-				`"id":"bgs820n361vj1qd"`,
-				`"id":"oap640cot4yru2s"`,
+				`"id":"0196afca-7951-7232-8306-426702662b74"`,
+				`"id":"0196afca-7951-77d1-ba15-923db9b774b2"`,
 			},
 		},
 		{
@@ -160,9 +160,9 @@ func TestEnrichRecords(t *testing.T) {
 				`"customField":"123"`,
 				`"test@example.com"`,
 				`"expand":{"rel_many"`,
-				`"id":"bgs820n361vj1qd"`,
-				`"id":"4q1xlclmfloku33"`,
-				`"id":"oap640cot4yru2s"`,
+				`"id":"0196afca-7951-7232-8306-426702662b74"`,
+				`"id":"0196afca-7951-76f3-b344-ae38a366ade2"`,
+				`"id":"0196afca-7951-77d1-ba15-923db9b774b2"`,
 			},
 			notExpected: []string{
 				`"expand":{}`,
@@ -179,8 +179,8 @@ func TestEnrichRecords(t *testing.T) {
 			expected: []string{
 				`"customField":"123"`,
 				`"expand":{"rel"`,
-				`"id":"llvuca81nly1qls"`,
-				`"id":"0yxhwia2amd8gec"`,
+				`"id":"0196afca-7951-70d0-bcc5-206ed6a14bea"`,
+				`"id":"0196afca-7951-753b-abd9-264df800cf28"`,
 			},
 			notExpected: []string{
 				`"expand":{}`,
@@ -195,8 +195,8 @@ func TestEnrichRecords(t *testing.T) {
 			expected: []string{
 				`"customField":"123"`,
 				`"expand":{"rel"`,
-				`"id":"llvuca81nly1qls"`,
-				`"id":"0yxhwia2amd8gec"`,
+				`"id":"0196afca-7951-70d0-bcc5-206ed6a14bea"`,
+				`"id":"0196afca-7951-753b-abd9-264df800cf28"`,
 			},
 		},
 		{
@@ -211,8 +211,8 @@ func TestEnrichRecords(t *testing.T) {
 				`"expand":{"`,
 				`"rel_many":[{`,
 				`"rel_one":{`,
-				`"id":"i9naidtvr6qsgb4"`,
-				`"id":"qzaqccwrmva4o1n"`,
+				`"id":"0196afca-7951-7bca-95b3-3b8b92760ec5"`,
+				`"id":"0196afca-7951-75c9-9c38-91315915f69d"`,
 			},
 		},
 	}

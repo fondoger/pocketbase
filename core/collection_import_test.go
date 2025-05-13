@@ -88,7 +88,7 @@ func TestImportCollections(t *testing.T) {
 			name: "new + update + delete (system collections delete should be ignored)",
 			data: []map[string]any{
 				{
-					"id":   "wsmn24bux7wo113",
+					"id":   "0196afca-7951-7653-beca-d69f40c17bcd",
 					"name": "demo",
 					"fields": []map[string]any{
 						{
@@ -122,7 +122,7 @@ func TestImportCollections(t *testing.T) {
 			name: "test with deleteMissing: false",
 			data: []map[string]any{
 				{
-					// "id":   "wsmn24bux7wo113", // test update with only name as identifier
+					// "id":   "0196afca-7951-7653-beca-d69f40c17bcd", // test update with only name as identifier
 					"name": "demo1",
 					"fields": []map[string]any{
 						{
@@ -264,7 +264,7 @@ func TestImportCollectionsByMarshaledJSON(t *testing.T) {
 			name: "new + update + delete (system collections delete should be ignored)",
 			data: `[
 				{
-					"id":   "wsmn24bux7wo113",
+					"id":   "0196afca-7951-7653-beca-d69f40c17bcd",
 					"name": "demo",
 					"fields": [
 						{
@@ -339,13 +339,13 @@ func TestImportCollectionsUpdateRules(t *testing.T) {
 		},
 		{
 			"extend existing by id (without deleteMissing)",
-			map[string]any{"id": "v851q4r790rhknl", "authToken": map[string]any{"duration": 100}, "fields": []map[string]any{{"name": "test", "type": "text"}}},
+			map[string]any{"id": "0196afca-09e0-717d-9a85-9c276d28c33c", "authToken": map[string]any{"duration": 100}, "fields": []map[string]any{{"name": "test", "type": "text"}}},
 			false,
 		},
 		{
 			"extend with delete missing",
 			map[string]any{
-				"id":           "v851q4r790rhknl",
+				"id":           "0196afca-09e0-717d-9a85-9c276d28c33c",
 				"authToken":    map[string]any{"duration": 100},
 				"fields":       []map[string]any{{"name": "test", "type": "text"}},
 				"passwordAuth": map[string]any{"identityFields": []string{"email"}},

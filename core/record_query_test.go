@@ -37,7 +37,7 @@ func TestRecordQueryWithDifferentCollectionValues(t *testing.T) {
 		{"with pointer model", collection, 3, false},
 		{"with value model", *collection, 3, false},
 		{"with name", "demo1", 3, false},
-		{"with id", "wsmn24bux7wo113", 3, false},
+		{"with id", "0196afca-7951-7653-beca-d69f40c17bcd", 3, false},
 	}
 
 	for _, s := range scenarios {
@@ -72,13 +72,13 @@ func TestRecordQueryOne(t *testing.T) {
 		{
 			"record model",
 			"demo1",
-			"84nmscqy84lsi1t",
+			"0196afca-7951-7ba1-8cef-b59777e4d838",
 			&core.Record{},
 		},
 		{
 			"record proxy",
 			"demo1",
-			"84nmscqy84lsi1t",
+			"0196afca-7951-7ba1-8cef-b59777e4d838",
 			&struct {
 				core.BaseRecordProxy
 			}{},
@@ -86,7 +86,7 @@ func TestRecordQueryOne(t *testing.T) {
 		{
 			"custom struct",
 			"demo1",
-			"84nmscqy84lsi1t",
+			"0196afca-7951-7ba1-8cef-b59777e4d838",
 			&struct {
 				Id string `db:"id" json:"id"`
 			}{},
@@ -143,37 +143,37 @@ func TestRecordQueryAll(t *testing.T) {
 		{
 			"slice of Record models",
 			"demo1",
-			[]any{"84nmscqy84lsi1t", "al1h9ijdeojtsjy"},
+			[]any{"0196afca-7951-7ba1-8cef-b59777e4d838", "0196afca-7951-752e-972d-502c0843467d"},
 			&[]core.Record{},
 		},
 		{
 			"slice of pointer Record models",
 			"demo1",
-			[]any{"84nmscqy84lsi1t", "al1h9ijdeojtsjy"},
+			[]any{"0196afca-7951-7ba1-8cef-b59777e4d838", "0196afca-7951-752e-972d-502c0843467d"},
 			&[]*core.Record{},
 		},
 		{
 			"slice of Record proxies",
 			"demo1",
-			[]any{"84nmscqy84lsi1t", "al1h9ijdeojtsjy"},
+			[]any{"0196afca-7951-7ba1-8cef-b59777e4d838", "0196afca-7951-752e-972d-502c0843467d"},
 			&[]mockRecordProxy{},
 		},
 		{
 			"slice of pointer Record proxies",
 			"demo1",
-			[]any{"84nmscqy84lsi1t", "al1h9ijdeojtsjy"},
+			[]any{"0196afca-7951-7ba1-8cef-b59777e4d838", "0196afca-7951-752e-972d-502c0843467d"},
 			&[]mockRecordProxy{},
 		},
 		{
 			"slice of custom structs",
 			"demo1",
-			[]any{"84nmscqy84lsi1t", "al1h9ijdeojtsjy"},
+			[]any{"0196afca-7951-7ba1-8cef-b59777e4d838", "0196afca-7951-752e-972d-502c0843467d"},
 			&[]customStructs{},
 		},
 		{
 			"slice of pointer custom structs",
 			"demo1",
-			[]any{"84nmscqy84lsi1t", "al1h9ijdeojtsjy"},
+			[]any{"0196afca-7951-7ba1-8cef-b59777e4d838", "0196afca-7951-752e-972d-502c0843467d"},
 			&[]customStructs{},
 		},
 	}
@@ -229,39 +229,39 @@ func TestFindRecordById(t *testing.T) {
 		expectError        bool
 	}{
 		{"demo2", "missing", nil, true},
-		{"missing", "0yxhwia2amd8gec", nil, true},
-		{"demo2", "0yxhwia2amd8gec", nil, false},
-		{"demo2", "0yxhwia2amd8gec", []func(q *dbx.SelectQuery) error{}, false},
-		{"demo2", "0yxhwia2amd8gec", []func(q *dbx.SelectQuery) error{nil, nil}, false},
-		{"demo2", "0yxhwia2amd8gec", []func(q *dbx.SelectQuery) error{
+		{"missing", "0196afca-7951-753b-abd9-264df800cf28", nil, true},
+		{"demo2", "0196afca-7951-753b-abd9-264df800cf28", nil, false},
+		{"demo2", "0196afca-7951-753b-abd9-264df800cf28", []func(q *dbx.SelectQuery) error{}, false},
+		{"demo2", "0196afca-7951-753b-abd9-264df800cf28", []func(q *dbx.SelectQuery) error{nil, nil}, false},
+		{"demo2", "0196afca-7951-753b-abd9-264df800cf28", []func(q *dbx.SelectQuery) error{
 			nil,
 			func(q *dbx.SelectQuery) error { return nil },
 		}, false},
-		{"demo2", "0yxhwia2amd8gec", []func(q *dbx.SelectQuery) error{
+		{"demo2", "0196afca-7951-753b-abd9-264df800cf28", []func(q *dbx.SelectQuery) error{
 			func(q *dbx.SelectQuery) error {
 				q.AndWhere(dbx.HashExp{"title": "missing"})
 				return nil
 			},
 		}, true},
-		{"demo2", "0yxhwia2amd8gec", []func(q *dbx.SelectQuery) error{
+		{"demo2", "0196afca-7951-753b-abd9-264df800cf28", []func(q *dbx.SelectQuery) error{
 			func(q *dbx.SelectQuery) error {
 				return errors.New("test error")
 			},
 		}, true},
-		{"demo2", "0yxhwia2amd8gec", []func(q *dbx.SelectQuery) error{
+		{"demo2", "0196afca-7951-753b-abd9-264df800cf28", []func(q *dbx.SelectQuery) error{
 			func(q *dbx.SelectQuery) error {
 				q.AndWhere(dbx.HashExp{"title": "test3"})
 				return nil
 			},
 		}, false},
-		{"demo2", "0yxhwia2amd8gec", []func(q *dbx.SelectQuery) error{
+		{"demo2", "0196afca-7951-753b-abd9-264df800cf28", []func(q *dbx.SelectQuery) error{
 			func(q *dbx.SelectQuery) error {
 				q.AndWhere(dbx.HashExp{"title": "test3"})
 				return nil
 			},
 			nil,
 		}, false},
-		{"demo2", "0yxhwia2amd8gec", []func(q *dbx.SelectQuery) error{
+		{"demo2", "0196afca-7951-753b-abd9-264df800cf28", []func(q *dbx.SelectQuery) error{
 			func(q *dbx.SelectQuery) error {
 				q.AndWhere(dbx.HashExp{"title": "test3"})
 				return nil
@@ -271,7 +271,7 @@ func TestFindRecordById(t *testing.T) {
 				return nil
 			},
 		}, true},
-		{"sz5l5z67tg7gku0", "0yxhwia2amd8gec", []func(q *dbx.SelectQuery) error{
+		{"0196afca-7951-7db1-a330-feb700e70dfc", "0196afca-7951-753b-abd9-264df800cf28", []func(q *dbx.SelectQuery) error{
 			func(q *dbx.SelectQuery) error {
 				q.AndWhere(dbx.HashExp{"title": "test3"})
 				return nil
@@ -319,33 +319,33 @@ func TestFindRecordsByIds(t *testing.T) {
 		{"demo2", []string{}, nil, 0, false},
 		{"demo2", []string{""}, nil, 0, false},
 		{"demo2", []string{"missing"}, nil, 0, false},
-		{"missing", []string{"0yxhwia2amd8gec"}, nil, 0, true},
-		{"demo2", []string{"0yxhwia2amd8gec"}, nil, 1, false},
-		{"sz5l5z67tg7gku0", []string{"0yxhwia2amd8gec"}, nil, 1, false},
+		{"missing", []string{"0196afca-7951-753b-abd9-264df800cf28"}, nil, 0, true},
+		{"demo2", []string{"0196afca-7951-753b-abd9-264df800cf28"}, nil, 1, false},
+		{"0196afca-7951-7db1-a330-feb700e70dfc", []string{"0196afca-7951-753b-abd9-264df800cf28"}, nil, 1, false},
 		{
 			"demo2",
-			[]string{"0yxhwia2amd8gec", "llvuca81nly1qls"},
+			[]string{"0196afca-7951-753b-abd9-264df800cf28", "0196afca-7951-70d0-bcc5-206ed6a14bea"},
 			nil,
 			2,
 			false,
 		},
 		{
 			"demo2",
-			[]string{"0yxhwia2amd8gec", "llvuca81nly1qls"},
+			[]string{"0196afca-7951-753b-abd9-264df800cf28", "0196afca-7951-70d0-bcc5-206ed6a14bea"},
 			[]func(q *dbx.SelectQuery) error{},
 			2,
 			false,
 		},
 		{
 			"demo2",
-			[]string{"0yxhwia2amd8gec", "llvuca81nly1qls"},
+			[]string{"0196afca-7951-753b-abd9-264df800cf28", "0196afca-7951-70d0-bcc5-206ed6a14bea"},
 			[]func(q *dbx.SelectQuery) error{nil, nil},
 			2,
 			false,
 		},
 		{
 			"demo2",
-			[]string{"0yxhwia2amd8gec", "llvuca81nly1qls"},
+			[]string{"0196afca-7951-753b-abd9-264df800cf28", "0196afca-7951-70d0-bcc5-206ed6a14bea"},
 			[]func(q *dbx.SelectQuery) error{
 				func(q *dbx.SelectQuery) error {
 					return nil // empty filter
@@ -356,7 +356,7 @@ func TestFindRecordsByIds(t *testing.T) {
 		},
 		{
 			"demo2",
-			[]string{"0yxhwia2amd8gec", "llvuca81nly1qls"},
+			[]string{"0196afca-7951-753b-abd9-264df800cf28", "0196afca-7951-70d0-bcc5-206ed6a14bea"},
 			[]func(q *dbx.SelectQuery) error{
 				func(q *dbx.SelectQuery) error {
 					return nil // empty filter
@@ -370,7 +370,7 @@ func TestFindRecordsByIds(t *testing.T) {
 		},
 		{
 			"demo2",
-			[]string{"0yxhwia2amd8gec", "llvuca81nly1qls"},
+			[]string{"0196afca-7951-753b-abd9-264df800cf28", "0196afca-7951-70d0-bcc5-206ed6a14bea"},
 			[]func(q *dbx.SelectQuery) error{
 				func(q *dbx.SelectQuery) error {
 					q.AndWhere(dbx.HashExp{"active": true})
@@ -382,8 +382,8 @@ func TestFindRecordsByIds(t *testing.T) {
 			false,
 		},
 		{
-			"sz5l5z67tg7gku0",
-			[]string{"0yxhwia2amd8gec", "llvuca81nly1qls"},
+			"0196afca-7951-7db1-a330-feb700e70dfc",
+			[]string{"0196afca-7951-753b-abd9-264df800cf28", "0196afca-7951-70d0-bcc5-206ed6a14bea"},
 			[]func(q *dbx.SelectQuery) error{
 				func(q *dbx.SelectQuery) error {
 					q.AndWhere(dbx.HashExp{"active": true})
@@ -447,9 +447,9 @@ func TestFindAllRecords(t *testing.T) {
 			"demo2",
 			nil,
 			[]string{
-				"achvryl401bhse3",
-				"llvuca81nly1qls",
-				"0yxhwia2amd8gec",
+				"0196afca-7951-78f8-bbc8-59d5d917adff",
+				"0196afca-7951-70d0-bcc5-206ed6a14bea",
+				"0196afca-7951-753b-abd9-264df800cf28",
 			},
 			false,
 		},
@@ -463,14 +463,14 @@ func TestFindAllRecords(t *testing.T) {
 			false,
 		},
 		{
-			"sz5l5z67tg7gku0",
+			"0196afca-7951-7db1-a330-feb700e70dfc",
 			[]dbx.Expression{
 				dbx.Like("title", "test").Match(true, true),
 				dbx.HashExp{"active": true},
 			},
 			[]string{
-				"achvryl401bhse3",
-				"0yxhwia2amd8gec",
+				"0196afca-7951-78f8-bbc8-59d5d917adff",
+				"0196afca-7951-753b-abd9-264df800cf28",
 			},
 			false,
 		},
@@ -514,14 +514,14 @@ func TestFindFirstRecordByData(t *testing.T) {
 		{
 			"missing",
 			"id",
-			"llvuca81nly1qls",
-			"llvuca81nly1qls",
+			"0196afca-7951-70d0-bcc5-206ed6a14bea",
+			"0196afca-7951-70d0-bcc5-206ed6a14bea",
 			true,
 		},
 		{
 			"demo2",
 			"",
-			"llvuca81nly1qls",
+			"0196afca-7951-70d0-bcc5-206ed6a14bea",
 			"",
 			true,
 		},
@@ -535,15 +535,15 @@ func TestFindFirstRecordByData(t *testing.T) {
 		{
 			"demo2",
 			"id",
-			"llvuca81nly1qls",
-			"llvuca81nly1qls",
+			"0196afca-7951-70d0-bcc5-206ed6a14bea",
+			"0196afca-7951-70d0-bcc5-206ed6a14bea",
 			false,
 		},
 		{
-			"sz5l5z67tg7gku0",
+			"0196afca-7951-7db1-a330-feb700e70dfc",
 			"title",
 			"test3",
-			"0yxhwia2amd8gec",
+			"0196afca-7951-753b-abd9-264df800cf28",
 			false,
 		},
 	}
@@ -613,9 +613,9 @@ func TestFindRecordsByFilter(t *testing.T) {
 			nil,
 			false,
 			[]string{
-				"llvuca81nly1qls",
-				"achvryl401bhse3",
-				"0yxhwia2amd8gec",
+				"0196afca-7951-70d0-bcc5-206ed6a14bea",
+				"0196afca-7951-78f8-bbc8-59d5d917adff",
+				"0196afca-7951-753b-abd9-264df800cf28",
 			},
 		},
 		{
@@ -628,9 +628,9 @@ func TestFindRecordsByFilter(t *testing.T) {
 			nil,
 			false,
 			[]string{
-				"llvuca81nly1qls",
-				"achvryl401bhse3",
-				"0yxhwia2amd8gec",
+				"0196afca-7951-70d0-bcc5-206ed6a14bea",
+				"0196afca-7951-78f8-bbc8-59d5d917adff",
+				"0196afca-7951-753b-abd9-264df800cf28",
 			},
 		},
 		{
@@ -643,13 +643,13 @@ func TestFindRecordsByFilter(t *testing.T) {
 			nil,
 			false,
 			[]string{
-				"0yxhwia2amd8gec",
-				"achvryl401bhse3",
+				"0196afca-7951-753b-abd9-264df800cf28",
+				"0196afca-7951-78f8-bbc8-59d5d917adff",
 			},
 		},
 		{
 			"with limit and offset",
-			"sz5l5z67tg7gku0",
+			"0196afca-7951-7db1-a330-feb700e70dfc",
 			"id != ''",
 			"title",
 			2,
@@ -657,8 +657,8 @@ func TestFindRecordsByFilter(t *testing.T) {
 			nil,
 			false,
 			[]string{
-				"achvryl401bhse3",
-				"0yxhwia2amd8gec",
+				"0196afca-7951-78f8-bbc8-59d5d917adff",
+				"0196afca-7951-753b-abd9-264df800cf28",
 			},
 		},
 		{
@@ -671,7 +671,7 @@ func TestFindRecordsByFilter(t *testing.T) {
 			[]dbx.Params{{"active": false}},
 			false,
 			[]string{
-				"llvuca81nly1qls",
+				"0196afca-7951-70d0-bcc5-206ed6a14bea",
 			},
 		},
 		{
@@ -684,7 +684,7 @@ func TestFindRecordsByFilter(t *testing.T) {
 			[]dbx.Params{{"active": false}},
 			false,
 			[]string{
-				"i9naidtvr6qsgb4",
+				"0196afca-7951-7bca-95b3-3b8b92760ec5",
 			},
 		},
 	}
@@ -758,7 +758,7 @@ func TestFindFirstRecordByFilter(t *testing.T) {
 			"",
 			nil,
 			false,
-			"llvuca81nly1qls",
+			"0196afca-7951-70d0-bcc5-206ed6a14bea",
 		},
 		{
 			"valid filter but no matches",
@@ -770,11 +770,11 @@ func TestFindFirstRecordByFilter(t *testing.T) {
 		},
 		{
 			"valid filter and multiple matches",
-			"sz5l5z67tg7gku0",
+			"0196afca-7951-7db1-a330-feb700e70dfc",
 			"id != ''",
 			nil,
 			false,
-			"llvuca81nly1qls",
+			"0196afca-7951-70d0-bcc5-206ed6a14bea",
 		},
 		{
 			"with placeholder params",
@@ -782,7 +782,7 @@ func TestFindFirstRecordByFilter(t *testing.T) {
 			"active = {:active}",
 			[]dbx.Params{{"active": false}},
 			false,
-			"llvuca81nly1qls",
+			"0196afca-7951-70d0-bcc5-206ed6a14bea",
 		},
 	}
 
@@ -835,7 +835,7 @@ func TestCountRecords(t *testing.T) {
 		},
 		{
 			"valid collection id",
-			"sz5l5z67tg7gku0",
+			"0196afca-7951-7db1-a330-feb700e70dfc",
 			nil,
 			3,
 			false,
@@ -913,33 +913,33 @@ func TestFindAuthRecordByToken(t *testing.T) {
 		},
 		{
 			"expired token",
-			"eyJhbGciOiJIUzI1NiJ9.eyJpZCI6IjRxMXhsY2xtZmxva3UzMyIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoiX3BiX3VzZXJzX2F1dGhfIiwiZXhwIjoxNjQwOTkxNjYxLCJyZWZyZXNoYWJsZSI6dHJ1ZX0.2D3tmqPn3vc5LoqqCz8V-iCDVXo9soYiH0d32G7FQT4",
+			tests.NewAuthTokenForTest("users", "test@example.com", tests.TokenExpired(true)),
 			nil,
 			"",
 		},
 		{
 			"valid auth token",
-			"eyJhbGciOiJIUzI1NiJ9.eyJpZCI6IjRxMXhsY2xtZmxva3UzMyIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoiX3BiX3VzZXJzX2F1dGhfIiwiZXhwIjoyNTI0NjA0NDYxLCJyZWZyZXNoYWJsZSI6dHJ1ZX0.ZT3F0Z3iM-xbGgSG3LEKiEzHrPHr8t8IuHLZGGNuxLo",
+			tests.NewAuthTokenForTest("users", "test@example.com"),
 			nil,
-			"4q1xlclmfloku33",
+			"0196afca-7951-76f3-b344-ae38a366ade2",
 		},
 		{
 			"valid verification token",
-			"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImRjNDlrNmpnZWpuNDBoMyIsImV4cCI6MjUyNDYwNDQ2MSwidHlwZSI6InZlcmlmaWNhdGlvbiIsImNvbGxlY3Rpb25JZCI6ImtwdjcwOXNrMmxxYnFrOCIsImVtYWlsIjoidGVzdEBleGFtcGxlLmNvbSJ9.5GmuZr4vmwk3Cb_3ZZWNxwbE75KZC-j71xxIPR9AsVw",
+			tests.NewAuthTokenForTest("nologin", "test@example.com", tests.CustomToken("verification", map[string]any { "email" : "test@example.com"})),
 			nil,
-			"dc49k6jgejn40h3",
+			"0196afca-7951-7d0f-a64c-cd080e9956d5",
 		},
 		{
 			"auth token with file type only check",
-			"eyJhbGciOiJIUzI1NiJ9.eyJpZCI6IjRxMXhsY2xtZmxva3UzMyIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoiX3BiX3VzZXJzX2F1dGhfIiwiZXhwIjoyNTI0NjA0NDYxLCJyZWZyZXNoYWJsZSI6dHJ1ZX0.ZT3F0Z3iM-xbGgSG3LEKiEzHrPHr8t8IuHLZGGNuxLo",
+			tests.NewAuthTokenForTest("users", "test@example.com"),
 			[]string{core.TokenTypeFile},
 			"",
 		},
 		{
 			"auth token with file and auth type check",
-			"eyJhbGciOiJIUzI1NiJ9.eyJpZCI6IjRxMXhsY2xtZmxva3UzMyIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoiX3BiX3VzZXJzX2F1dGhfIiwiZXhwIjoyNTI0NjA0NDYxLCJyZWZyZXNoYWJsZSI6dHJ1ZX0.ZT3F0Z3iM-xbGgSG3LEKiEzHrPHr8t8IuHLZGGNuxLo",
+			tests.NewAuthTokenForTest("users", "test@example.com"),
 			[]string{core.TokenTypeFile, core.TokenTypeAuth},
-			"4q1xlclmfloku33",
+			"0196afca-7951-76f3-b344-ae38a366ade2",
 		},
 	}
 
@@ -1041,7 +1041,7 @@ func TestCanAccessRecord(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	record, err := app.FindRecordById("demo1", "imy661ixudk5izi")
+	record, err := app.FindRecordById("demo1", "0196afca-7951-7a62-9100-f77edbf6f060")
 	if err != nil {
 		t.Fatal(err)
 	}

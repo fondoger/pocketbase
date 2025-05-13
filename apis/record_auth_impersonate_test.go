@@ -15,7 +15,7 @@ func TestRecordAuthImpersonate(t *testing.T) {
 		{
 			Name:            "unauthorized",
 			Method:          http.MethodPost,
-			URL:             "/api/collections/users/impersonate/4q1xlclmfloku33",
+			URL:             "/api/collections/users/impersonate/0196afca-7951-76f3-b344-ae38a366ade2",
 			ExpectedStatus:  401,
 			ExpectedContent: []string{`"data":{}`},
 			ExpectedEvents:  map[string]int{"*": 0},
@@ -23,9 +23,9 @@ func TestRecordAuthImpersonate(t *testing.T) {
 		{
 			Name:   "authorized as different user",
 			Method: http.MethodPost,
-			URL:    "/api/collections/users/impersonate/4q1xlclmfloku33",
+			URL:    "/api/collections/users/impersonate/0196afca-7951-76f3-b344-ae38a366ade2",
 			Headers: map[string]string{
-				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6Im9hcDY0MGNvdDR5cnUycyIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoiX3BiX3VzZXJzX2F1dGhfIiwiZXhwIjoyNTI0NjA0NDYxLCJyZWZyZXNoYWJsZSI6dHJ1ZX0.GfJo6EHIobgas_AXt-M-tj5IoQendPnrkMSe9ExuSEY",
+				"Authorization": tests.NewAuthTokenForTest("users", "test2@example.com"),
 			},
 			ExpectedStatus:  403,
 			ExpectedContent: []string{`"data":{}`},
@@ -34,9 +34,9 @@ func TestRecordAuthImpersonate(t *testing.T) {
 		{
 			Name:   "authorized as the same user",
 			Method: http.MethodPost,
-			URL:    "/api/collections/users/impersonate/4q1xlclmfloku33",
+			URL:    "/api/collections/users/impersonate/0196afca-7951-76f3-b344-ae38a366ade2",
 			Headers: map[string]string{
-				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6IjRxMXhsY2xtZmxva3UzMyIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoiX3BiX3VzZXJzX2F1dGhfIiwiZXhwIjoyNTI0NjA0NDYxLCJyZWZyZXNoYWJsZSI6dHJ1ZX0.ZT3F0Z3iM-xbGgSG3LEKiEzHrPHr8t8IuHLZGGNuxLo",
+				"Authorization": tests.NewAuthTokenForTest("users", "test@example.com"),
 			},
 			ExpectedStatus:  403,
 			ExpectedContent: []string{`"data":{}`},
@@ -45,14 +45,14 @@ func TestRecordAuthImpersonate(t *testing.T) {
 		{
 			Name:   "authorized as superuser",
 			Method: http.MethodPost,
-			URL:    "/api/collections/users/impersonate/4q1xlclmfloku33",
+			URL:    "/api/collections/users/impersonate/0196afca-7951-76f3-b344-ae38a366ade2",
 			Headers: map[string]string{
-				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6InN5d2JoZWNuaDQ2cmhtMCIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoicGJjXzMxNDI2MzU4MjMiLCJleHAiOjI1MjQ2MDQ0NjEsInJlZnJlc2hhYmxlIjp0cnVlfQ.UXgO3j-0BumcugrFjbd7j0M4MQvbrLggLlcu_YNGjoY",
+				"Authorization": tests.NewAuthTokenForTest("_superusers", "test@example.com"),
 			},
 			ExpectedStatus: 200,
 			ExpectedContent: []string{
 				`"token":"`,
-				`"id":"4q1xlclmfloku33"`,
+				`"id":"0196afca-7951-76f3-b344-ae38a366ade2"`,
 				`"record":{`,
 			},
 			NotExpectedContent: []string{
@@ -69,9 +69,9 @@ func TestRecordAuthImpersonate(t *testing.T) {
 		{
 			Name:   "authorized as superuser with custom invalid duration",
 			Method: http.MethodPost,
-			URL:    "/api/collections/users/impersonate/4q1xlclmfloku33",
+			URL:    "/api/collections/users/impersonate/0196afca-7951-76f3-b344-ae38a366ade2",
 			Headers: map[string]string{
-				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6InN5d2JoZWNuaDQ2cmhtMCIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoicGJjXzMxNDI2MzU4MjMiLCJleHAiOjI1MjQ2MDQ0NjEsInJlZnJlc2hhYmxlIjp0cnVlfQ.UXgO3j-0BumcugrFjbd7j0M4MQvbrLggLlcu_YNGjoY",
+				"Authorization": tests.NewAuthTokenForTest("_superusers", "test@example.com"),
 			},
 			Body:           strings.NewReader(`{"duration":-1}`),
 			ExpectedStatus: 400,
@@ -84,15 +84,15 @@ func TestRecordAuthImpersonate(t *testing.T) {
 		{
 			Name:   "authorized as superuser with custom valid duration",
 			Method: http.MethodPost,
-			URL:    "/api/collections/users/impersonate/4q1xlclmfloku33",
+			URL:    "/api/collections/users/impersonate/0196afca-7951-76f3-b344-ae38a366ade2",
 			Headers: map[string]string{
-				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6InN5d2JoZWNuaDQ2cmhtMCIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoicGJjXzMxNDI2MzU4MjMiLCJleHAiOjI1MjQ2MDQ0NjEsInJlZnJlc2hhYmxlIjp0cnVlfQ.UXgO3j-0BumcugrFjbd7j0M4MQvbrLggLlcu_YNGjoY",
+				"Authorization": tests.NewAuthTokenForTest("_superusers", "test@example.com"),
 			},
 			Body:           strings.NewReader(`{"duration":100}`),
 			ExpectedStatus: 200,
 			ExpectedContent: []string{
 				`"token":"`,
-				`"id":"4q1xlclmfloku33"`,
+				`"id":"0196afca-7951-76f3-b344-ae38a366ade2"`,
 				`"record":{`,
 			},
 			ExpectedEvents: map[string]int{

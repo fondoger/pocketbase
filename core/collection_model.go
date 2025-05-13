@@ -3,10 +3,8 @@ package core
 import (
 	"encoding/json"
 	"fmt"
-	"strconv"
 	"strings"
 
-	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/tools/dbutils"
 	"github.com/pocketbase/pocketbase/tools/hook"
 	"github.com/pocketbase/pocketbase/tools/security"
@@ -790,7 +788,11 @@ func onCollectionDeleteExecute(e *CollectionEvent) error {
 // -------------------------------------------------------------------
 
 func (c *Collection) idChecksum() string {
+	/* SQLite:
 	return "pbc_" + crc32Checksum(c.Type+c.Name)
+	*/
+	// PostgreSQL:
+	return GenerateNewUUIDV7()
 }
 
 func (c *Collection) initDefaultId() {
@@ -812,6 +814,7 @@ func (c *Collection) updateGeneratedIdIfExists(app App) {
 	// generate an up-to-date checksum
 	newId := c.idChecksum()
 
+	/* SQLite:
 	// add a number to the current id (if already exists)
 	for i := 2; i < 1000; i++ {
 		var exists int
@@ -821,6 +824,9 @@ func (c *Collection) updateGeneratedIdIfExists(app App) {
 		}
 		newId = c.idChecksum() + strconv.Itoa(i)
 	}
+	*/
+	// PostgreSQL:
+	// not needed because uuid never gets duplicated
 
 	// no change
 	if c.Id == newId {
@@ -987,14 +993,21 @@ func (c *Collection) initIdField() {
 	if field == nil {
 		// create default field
 		field = &TextField{
-			Name:                FieldNameId,
-			System:              true,
-			PrimaryKey:          true,
-			Required:            true,
-			Min:                 15,
-			Max:                 15,
+			Name:       FieldNameId,
+			System:     true,
+			PrimaryKey: true,
+			Required:   true,
+			/* SQLite:
+			Min:        15,
+			Max:        15,
 			Pattern:             defaultLowercaseRecordIdPattern,
 			AutogeneratePattern: `[a-z0-9]{15}`,
+			*/
+			// PostgreSQL:
+			Min:                 36,
+			Max:                 36,
+			Pattern:             security.PredefinedAutoGeneratePattern_uuidv7,
+			AutogeneratePattern: security.PredefinedAutoGeneratePattern_uuidv7,
 		}
 
 		// prepend it
@@ -1006,11 +1019,7 @@ func (c *Collection) initIdField() {
 		field.PrimaryKey = true
 		field.Hidden = false
 		if field.Pattern == "" {
-			if field.AutogeneratePattern == security.PredefinedAutoGeneratePattern_uuidv7 {
-				field.Pattern = security.PredefinedAutoGeneratePattern_uuidv7
-			} else {
-				field.Pattern = defaultLowercaseRecordIdPattern
-			}
+			field.Pattern = security.PredefinedAutoGeneratePattern_uuidv7
 		}
 	}
 }

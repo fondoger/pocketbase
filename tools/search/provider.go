@@ -181,6 +181,10 @@ func (s *Provider) AddFilter(filter FilterData) *Provider {
 // to the existing provider's `sort` and `filter` fields
 // (aka. using `AddSort` and `AddFilter`).
 func (s *Provider) Parse(urlQuery string) error {
+	if urlQuery == "" {
+		return nil // fast return
+	}
+
 	params, err := url.ParseQuery(urlQuery)
 	if err != nil {
 		return err

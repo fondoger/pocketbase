@@ -382,7 +382,7 @@ func TestFileFieldValidateValue(t *testing.T) {
 			"existing files > MaxSelect",
 			&core.FileField{Name: "file_many", MaxSize: 999, MaxSelect: 2},
 			func() *core.Record {
-				record, _ := app.FindRecordById("demo1", "84nmscqy84lsi1t") // 5 files
+				record, _ := app.FindRecordById("demo1", "0196afca-7951-7ba1-8cef-b59777e4d838") // 5 files
 				return record
 			},
 			true,
@@ -391,7 +391,7 @@ func TestFileFieldValidateValue(t *testing.T) {
 			"existing files should ignore the MaxSize and Mimetypes checks",
 			&core.FileField{Name: "file_many", MaxSize: 1, MaxSelect: 5, MimeTypes: []string{"a", "b"}},
 			func() *core.Record {
-				record, _ := app.FindRecordById("demo1", "84nmscqy84lsi1t")
+				record, _ := app.FindRecordById("demo1", "0196afca-7951-7ba1-8cef-b59777e4d838")
 				return record
 			},
 			false,
@@ -400,7 +400,7 @@ func TestFileFieldValidateValue(t *testing.T) {
 			"existing + new file > MaxSelect (5+2)",
 			&core.FileField{Name: "file_many", MaxSize: 999, MaxSelect: 6},
 			func() *core.Record {
-				record, _ := app.FindRecordById("demo1", "84nmscqy84lsi1t")
+				record, _ := app.FindRecordById("demo1", "0196afca-7951-7ba1-8cef-b59777e4d838")
 				record.Set("file_many+", []any{f1, f2})
 				return record
 			},
@@ -410,7 +410,7 @@ func TestFileFieldValidateValue(t *testing.T) {
 			"existing + new file <= MaxSelect (5+2)",
 			&core.FileField{Name: "file_many", MaxSize: 999, MaxSelect: 7},
 			func() *core.Record {
-				record, _ := app.FindRecordById("demo1", "84nmscqy84lsi1t")
+				record, _ := app.FindRecordById("demo1", "0196afca-7951-7ba1-8cef-b59777e4d838")
 				record.Set("file_many+", []any{f1, f2})
 				return record
 			},
@@ -420,7 +420,7 @@ func TestFileFieldValidateValue(t *testing.T) {
 			"existing + new filename",
 			&core.FileField{Name: "file_many", MaxSize: 999, MaxSelect: 99},
 			func() *core.Record {
-				record, _ := app.FindRecordById("demo1", "84nmscqy84lsi1t")
+				record, _ := app.FindRecordById("demo1", "0196afca-7951-7ba1-8cef-b59777e4d838")
 				record.Set("file_many+", "test123.png")
 				return record
 			},
@@ -641,7 +641,7 @@ func TestFileFieldFindGetter(t *testing.T) {
 	}
 	f2.Name = "f2"
 
-	record, err := app.FindRecordById("demo3", "lcl9d87w22ml6jy")
+	record, err := app.FindRecordById("demo3", "0196afca-7951-7100-b4f8-93182f5a1f9d")
 	if err != nil {
 		t.Fatal(err)
 	}

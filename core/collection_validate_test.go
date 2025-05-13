@@ -200,7 +200,7 @@ func TestCollectionValidate(t *testing.T) {
 			name: "existing id",
 			collection: func(app core.App) (*core.Collection, error) {
 				c := core.NewBaseCollection("test")
-				c.Id = "_pb_users_auth_"
+				c.Id = "11111111-1111-1111-1111-111111111111"
 				return c, nil
 			},
 			expectedErrors: []string{"id"},
@@ -209,7 +209,7 @@ func TestCollectionValidate(t *testing.T) {
 			name: "changing id",
 			collection: func(app core.App) (*core.Collection, error) {
 				c, _ := app.FindCollectionByNameOrId("demo3")
-				c.Id = "anything"
+				c.Id = "12345678-1234-5678-1234-567812345678"
 				return c, nil
 			},
 			expectedErrors: []string{"id"},
@@ -218,7 +218,7 @@ func TestCollectionValidate(t *testing.T) {
 			name: "valid id",
 			collection: func(app core.App) (*core.Collection, error) {
 				c := core.NewBaseCollection("test")
-				c.Id = "anything"
+				c.Id = "12345678-1234-5678-1234-567812345678"
 				return c, nil
 			},
 			expectedErrors: []string{},
@@ -229,7 +229,7 @@ func TestCollectionValidate(t *testing.T) {
 			name: "empty name",
 			collection: func(app core.App) (*core.Collection, error) {
 				c := core.NewBaseCollection("")
-				c.Id = "test"
+				c.Id = "12345678-1234-5678-1234-567812345678"
 				return c, nil
 			},
 			expectedErrors: []string{"name"},

@@ -234,7 +234,7 @@ func TestRelationFieldValidateValue(t *testing.T) {
 			&core.RelationField{Name: "test", MaxSelect: 1, CollectionId: demo1.Id},
 			func() *core.Record {
 				record := core.NewRecord(core.NewBaseCollection("test_collection"))
-				record.SetRaw("test", "achvryl401bhse3")
+				record.SetRaw("test", "0196afca-7951-78f8-bbc8-59d5d917adff")
 				return record
 			},
 			true,
@@ -244,7 +244,7 @@ func TestRelationFieldValidateValue(t *testing.T) {
 			&core.RelationField{Name: "test", MaxSelect: 1, CollectionId: demo1.Id},
 			func() *core.Record {
 				record := core.NewRecord(core.NewBaseCollection("test_collection"))
-				record.SetRaw("test", "84nmscqy84lsi1t")
+				record.SetRaw("test", "0196afca-7951-7ba1-8cef-b59777e4d838")
 				return record
 			},
 			false,
@@ -254,7 +254,7 @@ func TestRelationFieldValidateValue(t *testing.T) {
 			&core.RelationField{Name: "test", MaxSelect: 1, CollectionId: demo1.Id},
 			func() *core.Record {
 				record := core.NewRecord(core.NewBaseCollection("test_collection"))
-				record.SetRaw("test", []string{"84nmscqy84lsi1t", "al1h9ijdeojtsjy"})
+				record.SetRaw("test", []string{"0196afca-7951-7ba1-8cef-b59777e4d838", "0196afca-7951-752e-972d-502c0843467d"})
 				return record
 			},
 			true,
@@ -286,7 +286,7 @@ func TestRelationFieldValidateValue(t *testing.T) {
 			&core.RelationField{Name: "test", MaxSelect: 2, CollectionId: demo1.Id},
 			func() *core.Record {
 				record := core.NewRecord(core.NewBaseCollection("test_collection"))
-				record.SetRaw("test", []string{"84nmscqy84lsi1t", "achvryl401bhse3"})
+				record.SetRaw("test", []string{"0196afca-7951-7ba1-8cef-b59777e4d838", "0196afca-7951-78f8-bbc8-59d5d917adff"})
 				return record
 			},
 			true,
@@ -296,7 +296,7 @@ func TestRelationFieldValidateValue(t *testing.T) {
 			&core.RelationField{Name: "test", MaxSelect: 2, CollectionId: demo1.Id},
 			func() *core.Record {
 				record := core.NewRecord(core.NewBaseCollection("test_collection"))
-				record.SetRaw("test", []string{"84nmscqy84lsi1t", "al1h9ijdeojtsjy"})
+				record.SetRaw("test", []string{"0196afca-7951-7ba1-8cef-b59777e4d838", "0196afca-7951-752e-972d-502c0843467d"})
 				return record
 			},
 			false,
@@ -306,7 +306,7 @@ func TestRelationFieldValidateValue(t *testing.T) {
 			&core.RelationField{Name: "test", MaxSelect: 2, CollectionId: demo1.Id},
 			func() *core.Record {
 				record := core.NewRecord(core.NewBaseCollection("test_collection"))
-				record.SetRaw("test", []string{"84nmscqy84lsi1t", "al1h9ijdeojtsjy", "imy661ixudk5izi"})
+				record.SetRaw("test", []string{"0196afca-7951-7ba1-8cef-b59777e4d838", "0196afca-7951-752e-972d-502c0843467d", "0196afca-7951-7a62-9100-f77edbf6f060"})
 				return record
 			},
 			true,
@@ -316,7 +316,7 @@ func TestRelationFieldValidateValue(t *testing.T) {
 			&core.RelationField{Name: "test", MinSelect: 2, MaxSelect: 99, CollectionId: demo1.Id},
 			func() *core.Record {
 				record := core.NewRecord(core.NewBaseCollection("test_collection"))
-				record.SetRaw("test", []string{"84nmscqy84lsi1t"})
+				record.SetRaw("test", []string{"0196afca-7951-7ba1-8cef-b59777e4d838"})
 				return record
 			},
 			true,
@@ -326,7 +326,7 @@ func TestRelationFieldValidateValue(t *testing.T) {
 			&core.RelationField{Name: "test", MinSelect: 2, MaxSelect: 99, CollectionId: demo1.Id},
 			func() *core.Record {
 				record := core.NewRecord(core.NewBaseCollection("test_collection"))
-				record.SetRaw("test", []string{"84nmscqy84lsi1t", "al1h9ijdeojtsjy", "imy661ixudk5izi"})
+				record.SetRaw("test", []string{"0196afca-7951-7ba1-8cef-b59777e4d838", "0196afca-7951-752e-972d-502c0843467d", "0196afca-7951-7a62-9100-f77edbf6f060"})
 				return record
 			},
 			false,
@@ -400,7 +400,7 @@ func TestRelationFieldValidateSettings(t *testing.T) {
 				return &core.RelationField{
 					Id:           "test",
 					Name:         "test",
-					CollectionId: "v9gwnfh02gjq1q0",
+					CollectionId: "0196afca-7951-70b0-b3e7-12d59fc269ee",
 				}
 			},
 			[]string{"collectionId"},
@@ -412,7 +412,7 @@ func TestRelationFieldValidateSettings(t *testing.T) {
 				return &core.RelationField{
 					Id:           "test",
 					Name:         "test",
-					CollectionId: "v9gwnfh02gjq1q0",
+					CollectionId: "0196afca-7951-70b0-b3e7-12d59fc269ee",
 				}
 			},
 			[]string{},

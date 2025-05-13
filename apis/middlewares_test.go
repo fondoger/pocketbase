@@ -63,7 +63,7 @@ func TestRequireGuestOnly(t *testing.T) {
 			Method: http.MethodGet,
 			URL:    "/my/test",
 			Headers: map[string]string{
-				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6IjRxMXhsY2xtZmxva3UzMyIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoiX3BiX3VzZXJzX2F1dGhfIiwiZXhwIjoyNTI0NjA0NDYxLCJyZWZyZXNoYWJsZSI6dHJ1ZX0.ZT3F0Z3iM-xbGgSG3LEKiEzHrPHr8t8IuHLZGGNuxLo",
+				"Authorization": tests.NewAuthTokenForTest("users", "test@example.com"),
 			},
 			BeforeTestFunc:  beforeTestFunc,
 			ExpectedStatus:  400,
@@ -75,7 +75,7 @@ func TestRequireGuestOnly(t *testing.T) {
 			Method: http.MethodGet,
 			URL:    "/my/test",
 			Headers: map[string]string{
-				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6InN5d2JoZWNuaDQ2cmhtMCIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoicGJjXzMxNDI2MzU4MjMiLCJleHAiOjI1MjQ2MDQ0NjEsInJlZnJlc2hhYmxlIjp0cnVlfQ.UXgO3j-0BumcugrFjbd7j0M4MQvbrLggLlcu_YNGjoY",
+				"Authorization": tests.NewAuthTokenForTest("_superusers", "test@example.com"),
 			},
 			BeforeTestFunc:  beforeTestFunc,
 			ExpectedStatus:  400,
@@ -87,7 +87,7 @@ func TestRequireGuestOnly(t *testing.T) {
 			Method: http.MethodGet,
 			URL:    "/my/test",
 			Headers: map[string]string{
-				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6IjRxMXhsY2xtZmxva3UzMyIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoiX3BiX3VzZXJzX2F1dGhfIiwiZXhwIjoxNjQwOTkxNjYxLCJyZWZyZXNoYWJsZSI6dHJ1ZX0.2D3tmqPn3vc5LoqqCz8V-iCDVXo9soYiH0d32G7FQT4",
+				"Authorization": tests.NewAuthTokenForTest("users", "test@example.com", tests.TokenExpired(true)),
 			},
 			BeforeTestFunc:  beforeTestFunc,
 			ExpectedStatus:  200,
@@ -132,7 +132,7 @@ func TestRequireAuth(t *testing.T) {
 			Method: http.MethodGet,
 			URL:    "/my/test",
 			Headers: map[string]string{
-				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6IjRxMXhsY2xtZmxva3UzMyIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoiX3BiX3VzZXJzX2F1dGhfIiwiZXhwIjoxNjQwOTkxNjYxLCJyZWZyZXNoYWJsZSI6dHJ1ZX0.2D3tmqPn3vc5LoqqCz8V-iCDVXo9soYiH0d32G7FQT4",
+				"Authorization": tests.NewAuthTokenForTest("users", "test@example.com", tests.TokenExpired(true)),
 			},
 			BeforeTestFunc: func(t testing.TB, app *tests.TestApp, e *core.ServeEvent) {
 				e.Router.GET("/my/test", func(e *core.RequestEvent) error {
@@ -148,7 +148,7 @@ func TestRequireAuth(t *testing.T) {
 			Method: http.MethodGet,
 			URL:    "/my/test",
 			Headers: map[string]string{
-				"Authorization": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6InN5d2JoZWNuaDQ2cmhtMCIsImV4cCI6MjUyNDYwNDQ2MSwidHlwZSI6ImZpbGUiLCJjb2xsZWN0aW9uSWQiOiJwYmNfMzE0MjYzNTgyMyJ9.Lupz541xRvrktwkrl55p5pPCF77T69ZRsohsIcb2dxc",
+				"Authorization": tests.NewAuthTokenForTest("users", "test@example.com", tests.TokenInvalid(true)),
 			},
 			BeforeTestFunc: func(t testing.TB, app *tests.TestApp, e *core.ServeEvent) {
 				e.Router.GET("/my/test", func(e *core.RequestEvent) error {
@@ -165,7 +165,7 @@ func TestRequireAuth(t *testing.T) {
 			URL:    "/my/test",
 			Headers: map[string]string{
 				// regular user
-				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6IjRxMXhsY2xtZmxva3UzMyIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoiX3BiX3VzZXJzX2F1dGhfIiwiZXhwIjoyNTI0NjA0NDYxLCJyZWZyZXNoYWJsZSI6dHJ1ZX0.ZT3F0Z3iM-xbGgSG3LEKiEzHrPHr8t8IuHLZGGNuxLo",
+				"Authorization": tests.NewAuthTokenForTest("users", "test@example.com"),
 			},
 			BeforeTestFunc: func(t testing.TB, app *tests.TestApp, e *core.ServeEvent) {
 				e.Router.GET("/my/test", func(e *core.RequestEvent) error {
@@ -181,7 +181,7 @@ func TestRequireAuth(t *testing.T) {
 			URL:    "/my/test",
 			Headers: map[string]string{
 				// regular user
-				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6IjRxMXhsY2xtZmxva3UzMyIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoiX3BiX3VzZXJzX2F1dGhfIiwiZXhwIjoyNTI0NjA0NDYxLCJyZWZyZXNoYWJsZSI6ZmFsc2V9.4IsO6YMsR19crhwl_YWzvRH8pfq2Ri4Gv2dzGyneLak",
+				"Authorization": tests.NewAuthTokenForTest("users", "test@example.com", tests.TokenRefreshable(false)),
 			},
 			BeforeTestFunc: func(t testing.TB, app *tests.TestApp, e *core.ServeEvent) {
 				e.Router.GET("/my/test", func(e *core.RequestEvent) error {
@@ -197,7 +197,7 @@ func TestRequireAuth(t *testing.T) {
 			URL:    "/my/test",
 			Headers: map[string]string{
 				// superuser
-				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6InN5d2JoZWNuaDQ2cmhtMCIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoicGJjXzMxNDI2MzU4MjMiLCJleHAiOjI1MjQ2MDQ0NjEsInJlZnJlc2hhYmxlIjp0cnVlfQ.UXgO3j-0BumcugrFjbd7j0M4MQvbrLggLlcu_YNGjoY",
+				"Authorization": tests.NewAuthTokenForTest("_superusers", "test@example.com"),
 			},
 			BeforeTestFunc: func(t testing.TB, app *tests.TestApp, e *core.ServeEvent) {
 				e.Router.GET("/my/test", func(e *core.RequestEvent) error {
@@ -214,7 +214,7 @@ func TestRequireAuth(t *testing.T) {
 			URL:    "/my/test",
 			Headers: map[string]string{
 				// superuser
-				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6InN5d2JoZWNuaDQ2cmhtMCIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoicGJjXzMxNDI2MzU4MjMiLCJleHAiOjI1MjQ2MDQ0NjEsInJlZnJlc2hhYmxlIjp0cnVlfQ.UXgO3j-0BumcugrFjbd7j0M4MQvbrLggLlcu_YNGjoY",
+				"Authorization": tests.NewAuthTokenForTest("_superusers", "test@example.com"),
 			},
 			BeforeTestFunc: func(t testing.TB, app *tests.TestApp, e *core.ServeEvent) {
 				e.Router.GET("/my/test", func(e *core.RequestEvent) error {
@@ -253,7 +253,7 @@ func TestRequireSuperuserAuth(t *testing.T) {
 			Method: http.MethodGet,
 			URL:    "/my/test",
 			Headers: map[string]string{
-				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6InN5d2JoZWNuaDQ2cmhtMCIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoicGJjXzMxNDI2MzU4MjMiLCJleHAiOjE2NDA5OTE2NjEsInJlZnJlc2hhYmxlIjp0cnVlfQ.0pDcBPGDpL2Khh76ivlRi7ugiLBSYvasct3qpHV3rfs",
+				"Authorization": tests.NewAuthTokenForTest("_superusers", "test@example.com", tests.TokenExpired(true)),
 			},
 			BeforeTestFunc: func(t testing.TB, app *tests.TestApp, e *core.ServeEvent) {
 				e.Router.GET("/my/test", func(e *core.RequestEvent) error {
@@ -269,7 +269,7 @@ func TestRequireSuperuserAuth(t *testing.T) {
 			Method: http.MethodGet,
 			URL:    "/my/test",
 			Headers: map[string]string{
-				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6IjRxMXhsY2xtZmxva3UzMyIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoiX3BiX3VzZXJzX2F1dGhfIiwiZXhwIjoyNTI0NjA0NDYxLCJyZWZyZXNoYWJsZSI6dHJ1ZX0.ZT3F0Z3iM-xbGgSG3LEKiEzHrPHr8t8IuHLZGGNuxLo",
+				"Authorization": tests.NewAuthTokenForTest("users", "test@example.com"),
 			},
 			BeforeTestFunc: func(t testing.TB, app *tests.TestApp, e *core.ServeEvent) {
 				e.Router.GET("/my/test", func(e *core.RequestEvent) error {
@@ -285,7 +285,7 @@ func TestRequireSuperuserAuth(t *testing.T) {
 			Method: http.MethodGet,
 			URL:    "/my/test",
 			Headers: map[string]string{
-				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6InN5d2JoZWNuaDQ2cmhtMCIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoicGJjXzMxNDI2MzU4MjMiLCJleHAiOjI1MjQ2MDQ0NjEsInJlZnJlc2hhYmxlIjp0cnVlfQ.UXgO3j-0BumcugrFjbd7j0M4MQvbrLggLlcu_YNGjoY",
+				"Authorization": tests.NewAuthTokenForTest("_superusers", "test@example.com"),
 			},
 			BeforeTestFunc: func(t testing.TB, app *tests.TestApp, e *core.ServeEvent) {
 				e.Router.GET("/my/test", func(e *core.RequestEvent) error {
@@ -309,7 +309,7 @@ func TestRequireSuperuserOrOwnerAuth(t *testing.T) {
 		{
 			Name:   "guest",
 			Method: http.MethodGet,
-			URL:    "/my/test/4q1xlclmfloku33",
+			URL:    "/my/test/0196afca-7951-76f3-b344-ae38a366ade2",
 			BeforeTestFunc: func(t testing.TB, app *tests.TestApp, e *core.ServeEvent) {
 				e.Router.GET("/my/test/{id}", func(e *core.RequestEvent) error {
 					return e.String(200, "test123")
@@ -322,9 +322,9 @@ func TestRequireSuperuserOrOwnerAuth(t *testing.T) {
 		{
 			Name:   "expired/invalid token",
 			Method: http.MethodGet,
-			URL:    "/my/test/4q1xlclmfloku33",
+			URL:    "/my/test/0196afca-7951-76f3-b344-ae38a366ade2",
 			Headers: map[string]string{
-				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6InN5d2JoZWNuaDQ2cmhtMCIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoicGJjXzMxNDI2MzU4MjMiLCJleHAiOjE2NDA5OTE2NjEsInJlZnJlc2hhYmxlIjp0cnVlfQ.0pDcBPGDpL2Khh76ivlRi7ugiLBSYvasct3qpHV3rfs",
+				"Authorization": tests.NewAuthTokenForTest("_superusers", "test@example.com", tests.TokenExpired(true)),
 			},
 			BeforeTestFunc: func(t testing.TB, app *tests.TestApp, e *core.ServeEvent) {
 				e.Router.GET("/my/test/{id}", func(e *core.RequestEvent) error {
@@ -338,9 +338,9 @@ func TestRequireSuperuserOrOwnerAuth(t *testing.T) {
 		{
 			Name:   "valid record auth token (different user)",
 			Method: http.MethodGet,
-			URL:    "/my/test/oap640cot4yru2s",
+			URL:    "/my/test/0196afca-7951-77d1-ba15-923db9b774b2",
 			Headers: map[string]string{
-				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6IjRxMXhsY2xtZmxva3UzMyIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoiX3BiX3VzZXJzX2F1dGhfIiwiZXhwIjoyNTI0NjA0NDYxLCJyZWZyZXNoYWJsZSI6dHJ1ZX0.ZT3F0Z3iM-xbGgSG3LEKiEzHrPHr8t8IuHLZGGNuxLo",
+				"Authorization": tests.NewAuthTokenForTest("users", "test@example.com"),
 			},
 			BeforeTestFunc: func(t testing.TB, app *tests.TestApp, e *core.ServeEvent) {
 				e.Router.GET("/my/test/{id}", func(e *core.RequestEvent) error {
@@ -354,9 +354,9 @@ func TestRequireSuperuserOrOwnerAuth(t *testing.T) {
 		{
 			Name:   "valid record auth token (owner)",
 			Method: http.MethodGet,
-			URL:    "/my/test/4q1xlclmfloku33",
+			URL:    "/my/test/0196afca-7951-76f3-b344-ae38a366ade2",
 			Headers: map[string]string{
-				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6IjRxMXhsY2xtZmxva3UzMyIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoiX3BiX3VzZXJzX2F1dGhfIiwiZXhwIjoyNTI0NjA0NDYxLCJyZWZyZXNoYWJsZSI6dHJ1ZX0.ZT3F0Z3iM-xbGgSG3LEKiEzHrPHr8t8IuHLZGGNuxLo",
+				"Authorization": tests.NewAuthTokenForTest("users", "test@example.com"),
 			},
 			BeforeTestFunc: func(t testing.TB, app *tests.TestApp, e *core.ServeEvent) {
 				e.Router.GET("/my/test/{id}", func(e *core.RequestEvent) error {
@@ -369,9 +369,9 @@ func TestRequireSuperuserOrOwnerAuth(t *testing.T) {
 		{
 			Name:   "valid record auth token (owner + non-matching custom owner param)",
 			Method: http.MethodGet,
-			URL:    "/my/test/4q1xlclmfloku33",
+			URL:    "/my/test/0196afca-7951-76f3-b344-ae38a366ade2",
 			Headers: map[string]string{
-				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6IjRxMXhsY2xtZmxva3UzMyIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoiX3BiX3VzZXJzX2F1dGhfIiwiZXhwIjoyNTI0NjA0NDYxLCJyZWZyZXNoYWJsZSI6dHJ1ZX0.ZT3F0Z3iM-xbGgSG3LEKiEzHrPHr8t8IuHLZGGNuxLo",
+				"Authorization": tests.NewAuthTokenForTest("users", "test@example.com"),
 			},
 			BeforeTestFunc: func(t testing.TB, app *tests.TestApp, e *core.ServeEvent) {
 				e.Router.GET("/my/test/{id}", func(e *core.RequestEvent) error {
@@ -385,9 +385,9 @@ func TestRequireSuperuserOrOwnerAuth(t *testing.T) {
 		{
 			Name:   "valid record auth token (owner + matching custom owner param)",
 			Method: http.MethodGet,
-			URL:    "/my/test/4q1xlclmfloku33",
+			URL:    "/my/test/0196afca-7951-76f3-b344-ae38a366ade2",
 			Headers: map[string]string{
-				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6IjRxMXhsY2xtZmxva3UzMyIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoiX3BiX3VzZXJzX2F1dGhfIiwiZXhwIjoyNTI0NjA0NDYxLCJyZWZyZXNoYWJsZSI6dHJ1ZX0.ZT3F0Z3iM-xbGgSG3LEKiEzHrPHr8t8IuHLZGGNuxLo",
+				"Authorization": tests.NewAuthTokenForTest("users", "test@example.com"),
 			},
 			BeforeTestFunc: func(t testing.TB, app *tests.TestApp, e *core.ServeEvent) {
 				e.Router.GET("/my/test/{test}", func(e *core.RequestEvent) error {
@@ -400,9 +400,9 @@ func TestRequireSuperuserOrOwnerAuth(t *testing.T) {
 		{
 			Name:   "valid superuser auth token",
 			Method: http.MethodGet,
-			URL:    "/my/test/4q1xlclmfloku33",
+			URL:    "/my/test/0196afca-7951-76f3-b344-ae38a366ade2",
 			Headers: map[string]string{
-				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6InN5d2JoZWNuaDQ2cmhtMCIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoicGJjXzMxNDI2MzU4MjMiLCJleHAiOjI1MjQ2MDQ0NjEsInJlZnJlc2hhYmxlIjp0cnVlfQ.UXgO3j-0BumcugrFjbd7j0M4MQvbrLggLlcu_YNGjoY",
+				"Authorization": tests.NewAuthTokenForTest("_superusers", "test@example.com"),
 			},
 			BeforeTestFunc: func(t testing.TB, app *tests.TestApp, e *core.ServeEvent) {
 				e.Router.GET("/my/test/{id}", func(e *core.RequestEvent) error {
@@ -426,7 +426,7 @@ func TestRequireSameCollectionContextAuth(t *testing.T) {
 		{
 			Name:   "guest",
 			Method: http.MethodGet,
-			URL:    "/my/test/_pb_users_auth_",
+			URL:    "/my/test/11111111-1111-1111-1111-111111111111",
 			BeforeTestFunc: func(t testing.TB, app *tests.TestApp, e *core.ServeEvent) {
 				e.Router.GET("/my/test/{collection}", func(e *core.RequestEvent) error {
 					return e.String(200, "test123")
@@ -439,9 +439,9 @@ func TestRequireSameCollectionContextAuth(t *testing.T) {
 		{
 			Name:   "expired/invalid token",
 			Method: http.MethodGet,
-			URL:    "/my/test/_pb_users_auth_",
+			URL:    "/my/test/11111111-1111-1111-1111-111111111111",
 			Headers: map[string]string{
-				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6IjRxMXhsY2xtZmxva3UzMyIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoiX3BiX3VzZXJzX2F1dGhfIiwiZXhwIjoxNjQwOTkxNjYxLCJyZWZyZXNoYWJsZSI6dHJ1ZX0.2D3tmqPn3vc5LoqqCz8V-iCDVXo9soYiH0d32G7FQT4",
+				"Authorization": tests.NewAuthTokenForTest("users", "test@example.com", tests.TokenExpired(true)),
 			},
 			BeforeTestFunc: func(t testing.TB, app *tests.TestApp, e *core.ServeEvent) {
 				e.Router.GET("/my/test/{collection}", func(e *core.RequestEvent) error {
@@ -457,7 +457,7 @@ func TestRequireSameCollectionContextAuth(t *testing.T) {
 			Method: http.MethodGet,
 			URL:    "/my/test/clients",
 			Headers: map[string]string{
-				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6IjRxMXhsY2xtZmxva3UzMyIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoiX3BiX3VzZXJzX2F1dGhfIiwiZXhwIjoyNTI0NjA0NDYxLCJyZWZyZXNoYWJsZSI6dHJ1ZX0.ZT3F0Z3iM-xbGgSG3LEKiEzHrPHr8t8IuHLZGGNuxLo",
+				"Authorization": tests.NewAuthTokenForTest("users", "test@example.com"),
 			},
 			BeforeTestFunc: func(t testing.TB, app *tests.TestApp, e *core.ServeEvent) {
 				e.Router.GET("/my/test/{collection}", func(e *core.RequestEvent) error {
@@ -471,9 +471,9 @@ func TestRequireSameCollectionContextAuth(t *testing.T) {
 		{
 			Name:   "valid record auth token (same collection)",
 			Method: http.MethodGet,
-			URL:    "/my/test/_pb_users_auth_",
+			URL:    "/my/test/11111111-1111-1111-1111-111111111111",
 			Headers: map[string]string{
-				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6IjRxMXhsY2xtZmxva3UzMyIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoiX3BiX3VzZXJzX2F1dGhfIiwiZXhwIjoyNTI0NjA0NDYxLCJyZWZyZXNoYWJsZSI6dHJ1ZX0.ZT3F0Z3iM-xbGgSG3LEKiEzHrPHr8t8IuHLZGGNuxLo",
+				"Authorization": tests.NewAuthTokenForTest("users", "test@example.com"),
 			},
 			BeforeTestFunc: func(t testing.TB, app *tests.TestApp, e *core.ServeEvent) {
 				e.Router.GET("/my/test/{collection}", func(e *core.RequestEvent) error {
@@ -486,9 +486,9 @@ func TestRequireSameCollectionContextAuth(t *testing.T) {
 		{
 			Name:   "valid record auth token (non-matching/missing collection param)",
 			Method: http.MethodGet,
-			URL:    "/my/test/_pb_users_auth_",
+			URL:    "/my/test/11111111-1111-1111-1111-111111111111",
 			Headers: map[string]string{
-				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6IjRxMXhsY2xtZmxva3UzMyIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoiX3BiX3VzZXJzX2F1dGhfIiwiZXhwIjoyNTI0NjA0NDYxLCJyZWZyZXNoYWJsZSI6dHJ1ZX0.ZT3F0Z3iM-xbGgSG3LEKiEzHrPHr8t8IuHLZGGNuxLo",
+				"Authorization": tests.NewAuthTokenForTest("users", "test@example.com"),
 			},
 			BeforeTestFunc: func(t testing.TB, app *tests.TestApp, e *core.ServeEvent) {
 				e.Router.GET("/my/test/{id}", func(e *core.RequestEvent) error {
@@ -502,9 +502,9 @@ func TestRequireSameCollectionContextAuth(t *testing.T) {
 		{
 			Name:   "valid record auth token (matching custom collection param)",
 			Method: http.MethodGet,
-			URL:    "/my/test/_pb_users_auth_",
+			URL:    "/my/test/11111111-1111-1111-1111-111111111111",
 			Headers: map[string]string{
-				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6IjRxMXhsY2xtZmxva3UzMyIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoiX3BiX3VzZXJzX2F1dGhfIiwiZXhwIjoyNTI0NjA0NDYxLCJyZWZyZXNoYWJsZSI6dHJ1ZX0.ZT3F0Z3iM-xbGgSG3LEKiEzHrPHr8t8IuHLZGGNuxLo",
+				"Authorization": tests.NewAuthTokenForTest("users", "test@example.com"),
 			},
 			BeforeTestFunc: func(t testing.TB, app *tests.TestApp, e *core.ServeEvent) {
 				e.Router.GET("/my/test/{test}", func(e *core.RequestEvent) error {
@@ -518,9 +518,9 @@ func TestRequireSameCollectionContextAuth(t *testing.T) {
 		{
 			Name:   "superuser no exception check",
 			Method: http.MethodGet,
-			URL:    "/my/test/_pb_users_auth_",
+			URL:    "/my/test/11111111-1111-1111-1111-111111111111",
 			Headers: map[string]string{
-				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6InN5d2JoZWNuaDQ2cmhtMCIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoicGJjXzMxNDI2MzU4MjMiLCJleHAiOjI1MjQ2MDQ0NjEsInJlZnJlc2hhYmxlIjp0cnVlfQ.UXgO3j-0BumcugrFjbd7j0M4MQvbrLggLlcu_YNGjoY",
+				"Authorization": tests.NewAuthTokenForTest("_superusers", "test@example.com"),
 			},
 			BeforeTestFunc: func(t testing.TB, app *tests.TestApp, e *core.ServeEvent) {
 				e.Router.GET("/my/test/{collection}", func(e *core.RequestEvent) error {

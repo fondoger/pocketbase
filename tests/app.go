@@ -93,7 +93,7 @@ func NewTestApp(optTestDataDir ...string) (*TestApp, error) {
 		DataDir:       testDataDir,
 		EncryptionEnv: "pb_test_env",
 		PostgresURL:   "postgres://user:pass@127.0.0.1:5432/postgres?sslmode=disable",
-		IsDev:         true,
+		IsDev:         true, // Enable dev mode to see the SQL queries in the logs
 	})
 }
 

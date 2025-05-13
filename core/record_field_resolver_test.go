@@ -92,7 +92,7 @@ func TestRecordFieldResolverUpdateQuery(t *testing.T) {
 	app, _ := tests.NewTestApp()
 	defer app.Cleanup()
 
-	authRecord, err := app.FindRecordById("users", "4q1xlclmfloku33")
+	authRecord, err := app.FindRecordById("users", "0196afca-7951-76f3-b344-ae38a366ade2")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -754,7 +754,7 @@ func TestRecordFieldResolverResolveCollectionFields(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	authRecord, err := app.FindRecordById("users", "4q1xlclmfloku33")
+	authRecord, err := app.FindRecordById("users", "0196afca-7951-76f3-b344-ae38a366ade2")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -870,7 +870,7 @@ func TestRecordFieldResolverResolveStaticRequestInfoFields(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	authRecord, err := app.FindRecordById("users", "4q1xlclmfloku33")
+	authRecord, err := app.FindRecordById("users", "0196afca-7951-76f3-b344-ae38a366ade2")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -924,7 +924,7 @@ func TestRecordFieldResolverResolveStaticRequestInfoFields(t *testing.T) {
 		{"@request.body.b.missing", false, ``},
 		{"@request.body.c", false, `"{\"sub\":1}"`},
 		{"@request.auth", true, ""},
-		{"@request.auth.id", false, `"4q1xlclmfloku33"`},
+		{"@request.auth.id", false, `"0196afca-7951-76f3-b344-ae38a366ade2"`},
 		{"@request.auth.collectionId", false, `"` + authRecord.Collection().Id + `"`},
 		{"@request.auth.collectionName", false, `"` + authRecord.Collection().Name + `"`},
 		{"@request.auth.verified", false, `false`},

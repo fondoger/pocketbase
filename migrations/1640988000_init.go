@@ -54,7 +54,7 @@ func init() {
 		*/
 		_, execerr := txApp.DB().NewQuery(`
 			CREATE TABLE {{_collections}} (
-				[[id]]         TEXT PRIMARY KEY DEFAULT ('r'||lower(hex(randomblob(7)))) NOT NULL,
+				[[id]]         UUID PRIMARY KEY DEFAULT uuid_generate_v7() NOT NULL,
 				[[system]]     BOOLEAN DEFAULT FALSE NOT NULL,
 				[[type]]       TEXT DEFAULT 'base' NOT NULL,
 				[[name]]       TEXT UNIQUE NOT NULL,
@@ -133,6 +133,7 @@ func createParamsTable(txApp core.App) error {
 	`).Execute()
 	*/
 	// PostgreSQL:
+	// Note: we use TEXT instead of UUID for id column because the id can have meaningful values such as "settings".
 	_, execErr := txApp.DB().NewQuery(`
 		CREATE TABLE {{_params}} (
 			[[id]]      TEXT PRIMARY KEY DEFAULT ('r'||lower(hex(randomblob(7)))) NOT NULL,
@@ -341,7 +342,7 @@ func createSuperusersCollection(txApp core.App) error {
 }
 
 func createUsersCollection(txApp core.App) error {
-	users := core.NewAuthCollection("users", "_pb_users_auth_")
+	users := core.NewAuthCollection("users", "11111111-1111-1111-1111-111111111111")
 
 	ownerRule := "id = @request.auth.id"
 	users.ListRule = types.Pointer(ownerRule)

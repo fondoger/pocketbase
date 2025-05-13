@@ -11,6 +11,7 @@ import (
 
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/tools/list"
+	"github.com/pocketbase/pocketbase/tools/security"
 )
 
 const StoreKeyCachedCollections = "pbAppCachedCollections"
@@ -62,6 +63,7 @@ func (app *BaseApp) ReloadCachedCollections() error {
 func (app *BaseApp) FindCollectionByNameOrId(nameOrId string) (*Collection, error) {
 	m := &Collection{}
 
+	/* SQLite:
 	err := app.CollectionQuery().
 		AndWhere(dbx.NewExp("[[id]]={:id} OR LOWER([[name]])={:name}", dbx.Params{
 			"id":   nameOrId,
@@ -69,6 +71,20 @@ func (app *BaseApp) FindCollectionByNameOrId(nameOrId string) (*Collection, erro
 		})).
 		Limit(1).
 		One(m)
+	*/
+	// PostgreSQL:
+	var err error
+	if security.UUIDValidator.Validate(nameOrId) == nil {
+		err = app.CollectionQuery().
+			AndWhere(dbx.NewExp("[[id]]={:id}", dbx.Params{"id": nameOrId})).
+			Limit(1).
+			One(m)
+	} else {
+		err = app.CollectionQuery().
+			AndWhere(dbx.NewExp("LOWER([[name]])={:name}", dbx.Params{"name": strings.ToLower(nameOrId)})).
+			Limit(1).
+			One(m)
+	}
 	if err != nil {
 		return nil, err
 	}

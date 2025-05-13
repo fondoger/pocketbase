@@ -15,7 +15,7 @@ func TestFindAllExternalAuthsByRecord(t *testing.T) {
 	app, _ := tests.NewTestApp()
 	defer app.Cleanup()
 
-	demo1, err := app.FindRecordById("demo1", "84nmscqy84lsi1t")
+	demo1, err := app.FindRecordById("demo1", "0196afca-7951-7ba1-8cef-b59777e4d838")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -51,10 +51,10 @@ func TestFindAllExternalAuthsByRecord(t *testing.T) {
 	}{
 		{demo1, nil},
 		{superuser1, nil},
-		{client1, []string{"f1z5b3843pzc964"}},
-		{user1, []string{"clmflokuq1xl341", "dlmflokuq1xl342"}},
+		{client1, []string{"0196afca-7951-7d5f-bc27-ab60c8e0aee6"}},
+		{user1, []string{"0196afca-7951-7a1a-bba8-2d395664edc0", "0196afca-7951-71e7-8791-b7490a47960e"}},
 		{user2, nil},
-		{user3, []string{"5eto7nmys833164"}},
+		{user3, []string{"0196afca-7951-773e-8865-3b6a99a2237b"}},
 	}
 
 	for _, s := range scenarios {
@@ -110,12 +110,12 @@ func TestFindAllExternalAuthsByCollection(t *testing.T) {
 		{demo1, nil},
 		{superusers, nil},
 		{clients, []string{
-			"f1z5b3843pzc964",
+			"0196afca-7951-7d5f-bc27-ab60c8e0aee6",
 		}},
 		{users, []string{
-			"5eto7nmys833164",
-			"clmflokuq1xl341",
-			"dlmflokuq1xl342",
+			"0196afca-7951-773e-8865-3b6a99a2237b",
+			"0196afca-7951-7a1a-bba8-2d395664edc0",
+			"0196afca-7951-71e7-8791-b7490a47960e",
 		}},
 	}
 
@@ -150,8 +150,8 @@ func TestFindFirstExternalAuthByExpr(t *testing.T) {
 		expectedId string
 	}{
 		{dbx.HashExp{"collectionRef": "invalid"}, ""},
-		{dbx.HashExp{"collectionRef": "_pb_users_auth_"}, "5eto7nmys833164"},
-		{dbx.HashExp{"collectionRef": "_pb_users_auth_", "provider": "gitlab"}, "dlmflokuq1xl342"},
+		{dbx.HashExp{"collectionRef": "11111111-1111-1111-1111-111111111111"}, "0196afca-7951-773e-8865-3b6a99a2237b"},
+		{dbx.HashExp{"collectionRef": "11111111-1111-1111-1111-111111111111", "provider": "gitlab"}, "0196afca-7951-71e7-8791-b7490a47960e"},
 	}
 
 	for i, s := range scenarios {

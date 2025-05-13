@@ -31,7 +31,7 @@ func TestSettingsList(t *testing.T) {
 			Method: http.MethodGet,
 			URL:    "/api/settings",
 			Headers: map[string]string{
-				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6IjRxMXhsY2xtZmxva3UzMyIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoiX3BiX3VzZXJzX2F1dGhfIiwiZXhwIjoyNTI0NjA0NDYxLCJyZWZyZXNoYWJsZSI6dHJ1ZX0.ZT3F0Z3iM-xbGgSG3LEKiEzHrPHr8t8IuHLZGGNuxLo",
+				"Authorization": tests.NewAuthTokenForTest("users", "test@example.com"),
 			},
 			ExpectedStatus:  403,
 			ExpectedContent: []string{`"data":{}`},
@@ -42,7 +42,7 @@ func TestSettingsList(t *testing.T) {
 			Method: http.MethodGet,
 			URL:    "/api/settings",
 			Headers: map[string]string{
-				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6InN5d2JoZWNuaDQ2cmhtMCIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoicGJjXzMxNDI2MzU4MjMiLCJleHAiOjI1MjQ2MDQ0NjEsInJlZnJlc2hhYmxlIjp0cnVlfQ.UXgO3j-0BumcugrFjbd7j0M4MQvbrLggLlcu_YNGjoY",
+				"Authorization": tests.NewAuthTokenForTest("_superusers", "test@example.com"),
 			},
 			ExpectedStatus: 200,
 			ExpectedContent: []string{
@@ -90,7 +90,7 @@ func TestSettingsSet(t *testing.T) {
 			URL:    "/api/settings",
 			Body:   strings.NewReader(validData),
 			Headers: map[string]string{
-				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6IjRxMXhsY2xtZmxva3UzMyIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoiX3BiX3VzZXJzX2F1dGhfIiwiZXhwIjoyNTI0NjA0NDYxLCJyZWZyZXNoYWJsZSI6dHJ1ZX0.ZT3F0Z3iM-xbGgSG3LEKiEzHrPHr8t8IuHLZGGNuxLo",
+				"Authorization": tests.NewAuthTokenForTest("users", "test@example.com"),
 			},
 			ExpectedStatus:  403,
 			ExpectedContent: []string{`"data":{}`},
@@ -102,7 +102,7 @@ func TestSettingsSet(t *testing.T) {
 			URL:    "/api/settings",
 			Body:   strings.NewReader(``),
 			Headers: map[string]string{
-				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6InN5d2JoZWNuaDQ2cmhtMCIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoicGJjXzMxNDI2MzU4MjMiLCJleHAiOjI1MjQ2MDQ0NjEsInJlZnJlc2hhYmxlIjp0cnVlfQ.UXgO3j-0BumcugrFjbd7j0M4MQvbrLggLlcu_YNGjoY",
+				"Authorization": tests.NewAuthTokenForTest("_superusers", "test@example.com"),
 			},
 			ExpectedStatus: 200,
 			ExpectedContent: []string{
@@ -129,7 +129,7 @@ func TestSettingsSet(t *testing.T) {
 			URL:    "/api/settings",
 			Body:   strings.NewReader(`{"meta":{"appName":""}}`),
 			Headers: map[string]string{
-				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6InN5d2JoZWNuaDQ2cmhtMCIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoicGJjXzMxNDI2MzU4MjMiLCJleHAiOjI1MjQ2MDQ0NjEsInJlZnJlc2hhYmxlIjp0cnVlfQ.UXgO3j-0BumcugrFjbd7j0M4MQvbrLggLlcu_YNGjoY",
+				"Authorization": tests.NewAuthTokenForTest("_superusers", "test@example.com"),
 			},
 			ExpectedStatus: 400,
 			ExpectedContent: []string{
@@ -150,7 +150,7 @@ func TestSettingsSet(t *testing.T) {
 			URL:    "/api/settings",
 			Body:   strings.NewReader(validData),
 			Headers: map[string]string{
-				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6InN5d2JoZWNuaDQ2cmhtMCIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoicGJjXzMxNDI2MzU4MjMiLCJleHAiOjI1MjQ2MDQ0NjEsInJlZnJlc2hhYmxlIjp0cnVlfQ.UXgO3j-0BumcugrFjbd7j0M4MQvbrLggLlcu_YNGjoY",
+				"Authorization": tests.NewAuthTokenForTest("_superusers", "test@example.com"),
 			},
 			ExpectedStatus: 200,
 			ExpectedContent: []string{
@@ -200,7 +200,7 @@ func TestSettingsTestS3(t *testing.T) {
 			Method: http.MethodPost,
 			URL:    "/api/settings/test/s3",
 			Headers: map[string]string{
-				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6IjRxMXhsY2xtZmxva3UzMyIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoiX3BiX3VzZXJzX2F1dGhfIiwiZXhwIjoyNTI0NjA0NDYxLCJyZWZyZXNoYWJsZSI6dHJ1ZX0.ZT3F0Z3iM-xbGgSG3LEKiEzHrPHr8t8IuHLZGGNuxLo",
+				"Authorization": tests.NewAuthTokenForTest("users", "test@example.com"),
 			},
 			ExpectedStatus:  403,
 			ExpectedContent: []string{`"data":{}`},
@@ -211,7 +211,7 @@ func TestSettingsTestS3(t *testing.T) {
 			Method: http.MethodPost,
 			URL:    "/api/settings/test/s3",
 			Headers: map[string]string{
-				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6InN5d2JoZWNuaDQ2cmhtMCIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoicGJjXzMxNDI2MzU4MjMiLCJleHAiOjI1MjQ2MDQ0NjEsInJlZnJlc2hhYmxlIjp0cnVlfQ.UXgO3j-0BumcugrFjbd7j0M4MQvbrLggLlcu_YNGjoY",
+				"Authorization": tests.NewAuthTokenForTest("_superusers", "test@example.com"),
 			},
 			ExpectedStatus: 400,
 			ExpectedContent: []string{
@@ -226,7 +226,7 @@ func TestSettingsTestS3(t *testing.T) {
 			URL:    "/api/settings/test/s3",
 			Body:   strings.NewReader(`{"filesystem":"invalid"}`),
 			Headers: map[string]string{
-				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6InN5d2JoZWNuaDQ2cmhtMCIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoicGJjXzMxNDI2MzU4MjMiLCJleHAiOjI1MjQ2MDQ0NjEsInJlZnJlc2hhYmxlIjp0cnVlfQ.UXgO3j-0BumcugrFjbd7j0M4MQvbrLggLlcu_YNGjoY",
+				"Authorization": tests.NewAuthTokenForTest("_superusers", "test@example.com"),
 			},
 			ExpectedStatus: 400,
 			ExpectedContent: []string{
@@ -241,7 +241,7 @@ func TestSettingsTestS3(t *testing.T) {
 			URL:    "/api/settings/test/s3",
 			Body:   strings.NewReader(`{"filesystem":"storage"}`),
 			Headers: map[string]string{
-				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6InN5d2JoZWNuaDQ2cmhtMCIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoicGJjXzMxNDI2MzU4MjMiLCJleHAiOjI1MjQ2MDQ0NjEsInJlZnJlc2hhYmxlIjp0cnVlfQ.UXgO3j-0BumcugrFjbd7j0M4MQvbrLggLlcu_YNGjoY",
+				"Authorization": tests.NewAuthTokenForTest("_superusers", "test@example.com"),
 			},
 			ExpectedStatus: 400,
 			ExpectedContent: []string{
@@ -281,7 +281,7 @@ func TestSettingsTestEmail(t *testing.T) {
 				"email": "test@example.com"
 			}`),
 			Headers: map[string]string{
-				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6IjRxMXhsY2xtZmxva3UzMyIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoiX3BiX3VzZXJzX2F1dGhfIiwiZXhwIjoyNTI0NjA0NDYxLCJyZWZyZXNoYWJsZSI6dHJ1ZX0.ZT3F0Z3iM-xbGgSG3LEKiEzHrPHr8t8IuHLZGGNuxLo",
+				"Authorization": tests.NewAuthTokenForTest("users", "test@example.com"),
 			},
 			ExpectedStatus:  403,
 			ExpectedContent: []string{`"data":{}`},
@@ -293,7 +293,7 @@ func TestSettingsTestEmail(t *testing.T) {
 			URL:    "/api/settings/test/email",
 			Body:   strings.NewReader(`{`),
 			Headers: map[string]string{
-				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6InN5d2JoZWNuaDQ2cmhtMCIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoicGJjXzMxNDI2MzU4MjMiLCJleHAiOjI1MjQ2MDQ0NjEsInJlZnJlc2hhYmxlIjp0cnVlfQ.UXgO3j-0BumcugrFjbd7j0M4MQvbrLggLlcu_YNGjoY",
+				"Authorization": tests.NewAuthTokenForTest("_superusers", "test@example.com"),
 			},
 			ExpectedStatus:  400,
 			ExpectedContent: []string{`"data":{}`},
@@ -305,7 +305,7 @@ func TestSettingsTestEmail(t *testing.T) {
 			URL:    "/api/settings/test/email",
 			Body:   strings.NewReader(`{}`),
 			Headers: map[string]string{
-				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6InN5d2JoZWNuaDQ2cmhtMCIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoicGJjXzMxNDI2MzU4MjMiLCJleHAiOjI1MjQ2MDQ0NjEsInJlZnJlc2hhYmxlIjp0cnVlfQ.UXgO3j-0BumcugrFjbd7j0M4MQvbrLggLlcu_YNGjoY",
+				"Authorization": tests.NewAuthTokenForTest("_superusers", "test@example.com"),
 			},
 			ExpectedStatus: 400,
 			ExpectedContent: []string{
@@ -323,7 +323,7 @@ func TestSettingsTestEmail(t *testing.T) {
 				"email": "test@example.com"
 			}`),
 			Headers: map[string]string{
-				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6InN5d2JoZWNuaDQ2cmhtMCIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoicGJjXzMxNDI2MzU4MjMiLCJleHAiOjI1MjQ2MDQ0NjEsInJlZnJlc2hhYmxlIjp0cnVlfQ.UXgO3j-0BumcugrFjbd7j0M4MQvbrLggLlcu_YNGjoY",
+				"Authorization": tests.NewAuthTokenForTest("_superusers", "test@example.com"),
 			},
 			AfterTestFunc: func(t testing.TB, app *tests.TestApp, res *http.Response) {
 				if app.TestMailer.TotalSend() != 1 {
@@ -359,7 +359,7 @@ func TestSettingsTestEmail(t *testing.T) {
 				"email": "test@example.com"
 			}`),
 			Headers: map[string]string{
-				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6InN5d2JoZWNuaDQ2cmhtMCIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoicGJjXzMxNDI2MzU4MjMiLCJleHAiOjI1MjQ2MDQ0NjEsInJlZnJlc2hhYmxlIjp0cnVlfQ.UXgO3j-0BumcugrFjbd7j0M4MQvbrLggLlcu_YNGjoY",
+				"Authorization": tests.NewAuthTokenForTest("_superusers", "test@example.com"),
 			},
 			AfterTestFunc: func(t testing.TB, app *tests.TestApp, res *http.Response) {
 				if app.TestMailer.TotalSend() != 1 {
@@ -395,7 +395,7 @@ func TestSettingsTestEmail(t *testing.T) {
 				"email": "test@example.com"
 			}`),
 			Headers: map[string]string{
-				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6InN5d2JoZWNuaDQ2cmhtMCIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoicGJjXzMxNDI2MzU4MjMiLCJleHAiOjI1MjQ2MDQ0NjEsInJlZnJlc2hhYmxlIjp0cnVlfQ.UXgO3j-0BumcugrFjbd7j0M4MQvbrLggLlcu_YNGjoY",
+				"Authorization": tests.NewAuthTokenForTest("_superusers", "test@example.com"),
 			},
 			AfterTestFunc: func(t testing.TB, app *tests.TestApp, res *http.Response) {
 				if app.TestMailer.TotalSend() != 1 {
@@ -431,7 +431,7 @@ func TestSettingsTestEmail(t *testing.T) {
 				"email": "test@example.com"
 			}`),
 			Headers: map[string]string{
-				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6InN5d2JoZWNuaDQ2cmhtMCIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoicGJjXzMxNDI2MzU4MjMiLCJleHAiOjI1MjQ2MDQ0NjEsInJlZnJlc2hhYmxlIjp0cnVlfQ.UXgO3j-0BumcugrFjbd7j0M4MQvbrLggLlcu_YNGjoY",
+				"Authorization": tests.NewAuthTokenForTest("_superusers", "test@example.com"),
 			},
 			AfterTestFunc: func(t testing.TB, app *tests.TestApp, res *http.Response) {
 				if app.TestMailer.TotalSend() != 1 {
@@ -499,7 +499,7 @@ func TestGenerateAppleClientSecret(t *testing.T) {
 			Method: http.MethodPost,
 			URL:    "/api/settings/apple/generate-client-secret",
 			Headers: map[string]string{
-				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6IjRxMXhsY2xtZmxva3UzMyIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoiX3BiX3VzZXJzX2F1dGhfIiwiZXhwIjoyNTI0NjA0NDYxLCJyZWZyZXNoYWJsZSI6dHJ1ZX0.ZT3F0Z3iM-xbGgSG3LEKiEzHrPHr8t8IuHLZGGNuxLo",
+				"Authorization": tests.NewAuthTokenForTest("users", "test@example.com"),
 			},
 			ExpectedStatus:  403,
 			ExpectedContent: []string{`"data":{}`},
@@ -511,7 +511,7 @@ func TestGenerateAppleClientSecret(t *testing.T) {
 			URL:    "/api/settings/apple/generate-client-secret",
 			Body:   strings.NewReader(`{`),
 			Headers: map[string]string{
-				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6InN5d2JoZWNuaDQ2cmhtMCIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoicGJjXzMxNDI2MzU4MjMiLCJleHAiOjI1MjQ2MDQ0NjEsInJlZnJlc2hhYmxlIjp0cnVlfQ.UXgO3j-0BumcugrFjbd7j0M4MQvbrLggLlcu_YNGjoY",
+				"Authorization": tests.NewAuthTokenForTest("_superusers", "test@example.com"),
 			},
 			ExpectedStatus:  400,
 			ExpectedContent: []string{`"data":{}`},
@@ -523,7 +523,7 @@ func TestGenerateAppleClientSecret(t *testing.T) {
 			URL:    "/api/settings/apple/generate-client-secret",
 			Body:   strings.NewReader(`{}`),
 			Headers: map[string]string{
-				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6InN5d2JoZWNuaDQ2cmhtMCIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoicGJjXzMxNDI2MzU4MjMiLCJleHAiOjI1MjQ2MDQ0NjEsInJlZnJlc2hhYmxlIjp0cnVlfQ.UXgO3j-0BumcugrFjbd7j0M4MQvbrLggLlcu_YNGjoY",
+				"Authorization": tests.NewAuthTokenForTest("_superusers", "test@example.com"),
 			},
 			ExpectedStatus: 400,
 			ExpectedContent: []string{
@@ -547,7 +547,7 @@ func TestGenerateAppleClientSecret(t *testing.T) {
 				"duration": -1
 			}`),
 			Headers: map[string]string{
-				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6InN5d2JoZWNuaDQ2cmhtMCIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoicGJjXzMxNDI2MzU4MjMiLCJleHAiOjI1MjQ2MDQ0NjEsInJlZnJlc2hhYmxlIjp0cnVlfQ.UXgO3j-0BumcugrFjbd7j0M4MQvbrLggLlcu_YNGjoY",
+				"Authorization": tests.NewAuthTokenForTest("_superusers", "test@example.com"),
 			},
 			ExpectedStatus: 400,
 			ExpectedContent: []string{
@@ -571,7 +571,7 @@ func TestGenerateAppleClientSecret(t *testing.T) {
 				"duration": 1
 			}`, privatePem)),
 			Headers: map[string]string{
-				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6InN5d2JoZWNuaDQ2cmhtMCIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoicGJjXzMxNDI2MzU4MjMiLCJleHAiOjI1MjQ2MDQ0NjEsInJlZnJlc2hhYmxlIjp0cnVlfQ.UXgO3j-0BumcugrFjbd7j0M4MQvbrLggLlcu_YNGjoY",
+				"Authorization": tests.NewAuthTokenForTest("_superusers", "test@example.com"),
 			},
 			ExpectedStatus: 200,
 			ExpectedContent: []string{

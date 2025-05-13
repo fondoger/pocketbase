@@ -209,7 +209,7 @@ func TestAuthOriginValidateHook(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	demo1, err := app.FindRecordById("demo1", "84nmscqy84lsi1t")
+	demo1, err := app.FindRecordById("demo1", "0196afca-7951-7ba1-8cef-b59777e4d838")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -296,8 +296,8 @@ func TestAuthOriginPasswordChangeDeletion(t *testing.T) {
 		deletedIds []string
 	}{
 		{user1, nil},
-		{superuser2, []string{"5798yh833k6w6w0", "ic55o70g4f8pcl4", "dmy260k6ksjr4ib"}},
-		{client1, []string{"9r2j0m74260ur8i"}},
+		{superuser2, []string{"0196afca-7950-7596-b740-a6167a4ab938", "0196afca-7950-737c-9b22-ef2eb4690b37", "0196afca-7950-70c4-b130-6660e4c8d20d"}},
+		{client1, []string{"0196afca-7950-7e99-906f-93f836ec07bf"}},
 	}
 
 	for i, s := range scenarios {

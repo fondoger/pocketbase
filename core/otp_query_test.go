@@ -19,7 +19,7 @@ func TestFindAllOTPsByRecord(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	demo1, err := app.FindRecordById("demo1", "84nmscqy84lsi1t")
+	demo1, err := app.FindRecordById("demo1", "0196afca-7951-7ba1-8cef-b59777e4d838")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -152,7 +152,7 @@ func TestFindOTPById(t *testing.T) {
 		expectError bool
 	}{
 		{"", true},
-		{"84nmscqy84lsi1t", true}, // non-otp id
+		{"0196afca-7951-7ba1-8cef-b59777e4d838", true}, // non-otp id
 		{"superuser2_0", false},
 		{"superuser2_4", false}, // expired
 		{"user1_0", false},
@@ -184,7 +184,7 @@ func TestDeleteAllOTPsByRecord(t *testing.T) {
 	testApp, _ := tests.NewTestApp()
 	defer testApp.Cleanup()
 
-	demo1, err := testApp.FindRecordById("demo1", "84nmscqy84lsi1t")
+	demo1, err := testApp.FindRecordById("demo1", "0196afca-7951-7ba1-8cef-b59777e4d838")
 	if err != nil {
 		t.Fatal(err)
 	}

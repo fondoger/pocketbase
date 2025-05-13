@@ -295,7 +295,11 @@ func parseQueryToFields(app App, selectQuery string) (map[string]*queryField, er
 					System:     true,
 					Required:   true,
 					PrimaryKey: true,
+					/* SQLite:
 					Pattern:    `^[a-z0-9]+$`,
+					*/
+					// PostgreSQL:
+					Pattern: `<uuidv7>`,
 				},
 			}
 			continue

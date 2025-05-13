@@ -1071,7 +1071,7 @@ func TestRecordGetUnsavedFiles(t *testing.T) {
 	}
 	f2.Name = "f2"
 
-	record, err := app.FindRecordById("demo3", "lcl9d87w22ml6jy")
+	record, err := app.FindRecordById("demo3", "0196afca-7951-7100-b4f8-93182f5a1f9d")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1304,7 +1304,7 @@ func TestRecordIgnoreUnchangedFields(t *testing.T) {
 
 	new := core.NewRecord(col)
 
-	existing, err := app.FindRecordById(col, "mk5fmymtx4wsprk")
+	existing, err := app.FindRecordById(col, "0196afca-7951-76a5-8168-76ecc556aff8")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1651,7 +1651,7 @@ func TestRecordValidate(t *testing.T) {
 	})
 
 	t.Run("satisfying the fields validations", func(t *testing.T) {
-		record.Id = strings.Repeat("b", 15)
+		record.Id = "12345678-1234-1234-1234-123456789012"
 		record.Set("f1", "abc")
 		record.Set("f2", 1)
 		tests.TestValidationErrors(t, app.Validate(record), nil)
@@ -2097,7 +2097,7 @@ func TestRecordSaveIdFromOtherCollection(t *testing.T) {
 	// base collection test
 	r1 := core.NewRecord(baseCollection)
 	r1.Set("title", "test_new")
-	r1.Set("id", "mk5fmymtx4wsprk") // existing id of demo3 record
+	r1.Set("id", "0196afca-7951-76a5-8168-76ecc556aff8") // existing id of demo3 record
 	if err := app.Save(r1); err != nil {
 		t.Fatalf("Expected nil, got error %v", err)
 	}
@@ -2106,13 +2106,13 @@ func TestRecordSaveIdFromOtherCollection(t *testing.T) {
 	r2 := core.NewRecord(authCollection)
 	r2.SetEmail("test_new@example.com")
 	r2.SetPassword("1234567890")
-	r2.Set("id", "gk390qegs4y47wn") // existing id of "clients" record
+	r2.Set("id", "0196afca-7951-7ab7-afc2-cd8438fef6fa") // existing id of "clients" record
 	if err := app.Save(r2); err == nil {
 		t.Fatal("Expected error, got nil")
 	}
 
 	// try again with unique id
-	r2.Set("id", strings.Repeat("a", 15))
+	r2.Set("id", "12345678-1234-1234-1234-123456789012")
 	if err := app.Save(r2); err != nil {
 		t.Fatalf("Expected nil, got error %v", err)
 	}
@@ -2124,7 +2124,7 @@ func TestRecordSaveIdUpdateNoValidation(t *testing.T) {
 	app, _ := tests.NewTestApp()
 	defer app.Cleanup()
 
-	rec, err := app.FindRecordById("demo3", "7nwo8tuiatetxdm")
+	rec, err := app.FindRecordById("demo3", "0196afca-7951-70d4-bb39-344bd3a8d4f7")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2216,7 +2216,7 @@ func TestRecordDelete(t *testing.T) {
 
 	// delete view record
 	// ---
-	viewRec, _ := app.FindRecordById("view2", "84nmscqy84lsi1t")
+	viewRec, _ := app.FindRecordById("view2", "0196afca-7951-7ba1-8cef-b59777e4d838")
 	if err := app.Delete(viewRec); err == nil {
 		t.Fatal("(viewRec) Didn't expect to succeed deleting view record")
 	}
@@ -2228,7 +2228,7 @@ func TestRecordDelete(t *testing.T) {
 
 	// delete existing record + external auths
 	// ---
-	rec1, err3 := app.FindRecordById("users", "4q1xlclmfloku33")
+	rec1, err3 := app.FindRecordById("users", "0196afca-7951-76f3-b344-ae38a366ade2")
 	_ = err3
 	if err := app.Delete(rec1); err != nil {
 		t.Fatalf("(rec1) Expected nil, got error %v", err)
@@ -2244,7 +2244,7 @@ func TestRecordDelete(t *testing.T) {
 
 	// delete existing record while being part of a non-cascade required relation
 	// ---
-	rec2, _ := app.FindRecordById("demo3", "7nwo8tuiatetxdm")
+	rec2, _ := app.FindRecordById("demo3", "0196afca-7951-70d4-bb39-344bd3a8d4f7")
 	if err := app.Delete(rec2); err == nil {
 		t.Fatalf("(rec2) Expected error, got nil")
 	}
@@ -2264,7 +2264,7 @@ func TestRecordDelete(t *testing.T) {
 	app.DB().(*dbx.DB).ExecLogFunc = func(ctx context.Context, t time.Duration, sql string, result sql.Result, err error) {
 		calledQueries = append(calledQueries, sql)
 	}
-	rec3, _ := app.FindRecordById("users", "oap640cot4yru2s")
+	rec3, _ := app.FindRecordById("users", "0196afca-7951-77d1-ba15-923db9b774b2")
 	// delete
 	if err := app.Delete(rec3); err != nil {
 		t.Fatalf("(rec3) Expected nil, got error %v", err)
@@ -2275,7 +2275,7 @@ func TestRecordDelete(t *testing.T) {
 		t.Fatalf("(rec3) Expected record to be deleted, got %v", rec3)
 	}
 	// check if the operation cascaded
-	rel, _ := app.FindRecordById("demo1", "84nmscqy84lsi1t")
+	rel, _ := app.FindRecordById("demo1", "0196afca-7951-7ba1-8cef-b59777e4d838")
 	if rel != nil {
 		t.Fatalf("(rec3) Expected the delete to cascade, found relation %v", rel)
 	}
@@ -2310,7 +2310,7 @@ func TestRecordDeleteBatchProcessing(t *testing.T) {
 	}
 
 	// find and delete the first c1 record to trigger cascade
-	mainRecord, _ := app.FindRecordById("c1", "a")
+	mainRecord, _ := app.FindRecordById("c1", "a0000000-1234-1234-1234-123456789012")
 	if err := app.Delete(mainRecord); err != nil {
 		t.Fatal(err)
 	}
@@ -2322,7 +2322,7 @@ func TestRecordDeleteBatchProcessing(t *testing.T) {
 	}
 
 	// check if the c1 b rel field were updated
-	c1RecordB, err := app.FindRecordById("c1", "b")
+	c1RecordB, err := app.FindRecordById("c1", "b0000000-1234-1234-1234-123456789012")
 	if err != nil || c1RecordB.GetString("rel") != "" {
 		t.Fatalf("Expected c1RecordB.rel to be nil, got %v", c1RecordB.GetString("rel"))
 	}
@@ -2334,8 +2334,8 @@ func TestRecordDeleteBatchProcessing(t *testing.T) {
 	}
 	for _, r := range c2Records {
 		ids := r.GetStringSlice("rel")
-		if len(ids) != 1 || ids[0] != "b" {
-			t.Fatalf("Expected only 'b' rel id, got %v", ids)
+		if len(ids) != 1 || ids[0] != "b0000000-1234-1234-1234-123456789012" {
+			t.Fatalf("Expected only 'b0000000-1234-1234-1234-123456789012' rel id, got %v", ids)
 		}
 	}
 
@@ -2352,13 +2352,13 @@ func TestRecordDeleteBatchProcessing(t *testing.T) {
 func createMockBatchProcessingData(app core.App) error {
 	// create mock collection without relation
 	c1 := core.NewBaseCollection("c1")
-	c1.Id = "c1"
+	c1.Id = "c1000000-1234-1234-1234-123456789012"
 	c1.Fields.Add(
 		&core.TextField{Name: "text"},
 		&core.RelationField{
 			Name:          "rel",
 			MaxSelect:     1,
-			CollectionId:  "c1",
+			CollectionId:  "c1000000-1234-1234-1234-123456789012",
 			CascadeDelete: false, // should unset all rel fields
 		},
 	)
@@ -2368,13 +2368,13 @@ func createMockBatchProcessingData(app core.App) error {
 
 	// create mock collection with a multi-rel field
 	c2 := core.NewBaseCollection("c2")
-	c2.Id = "c2"
+	c2.Id = "c2000000-1234-1234-1234-123456789012"
 	c2.Fields.Add(
 		&core.TextField{Name: "text"},
 		&core.RelationField{
 			Name:          "rel",
 			MaxSelect:     10,
-			CollectionId:  "c1",
+			CollectionId:  "c1000000-1234-1234-1234-123456789012",
 			CascadeDelete: false, // should unset all rel fields
 		},
 	)
@@ -2384,12 +2384,12 @@ func createMockBatchProcessingData(app core.App) error {
 
 	// create mock collection with a single-rel field
 	c3 := core.NewBaseCollection("c3")
-	c3.Id = "c3"
+	c3.Id = "c3000000-0000-1234-1234-123456789012"
 	c3.Fields.Add(
 		&core.RelationField{
 			Name:          "rel",
 			MaxSelect:     1,
-			CollectionId:  "c1",
+			CollectionId:  "c1000000-1234-1234-1234-123456789012",
 			CascadeDelete: true, // should delete all c3 records
 		},
 	)
@@ -2399,13 +2399,13 @@ func createMockBatchProcessingData(app core.App) error {
 
 	// insert mock records
 	c1RecordA := core.NewRecord(c1)
-	c1RecordA.Id = "a"
+	c1RecordA.Id = "a0000000-1234-1234-1234-123456789012"
 	c1RecordA.Set("rel", c1RecordA.Id) // self reference
 	if err := app.SaveNoValidate(c1RecordA); err != nil {
 		return err
 	}
 	c1RecordB := core.NewRecord(c1)
-	c1RecordB.Id = "b"
+	c1RecordB.Id = "b0000000-1234-1234-1234-123456789012"
 	c1RecordB.Set("rel", c1RecordA.Id) // rel to another record from the same collection
 	if err := app.SaveNoValidate(c1RecordB); err != nil {
 		return err

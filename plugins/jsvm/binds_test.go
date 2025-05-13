@@ -1168,7 +1168,7 @@ func TestLoadingDynamicModel(t *testing.T) {
 		$app.db()
 			.select("text", "bool", "number", "select_many", "json", "('{\"test\": 1}') as obj")
 			.from("demo1")
-			.where($dbx.hashExp({"id": "84nmscqy84lsi1t"}))
+			.where($dbx.hashExp({"id": "0196afca-7951-7ba1-8cef-b59777e4d838"}))
 			.limit(1)
 			.one(result)
 
@@ -1278,7 +1278,7 @@ func TestLoadingArrayOf(t *testing.T) {
 		$app.db()
 			.select("id", "text")
 			.from("demo1")
-			.where($dbx.exp("id='84nmscqy84lsi1t' OR id='al1h9ijdeojtsjy'"))
+			.where($dbx.exp("id='0196afca-7951-7ba1-8cef-b59777e4d838' OR id='0196afca-7951-752e-972d-502c0843467d'"))
 			.limit(2)
 			.orderBy("text ASC")
 			.all(result)
@@ -1287,15 +1287,15 @@ func TestLoadingArrayOf(t *testing.T) {
 			throw new Error('Expected 2 list items, got ' + result.length);
 		}
 
-		if (result[0].id != "84nmscqy84lsi1t") {
-			throw new Error('Expected 0.id "84nmscqy84lsi1t", got ' + result[0].id);
+		if (result[0].id != "0196afca-7951-7ba1-8cef-b59777e4d838") {
+			throw new Error('Expected 0.id "0196afca-7951-7ba1-8cef-b59777e4d838", got ' + result[0].id);
 		}
 		if (result[0].text != "test") {
 			throw new Error('Expected 0.text "test", got ' + result[0].text);
 		}
 
-		if (result[1].id != "al1h9ijdeojtsjy") {
-			throw new Error('Expected 1.id "al1h9ijdeojtsjy", got ' + result[1].id);
+		if (result[1].id != "0196afca-7951-752e-972d-502c0843467d") {
+			throw new Error('Expected 1.id "0196afca-7951-752e-972d-502c0843467d", got ' + result[1].id);
 		}
 		if (result[1].text != "test2") {
 			throw new Error('Expected 1.text "test2", got ' + result[1].text);

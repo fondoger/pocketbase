@@ -21,7 +21,7 @@ func TestBatchRequest(t *testing.T) {
 					{"method":"POST", "url":"/api/collections/demo3/records", "body": {"title": "batch1"}},
 					{"method":"POST", "url":"/api/collections/demo3/records", "body": {"title": "batch2"}},
 					{"method":"POST", "url":"/api/collections/demo3/records", "body": {"title": "batch3"}},
-					{"method":"PATCH", "url":"/api/collections/demo3/records/lcl9d87w22ml6jy", "body": {"files-": "test_FLurQTgrY8.txt"}}
+					{"method":"PATCH", "url":"/api/collections/demo3/records/0196afca-7951-7100-b4f8-93182f5a1f9d", "body": {"files-": "test_FLurQTgrY8.txt"}}
 				]
 			}`,
 		},
@@ -174,7 +174,7 @@ func TestBatchRequest(t *testing.T) {
 					{"method":"POST", "url":"/api/collections/demo2/records", "body": {"title": "batch1"}},
 					{"method":"POST", "url":"/api/collections/demo2/records", "body": {"title": "batch2"}},
 					{"method":"PUT", "url":"/api/collections/demo2/records", "body": {"title": "batch3"}},
-					{"method":"PUT", "url":"/api/collections/demo2/records?fields=*,id:excerpt(4,true)", "body": {"id":"achvryl401bhse3","title": "batch4"}}
+					{"method":"PUT", "url":"/api/collections/demo2/records?fields=*,id:excerpt(4,true)", "body": {"id":"0196afca-7951-78f8-bbc8-59d5d917adff","title": "batch4"}}
 				]
 			}`),
 			ExpectedStatus: 200,
@@ -230,8 +230,8 @@ func TestBatchRequest(t *testing.T) {
 			Body: strings.NewReader(`{
 				"requests": [
 					{"method":"POST", "url":"/api/collections/demo2/records", "body": {"title": "batch_create"}},
-					{"method":"DELETE", "url":"/api/collections/demo2/records/achvryl401bhse3"},
-					{"method":"PATCH", "url":"/api/collections/demo3/records/1tmknxy2868d869", "body": {"title": "batch_update"}}
+					{"method":"DELETE", "url":"/api/collections/demo2/records/0196afca-7951-78f8-bbc8-59d5d917adff"},
+					{"method":"PATCH", "url":"/api/collections/demo3/records/0196afca-7951-7b27-833a-1f145305563f", "body": {"title": "batch_update"}}
 				]
 			}`),
 			ExpectedStatus: 400,
@@ -278,7 +278,7 @@ func TestBatchRequest(t *testing.T) {
 					t.Fatal("Expected record to not be updated")
 				}
 
-				_, err = app.FindRecordById("demo2", "achvryl401bhse3")
+				_, err = app.FindRecordById("demo2", "0196afca-7951-78f8-bbc8-59d5d917adff")
 				if err != nil {
 					t.Fatal("Expected record to not be deleted")
 				}
@@ -290,13 +290,13 @@ func TestBatchRequest(t *testing.T) {
 			URL:    "/api/batch",
 			Headers: map[string]string{
 				// test@example.com, clients
-				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6ImdrMzkwcWVnczR5NDd3biIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoidjg1MXE0cjc5MHJoa25sIiwiZXhwIjoyNTI0NjA0NDYxLCJyZWZyZXNoYWJsZSI6dHJ1ZX0.0ONnm_BsvPRZyDNT31GN1CKUB6uQRxvVvQ-Wc9AZfG0",
+				"Authorization": tests.NewAuthTokenForTest("clients", "test@example.com"),
 			},
 			Body: strings.NewReader(`{
 				"requests": [
 					{"method":"POST", "url":"/api/collections/demo2/records", "body": {"title": "batch_create"}, "headers": {"Authorization": "ignored"}},
-					{"method":"DELETE", "url":"/api/collections/demo2/records/achvryl401bhse3", "headers": {"Authorization": "ignored"}},
-					{"method":"PATCH", "url":"/api/collections/demo3/records/1tmknxy2868d869", "body": {"title": "batch_update"}, "headers": {"Authorization": "ignored"}}
+					{"method":"DELETE", "url":"/api/collections/demo2/records/0196afca-7951-78f8-bbc8-59d5d917adff", "headers": {"Authorization": "ignored"}},
+					{"method":"PATCH", "url":"/api/collections/demo3/records/0196afca-7951-7b27-833a-1f145305563f", "body": {"title": "batch_update"}, "headers": {"Authorization": "ignored"}}
 				]
 			}`),
 			ExpectedStatus: 200,
@@ -349,7 +349,7 @@ func TestBatchRequest(t *testing.T) {
 					t.Fatal(err)
 				}
 
-				_, err = app.FindRecordById("demo2", "achvryl401bhse3")
+				_, err = app.FindRecordById("demo2", "0196afca-7951-78f8-bbc8-59d5d917adff")
 				if err == nil {
 					t.Fatal("Expected record to be deleted")
 				}
@@ -361,13 +361,13 @@ func TestBatchRequest(t *testing.T) {
 			URL:    "/api/batch",
 			Headers: map[string]string{
 				// test@example.com, _superusers
-				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6InN5d2JoZWNuaDQ2cmhtMCIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoicGJjXzMxNDI2MzU4MjMiLCJleHAiOjI1MjQ2MDQ0NjEsInJlZnJlc2hhYmxlIjp0cnVlfQ.UXgO3j-0BumcugrFjbd7j0M4MQvbrLggLlcu_YNGjoY",
+				"Authorization": tests.NewAuthTokenForTest("_superusers", "test@example.com"),
 			},
 			Body: strings.NewReader(`{
 				"requests": [
 					{"method":"POST", "url":"/api/collections/demo2/records", "body": {"title": "batch_create"}},
-					{"method":"DELETE", "url":"/api/collections/demo2/records/achvryl401bhse3"},
-					{"method":"PATCH", "url":"/api/collections/demo3/records/1tmknxy2868d869", "body": {"title": "batch_update"}}
+					{"method":"DELETE", "url":"/api/collections/demo2/records/0196afca-7951-78f8-bbc8-59d5d917adff"},
+					{"method":"PATCH", "url":"/api/collections/demo3/records/0196afca-7951-7b27-833a-1f145305563f", "body": {"title": "batch_update"}}
 				]
 			}`),
 			ExpectedStatus: 200,
@@ -420,7 +420,7 @@ func TestBatchRequest(t *testing.T) {
 					t.Fatal(err)
 				}
 
-				_, err = app.FindRecordById("demo2", "achvryl401bhse3")
+				_, err = app.FindRecordById("demo2", "0196afca-7951-78f8-bbc8-59d5d917adff")
 				if err == nil {
 					t.Fatal("Expected record to be deleted")
 				}
@@ -432,12 +432,12 @@ func TestBatchRequest(t *testing.T) {
 			URL:    "/api/batch",
 			Headers: map[string]string{
 				// test@example.com, _superusers
-				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6InN5d2JoZWNuaDQ2cmhtMCIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoicGJjXzMxNDI2MzU4MjMiLCJleHAiOjI1MjQ2MDQ0NjEsInJlZnJlc2hhYmxlIjp0cnVlfQ.UXgO3j-0BumcugrFjbd7j0M4MQvbrLggLlcu_YNGjoY",
+				"Authorization": tests.NewAuthTokenForTest("_superusers", "test@example.com"),
 			},
 			Body: strings.NewReader(`{
 				"requests": [
-					{"method":"DELETE", "url":"/api/collections/demo3/records/1tmknxy2868d869"},
-					{"method":"DELETE", "url":"/api/collections/demo3/records/mk5fmymtx4wsprk"}
+					{"method":"DELETE", "url":"/api/collections/demo3/records/0196afca-7951-7b27-833a-1f145305563f"},
+					{"method":"DELETE", "url":"/api/collections/demo3/records/0196afca-7951-76a5-8168-76ecc556aff8"}
 				]
 			}`),
 			ExpectedStatus: 200,
@@ -470,9 +470,9 @@ func TestBatchRequest(t *testing.T) {
 			},
 			AfterTestFunc: func(t testing.TB, app *tests.TestApp, res *http.Response) {
 				ids := []string{
-					"1tmknxy2868d869",
-					"mk5fmymtx4wsprk",
-					"qzaqccwrmva4o1n",
+					"0196afca-7951-7b27-833a-1f145305563f",
+					"0196afca-7951-76a5-8168-76ecc556aff8",
+					"0196afca-7951-75c9-9c38-91315915f69d",
 				}
 
 				for _, id := range ids {
@@ -495,7 +495,7 @@ func TestBatchRequest(t *testing.T) {
 			}`),
 			Headers: map[string]string{
 				// test@example.com, _superusers
-				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6InN5d2JoZWNuaDQ2cmhtMCIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoicGJjXzMxNDI2MzU4MjMiLCJleHAiOjI1MjQ2MDQ0NjEsInJlZnJlc2hhYmxlIjp0cnVlfQ.UXgO3j-0BumcugrFjbd7j0M4MQvbrLggLlcu_YNGjoY",
+				"Authorization": tests.NewAuthTokenForTest("_superusers", "test@example.com"),
 			},
 			BeforeTestFunc: func(t testing.TB, app *tests.TestApp, e *core.ServeEvent) {
 				app.Settings().Batch.Enabled = true
@@ -541,7 +541,7 @@ func TestBatchRequest(t *testing.T) {
 			Body:   formData,
 			Headers: map[string]string{
 				// test@example.com, clients
-				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6ImdrMzkwcWVnczR5NDd3biIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoidjg1MXE0cjc5MHJoa25sIiwiZXhwIjoyNTI0NjA0NDYxLCJyZWZyZXNoYWJsZSI6dHJ1ZX0.0ONnm_BsvPRZyDNT31GN1CKUB6uQRxvVvQ-Wc9AZfG0",
+				"Authorization": tests.NewAuthTokenForTest("clients", "test@example.com"),
 				"Content-Type":  mp.FormDataContentType(),
 			},
 			ExpectedStatus: 200,
@@ -549,7 +549,7 @@ func TestBatchRequest(t *testing.T) {
 				`"title":"batch1"`,
 				`"title":"batch2"`,
 				`"title":"batch3"`,
-				`"id":"lcl9d87w22ml6jy"`,
+				`"id":"0196afca-7951-7100-b4f8-93182f5a1f9d"`,
 				`"files":["300_UhLKX91HVb.png"]`,
 				`"tmpfile_`,
 				`"status":200`,
@@ -606,7 +606,7 @@ func TestBatchRequest(t *testing.T) {
 					t.Fatalf("Expected %d batch3 file(s), got %d", 1, len(batch3Files))
 				}
 
-				batch4, err := app.FindRecordById("demo3", "lcl9d87w22ml6jy")
+				batch4, err := app.FindRecordById("demo3", "0196afca-7951-7100-b4f8-93182f5a1f9d")
 				if err != nil {
 					t.Fatalf("missing batch4: %v", err)
 				}
@@ -622,20 +622,20 @@ func TestBatchRequest(t *testing.T) {
 			URL:    "/api/batch",
 			Headers: map[string]string{
 				// test@example.com, _superusers
-				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6InN5d2JoZWNuaDQ2cmhtMCIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoicGJjXzMxNDI2MzU4MjMiLCJleHAiOjI1MjQ2MDQ0NjEsInJlZnJlc2hhYmxlIjp0cnVlfQ.UXgO3j-0BumcugrFjbd7j0M4MQvbrLggLlcu_YNGjoY",
+				"Authorization": tests.NewAuthTokenForTest("_superusers", "test@example.com"),
 			},
 			Body: strings.NewReader(`{
 				"requests": [
-					{"method":"POST", "url":"/api/collections/demo5/records?expand=rel_one", "body": {"total": 9, "rel_one":"qzaqccwrmva4o1n"}},
-					{"method":"PATCH", "url":"/api/collections/demo5/records/qjeql998mtp1azp?expand=rel_many", "body": {"total": 10}}
+					{"method":"POST", "url":"/api/collections/demo5/records?expand=rel_one", "body": {"total": 9, "rel_one":"0196afca-7951-75c9-9c38-91315915f69d"}},
+					{"method":"PATCH", "url":"/api/collections/demo5/records/0196afca-7951-73fc-a188-a989856a8167?expand=rel_many", "body": {"total": 10}}
 				]
 			}`),
 			ExpectedStatus: 200,
 			ExpectedContent: []string{
 				`"body":{`,
-				`"id":"qjeql998mtp1azp"`,
-				`"id":"qzaqccwrmva4o1n"`,
-				`"id":"i9naidtvr6qsgb4"`,
+				`"id":"0196afca-7951-73fc-a188-a989856a8167"`,
+				`"id":"0196afca-7951-75c9-9c38-91315915f69d"`,
+				`"id":"0196afca-7951-7bca-95b3-3b8b92760ec5"`,
 				`"expand":{"rel_one"`,
 				`"expand":{"rel_many"`,
 			},
@@ -669,12 +669,12 @@ func TestBatchRequest(t *testing.T) {
 			URL:    "/api/batch",
 			Headers: map[string]string{
 				// test@example.com, _superusers
-				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6InN5d2JoZWNuaDQ2cmhtMCIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoicGJjXzMxNDI2MzU4MjMiLCJleHAiOjI1MjQ2MDQ0NjEsInJlZnJlc2hhYmxlIjp0cnVlfQ.UXgO3j-0BumcugrFjbd7j0M4MQvbrLggLlcu_YNGjoY",
+				"Authorization": tests.NewAuthTokenForTest("_superusers", "test@example.com"),
 			},
 			Body: strings.NewReader(`{
 				"requests": [
-					{"method":"POST", "url":"/api/collections/demo5/records?expand=rel_one", "body": {"total": 9, "rel_one":"qzaqccwrmva4o1n"}},
-					{"method":"PATCH", "url":"/api/collections/demo5/records/qjeql998mtp1azp?expand=rel_many", "body": {"total": 10}}
+					{"method":"POST", "url":"/api/collections/demo5/records?expand=rel_one", "body": {"total": 9, "rel_one":"0196afca-7951-75c9-9c38-91315915f69d"}},
+					{"method":"PATCH", "url":"/api/collections/demo5/records/0196afca-7951-73fc-a188-a989856a8167?expand=rel_many", "body": {"total": 10}}
 				]
 			}`),
 			BeforeTestFunc: func(t testing.TB, app *tests.TestApp, e *core.ServeEvent) {

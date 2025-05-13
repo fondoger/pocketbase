@@ -19,6 +19,8 @@ import (
 	"github.com/pocketbase/pocketbase/tools/types"
 )
 
+var uuidRegex = regexp.MustCompile(`"id":"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"`)
+
 func TestNewCollection(t *testing.T) {
 	t.Parallel()
 
@@ -31,7 +33,7 @@ func TestNewCollection(t *testing.T) {
 			"",
 			"",
 			[]string{
-				`"id":"pbc_`,
+				// `"id":"pbc_`,
 				`"name":""`,
 				`"type":"base"`,
 				`"system":false`,
@@ -50,7 +52,7 @@ func TestNewCollection(t *testing.T) {
 			"unknown",
 			"test",
 			[]string{
-				`"id":"pbc_`,
+				// `"id":"pbc_`,
 				`"name":"test"`,
 				`"type":"base"`,
 				`"system":false`,
@@ -69,7 +71,7 @@ func TestNewCollection(t *testing.T) {
 			"base",
 			"test",
 			[]string{
-				`"id":"pbc_`,
+				// `"id":"pbc_`,
 				`"name":"test"`,
 				`"type":"base"`,
 				`"system":false`,
@@ -88,7 +90,7 @@ func TestNewCollection(t *testing.T) {
 			"view",
 			"test",
 			[]string{
-				`"id":"pbc_`,
+				// `"id":"pbc_`,
 				`"name":"test"`,
 				`"type":"view"`,
 				`"indexes":[]`,
@@ -105,7 +107,7 @@ func TestNewCollection(t *testing.T) {
 			"auth",
 			"test",
 			[]string{
-				`"id":"pbc_`,
+				// `"id":"pbc_`,
 				`"name":"test"`,
 				`"type":"auth"`,
 				`"fields":[{`,
@@ -134,6 +136,10 @@ func TestNewCollection(t *testing.T) {
 		t.Run(fmt.Sprintf("%d_%s_%s", i, s.typ, s.name), func(t *testing.T) {
 			result := core.NewCollection(s.typ, s.name).String()
 
+			if uuidRegex.FindString(result) == "" {
+				t.Fatalf("Missing id in\n%v", result)
+			}
+
 			for _, part := range s.expected {
 				if !strings.Contains(result, part) {
 					t.Fatalf("Missing part %q in\n%v", part, result)
@@ -153,7 +159,7 @@ func TestNewBaseCollection(t *testing.T) {
 		{
 			"",
 			[]string{
-				`"id":"pbc_`,
+				// `"id":"pbc_`,
 				`"name":""`,
 				`"type":"base"`,
 				`"system":false`,
@@ -171,7 +177,7 @@ func TestNewBaseCollection(t *testing.T) {
 		{
 			"test",
 			[]string{
-				`"id":"pbc_`,
+				// `"id":"pbc_`,
 				`"name":"test"`,
 				`"type":"base"`,
 				`"system":false`,
@@ -192,6 +198,10 @@ func TestNewBaseCollection(t *testing.T) {
 		t.Run(fmt.Sprintf("%d_%s", i, s.name), func(t *testing.T) {
 			result := core.NewBaseCollection(s.name).String()
 
+			if uuidRegex.FindString(result) == "" {
+				t.Fatalf("Missing id in\n%v", result)
+			}
+
 			for _, part := range s.expected {
 				if !strings.Contains(result, part) {
 					t.Fatalf("Missing part %q in\n%v", part, result)
@@ -211,7 +221,7 @@ func TestNewViewCollection(t *testing.T) {
 		{
 			"",
 			[]string{
-				`"id":"pbc_`,
+				// `"id":"pbc_`,
 				`"name":""`,
 				`"type":"view"`,
 				`"indexes":[]`,
@@ -227,7 +237,7 @@ func TestNewViewCollection(t *testing.T) {
 		{
 			"test",
 			[]string{
-				`"id":"pbc_`,
+				// `"id":"pbc_`,
 				`"name":"test"`,
 				`"type":"view"`,
 				`"indexes":[]`,
@@ -245,6 +255,10 @@ func TestNewViewCollection(t *testing.T) {
 	for i, s := range scenarios {
 		t.Run(fmt.Sprintf("%d_%s", i, s.name), func(t *testing.T) {
 			result := core.NewViewCollection(s.name).String()
+
+			if uuidRegex.FindString(result) == "" {
+				t.Fatalf("Missing id in\n%v", result)
+			}
 
 			for _, part := range s.expected {
 				if !strings.Contains(result, part) {
@@ -291,7 +305,7 @@ func TestNewAuthCollection(t *testing.T) {
 		{
 			"test",
 			[]string{
-				`"id":"pbc_`,
+				// `"id":"pbc_`,
 				`"name":"test"`,
 				`"type":"auth"`,
 				`"fields":[{`,
@@ -319,6 +333,10 @@ func TestNewAuthCollection(t *testing.T) {
 	for i, s := range scenarios {
 		t.Run(fmt.Sprintf("%d_%s", i, s.name), func(t *testing.T) {
 			result := core.NewAuthCollection(s.name).String()
+
+			if uuidRegex.FindString(result) == "" {
+				t.Fatalf("Missing id in\n%v", result)
+			}
 
 			for _, part := range s.expected {
 				if !strings.Contains(result, part) {
@@ -517,7 +535,7 @@ func TestCollectionUnmarshalJSON(t *testing.T) {
 			},
 			[]string{
 				`"type":"base"`,
-				`"id":"pbc_`,
+				// `"id":"pbc_`,
 				`"name":"test"`,
 				`"listRule":"1=2"`,
 				`"fields":[`,
@@ -537,7 +555,7 @@ func TestCollectionUnmarshalJSON(t *testing.T) {
 			},
 			[]string{
 				`"type":"view"`,
-				`"id":"pbc_`,
+				// `"id":"pbc_`,
 				`"name":"test"`,
 				`"listRule":"1=2"`,
 				`"fields":[]`,
@@ -556,7 +574,7 @@ func TestCollectionUnmarshalJSON(t *testing.T) {
 			},
 			[]string{
 				`"type":"auth"`,
-				`"id":"pbc_`,
+				// `"id":"pbc_`,
 				`"name":"test"`,
 				`"listRule":"1=2"`,
 				`"authRule":"1=3"`,
@@ -625,6 +643,10 @@ func TestCollectionUnmarshalJSON(t *testing.T) {
 			}
 			rawResultStr := string(rawResult)
 
+			if !slices.Contains(s.expected, `"id":""`) && uuidRegex.FindString(rawResultStr) == "" {
+				t.Fatalf("Missing id in\n%v", rawResultStr)
+			}
+
 			for _, part := range s.expected {
 				if !strings.Contains(rawResultStr, part) {
 					t.Fatalf("Missing expected %q in\n%v", part, rawResultStr)
@@ -660,7 +682,7 @@ func TestCollectionSerialize(t *testing.T) {
 				return c
 			},
 			[]string{
-				`"id":"pbc_`,
+				// `"id":"pbc_`,
 				`"name":"test"`,
 				`"type":"base"`,
 			},
@@ -688,7 +710,7 @@ func TestCollectionSerialize(t *testing.T) {
 				return c
 			},
 			[]string{
-				`"id":"pbc_`,
+				// `"id":"pbc_`,
 				`"name":"test"`,
 				`"type":"view"`,
 				`"viewQuery":"1=1"`,
@@ -716,7 +738,7 @@ func TestCollectionSerialize(t *testing.T) {
 				return c
 			},
 			[]string{
-				`"id":"pbc_`,
+				// `"id":"pbc_`,
 				`"name":"test"`,
 				`"type":"auth"`,
 				`"oauth2":{`,
@@ -744,6 +766,10 @@ func TestCollectionSerialize(t *testing.T) {
 
 			if rawStr != collection.String() {
 				t.Fatalf("Expected the same serialization, got\n%v\nVS\n%v", collection.String(), rawStr)
+			}
+
+			if uuidRegex.FindString(rawStr) == "" {
+				t.Fatalf("Missing id in\n%v", rawStr)
 			}
 
 			for _, part := range s.expected {

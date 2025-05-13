@@ -232,7 +232,7 @@ func TestSingleVsMultipleValuesNormalization(t *testing.T) {
 		expected fieldsExpectation
 	}{
 		{
-			"imy661ixudk5izi",
+			"0196afca-7951-7a62-9100-f77edbf6f060",
 			fieldsExpectation{
 				SelectOne:   `[]`,
 				SelectMany:  ``,
@@ -244,26 +244,26 @@ func TestSingleVsMultipleValuesNormalization(t *testing.T) {
 			},
 		},
 		{
-			"al1h9ijdeojtsjy",
+			"0196afca-7951-752e-972d-502c0843467d",
 			fieldsExpectation{
 				SelectOne:   `["optionB"]`,
 				SelectMany:  `optionB`,
 				FileOne:     `["300_Jsjq7RdBgA.png"]`,
 				FileMany:    ``,
-				RelOne:      `["84nmscqy84lsi1t"]`,
-				RelMany:     `oap640cot4yru2s`,
+				RelOne:      `["0196afca-7951-7ba1-8cef-b59777e4d838"]`,
+				RelMany:     `0196afca-7951-77d1-ba15-923db9b774b2`,
 				NewMultiple: `[]`,
 			},
 		},
 		{
-			"84nmscqy84lsi1t",
+			"0196afca-7951-7ba1-8cef-b59777e4d838",
 			fieldsExpectation{
 				SelectOne:   `["optionB"]`,
 				SelectMany:  `optionC`,
 				FileOne:     `["test_d61b33QdDU.txt"]`,
 				FileMany:    `test_tC1Yc87DfC.txt`,
 				RelOne:      `[]`,
-				RelMany:     `oap640cot4yru2s`,
+				RelMany:     `0196afca-7951-77d1-ba15-923db9b774b2`,
 				NewMultiple: `[]`,
 			},
 		},

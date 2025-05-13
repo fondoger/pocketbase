@@ -64,16 +64,8 @@ func PostgresDBConnectFunc(connectionString string) DBConnectFunc {
 }
 
 func createGenerateUuidV7Function(db dbx.Builder) error {
-	//PostgreSQL:
-	// 1. Check existance
-	sql := `select count(pg_get_functiondef('uuid_generate_v7()'::regprocedure));`
-	var exists int
-	_ = db.NewQuery(sql).Row(&exists)
-	if exists > 0 {
-		return nil
-	}
 	// Postgres:
-	// 2. Create function
+	// 1. Create function
 	funcDef := `
 	-- Enable built-in pgcrypto extension to use gen_random_bytes function
 	CREATE EXTENSION IF NOT EXISTS "pgcrypto";

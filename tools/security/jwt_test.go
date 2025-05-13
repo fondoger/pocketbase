@@ -194,3 +194,50 @@ func TestNewJWT(t *testing.T) {
 		})
 	}
 }
+
+func TestCreateJWTForUnitTest(t *testing.T) {
+	// users/test@example.com
+	userClaims := jwt.MapClaims{
+		"id":           "0196afca-7951-76f3-b344-ae38a366ade2",
+		"type":         "auth",
+		"collectionId": "11111111-1111-1111-1111-111111111111",
+		"refreshable":  true,
+	}
+	usersRootToken := "PjVU4hAV7CZIWbCByJHkDcMUlSEWCLI6M5aWSZOpEq0a3rYxKT"
+	usersUserToken := "tfYe7rCTX4D2KuWQY3pJjBifgsrMbecyXBatEPjrSfGEGS2jh6"
+	token, _ := security.NewJWT(userClaims, usersUserToken+usersRootToken, time.Hour*10000)
+	fmt.Println("Normal user JWT:", token)
+	// eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjb2xsZWN0aW9uSWQiOiIxMTExMTExMS0xMTExLTExMTEtMTExMS0xMTExMTExMTExMTEiLCJleHAiOjE3ODI4Njc4NTYsImlkIjoiMDE5NmFmY2EtNzk1MS03NmYzLWIzNDQtYWUzOGEzNjZhZGUyIiwicmVmcmVzaGFibGUiOnRydWUsInR5cGUiOiJhdXRoIn0.y8yOhOhB68CdO5oo54qL3sIWaJh-5-elr0QnSfbuim8
+
+	// users/test2@example.com
+	userClaims["id"] = "0196afca-7951-77d1-ba15-923db9b774b2"
+	token, _ = security.NewJWT(userClaims, usersUserToken+usersRootToken, time.Hour*10000)
+	fmt.Println("Normal user JWT:", token)
+	// eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjb2xsZWN0aW9uSWQiOiIxMTExMTExMS0xMTExLTExMTEtMTExMS0xMTExMTExMTExMTEiLCJleHAiOjE3ODMwNTcwNjMsImlkIjoiMDE5NmFmY2EtNzk1MS03N2QxLWJhMTUtOTIzZGI5Yjc3NGIyIiwicmVmcmVzaGFibGUiOnRydWUsInR5cGUiOiJhdXRoIn0.z-qWhoRfps_3JlXYvLeij9G_EFRWGEEnons3cF-2h48
+
+	// _superusers/test@example.com
+	superUserClaims := jwt.MapClaims{
+		"id":           "0196afca-7951-7dc4-a3a4-35b24b1bdccd",
+		"type":         "auth",
+		"collectionId": "0196afca-09e0-7d9a-82c8-1e040135f09f",
+		"refreshable":  true,
+	}
+	superUserRootToken := "MyN3nDlzmHnuCjd35vb6cyIdqNr7Os0PmgiPVDMxmbFToSpBvS"
+	superUserUserToken := "O4rvW9FSUyTA3xUuQmXR3wHF2db9bHs19nBHeSgVTxerOsTAl4"
+	superUserToken, _ := security.NewJWT(superUserClaims, superUserUserToken+superUserRootToken, time.Hour*10000)
+	fmt.Println("Generated super user JWT:", superUserToken)
+	// eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjb2xsZWN0aW9uSWQiOiIwMTk2YWZjYS0wOWUwLTdkOWEtODJjOC0xZTA0MDEzNWYwOWYiLCJleHAiOjE3ODI4Njc4NTYsImlkIjoiMDE5NmFmY2EtNzk1MS03ZGM0LWEzYTQtMzViMjRiMWJkY2NkIiwicmVmcmVzaGFibGUiOnRydWUsInR5cGUiOiJhdXRoIn0.AS_Er29Xmyo1CtCf8W40b3zwSLsL5icCxdEZjcLLgFk
+
+	// clients/test@example.com
+	clientsClaims := jwt.MapClaims{
+		"id":           "0196afca-7951-7ab7-afc2-cd8438fef6fa",
+		"type":         "auth",
+		"collectionId": "0196afca-09e0-717d-9a85-9c276d28c33c",
+		"refreshable":  true,
+	}
+	clientsRootToken := "PjVU4hAV7CZIWbCByJHkDcMUlSEWCLI6M5aWSZOpEq0a3rYxKT"
+	clientsUserToken := "rMb1gUpn27s53t66gOGscSHfYsa272cgOgn4nhTZIl4fIC8XP8"
+	clientsToken, _ := security.NewJWT(clientsClaims, clientsUserToken+clientsRootToken, time.Hour*10000)
+	fmt.Println("Generated clients JWT:", clientsToken)
+	// eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjb2xsZWN0aW9uSWQiOiIwMTk2YWZjYS0wOWUwLTcxN2QtOWE4NS05YzI3NmQyOGMzM2MiLCJleHAiOjE3ODI4NjgzNjIsImlkIjoiMDE5NmFmY2EtNzk1MS03YWI3LWFmYzItY2Q4NDM4ZmVmNmZhIiwicmVmcmVzaGFibGUiOnRydWUsInR5cGUiOiJhdXRoIn0.Fd8qpj1yIZN3pQhQFWm5tqc5abCXDnyhkgxC-ifg1qk
+}

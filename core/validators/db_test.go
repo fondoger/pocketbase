@@ -24,7 +24,7 @@ func TestUniqueId(t *testing.T) {
 	}{
 		{"", "", false},
 		{"test", "", true},
-		{"wsmn24bux7wo113", "_collections", true},
+		{"0196afca-7951-7653-beca-d69f40c17bcd", "_collections", true},
 		{"test_unique_id", "unknown_table", true},
 		{"test_unique_id", "_collections", false},
 	}

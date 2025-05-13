@@ -300,11 +300,11 @@ func TestRecordAuthWithPassword(t *testing.T) {
 				"password":"1234567890"
 			}`),
 			Headers: map[string]string{
-				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6IjRxMXhsY2xtZmxva3UzMyIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoiX3BiX3VzZXJzX2F1dGhfIiwiZXhwIjoyNTI0NjA0NDYxLCJyZWZyZXNoYWJsZSI6dHJ1ZX0.ZT3F0Z3iM-xbGgSG3LEKiEzHrPHr8t8IuHLZGGNuxLo",
+				"Authorization": tests.NewAuthTokenForTest("users", "test@example.com"),
 			},
 			ExpectedStatus: 200,
 			ExpectedContent: []string{
-				`"id":"gk390qegs4y47wn"`,
+				`"id":"0196afca-7951-7ab7-afc2-cd8438fef6fa"`,
 				`"email":"test@example.com"`,
 				`"token":`,
 			},

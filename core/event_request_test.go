@@ -189,7 +189,7 @@ func TestRequestEventRequestInfo(t *testing.T) {
 		}
 		rawStr := string(raw)
 
-		expected := `{"query":{"q1":"123","q2":"456"},"headers":{"content_type":"application/json","x_test":"test"},"body":{"a":123,"b":"test"},"auth":{"avatar":"","collectionId":"_pb_users_auth_","collectionName":"users","created":"","emailVisibility":false,"file":[],"id":"user1","name":"","rel":"","updated":"","username":"","verified":false},"method":"POST","context":"test"}`
+		expected := `{"query":{"q1":"123","q2":"456"},"headers":{"content_type":"application/json","x_test":"test"},"body":{"a":123,"b":"test"},"auth":{"avatar":"","collectionId":"11111111-1111-1111-1111-111111111111","collectionName":"users","created":"","emailVisibility":false,"file":[],"id":"user1","name":"","rel":"","updated":"","username":"","verified":false},"method":"POST","context":"test"}`
 
 		if expected != rawStr {
 			t.Fatalf("Expected\n%v\ngot\n%v", expected, rawStr)
@@ -211,7 +211,7 @@ func TestRequestEventRequestInfo(t *testing.T) {
 		}
 		rawStr := string(raw)
 
-		expected := `{"query":{"q1":"123","q2":"456"},"headers":{"content_type":"application/json","x_test":"test"},"body":{"a":123,"b":"test"},"auth":{"avatar":"","collectionId":"_pb_users_auth_","collectionName":"users","created":"","emailVisibility":false,"file":[],"id":"user2","name":"","rel":"","updated":"","username":"","verified":false},"method":"POST","context":"test2"}`
+		expected := `{"query":{"q1":"123","q2":"456"},"headers":{"content_type":"application/json","x_test":"test"},"body":{"a":123,"b":"test"},"auth":{"avatar":"","collectionId":"11111111-1111-1111-1111-111111111111","collectionName":"users","created":"","emailVisibility":false,"file":[],"id":"user2","name":"","rel":"","updated":"","username":"","verified":false},"method":"POST","context":"test2"}`
 
 		if expected != rawStr {
 			t.Fatalf("Expected\n%v\ngot\n%v", expected, rawStr)
@@ -314,7 +314,7 @@ func TestRequestInfoClone(t *testing.T) {
 	}
 	originalRawStr := string(originalRaw)
 
-	expectedRawStr := `{"query":{"q1":"123","q2":"456"},"headers":{"content_type":"application/json"},"body":{"a":123,"b":"test"},"auth":{"avatar":"","collectionId":"_pb_users_auth_","collectionName":"users","created":"","emailVisibility":false,"file":[],"id":"user1","name":"","rel":"","updated":"","username":"","verified":false},"method":"POST","context":"default"}`
+	expectedRawStr := `{"query":{"q1":"123","q2":"456"},"headers":{"content_type":"application/json"},"body":{"a":123,"b":"test"},"auth":{"avatar":"","collectionId":"11111111-1111-1111-1111-111111111111","collectionName":"users","created":"","emailVisibility":false,"file":[],"id":"user1","name":"","rel":"","updated":"","username":"","verified":false},"method":"POST","context":"default"}`
 	if expectedRawStr != originalRawStr {
 		t.Fatalf("Expected original info\n%v\ngot\n%v", expectedRawStr, originalRawStr)
 	}
@@ -327,7 +327,7 @@ func TestRequestInfoClone(t *testing.T) {
 	}
 	cloneRawStr := string(cloneRaw)
 
-	expectedCloneStr := `{"query":{"new_query":"test","q1":"123","q2":"456"},"headers":{"content_type":"application/json","new_header":"test"},"body":{"a":123,"b":"test","new_body":"test"},"auth":{"avatar":"","collectionId":"_pb_users_auth_","collectionName":"users","created":"","emailVisibility":false,"file":[],"id":"user2","name":"","rel":"","updated":"","username":"","verified":false},"method":"POST","context":"default"}`
+	expectedCloneStr := `{"query":{"new_query":"test","q1":"123","q2":"456"},"headers":{"content_type":"application/json","new_header":"test"},"body":{"a":123,"b":"test","new_body":"test"},"auth":{"avatar":"","collectionId":"11111111-1111-1111-1111-111111111111","collectionName":"users","created":"","emailVisibility":false,"file":[],"id":"user2","name":"","rel":"","updated":"","username":"","verified":false},"method":"POST","context":"default"}`
 	if expectedCloneStr != cloneRawStr {
 		t.Fatalf("Expected clone info\n%v\ngot\n%v", expectedCloneStr, cloneRawStr)
 	}

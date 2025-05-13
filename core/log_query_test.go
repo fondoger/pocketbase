@@ -57,7 +57,7 @@ func TestLogsStats(t *testing.T) {
 
 	tests.StubLogsData(app)
 
-	expected := `[{"date":"2022-05-01 10:00:00.123Z","total":1},{"date":"2022-05-02 10:00:00.123Z","total":1}]`
+	expected := `[{"date":"2022-05-01 10:00:00.000Z","total":1},{"date":"2022-05-02 10:00:00.000Z","total":1}]`
 
 	// now := time.Now().UTC().Format(types.DefaultDateLayout)
 	exp := dbx.NewExp("[[created]] <= {:date}", dbx.Params{"date": time.Now()})

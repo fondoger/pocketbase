@@ -48,10 +48,13 @@ func TestRecordConfirmEmailChange(t *testing.T) {
 			Name:   "expired token and correct password",
 			Method: http.MethodPost,
 			URL:    "/api/collections/users/confirm-email-change",
-			Body: strings.NewReader(`{
-				"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjRxMXhsY2xtZmxva3UzMyIsImNvbGxlY3Rpb25JZCI6Il9wYl91c2Vyc19hdXRoXyIsInR5cGUiOiJlbWFpbENoYW5nZSIsImVtYWlsIjoidGVzdEBleGFtcGxlLmNvbSIsIm5ld0VtYWlsIjoiY2hhbmdlQGV4YW1wbGUuY29tIiwiZXhwIjoxNjQwOTkxNjYxfQ.dff842MO0mgRTHY8dktp0dqG9-7LGQOgRuiAbQpYBls",
+			Body: strings.NewReader(strings.ReplaceAll(`{
+				"token":"[token-placeholder]",
 				"password":"1234567890"
-			}`),
+			}`, "[token-placeholder]", tests.NewAuthTokenForTest("users", "test@example.com", tests.CustomToken("emailChange", map[string]any{
+				"email":    "test@example.com",
+				"newEmail": "change@example.com",
+			}), tests.TokenExpired(true)))),
 			ExpectedStatus: 400,
 			ExpectedContent: []string{
 				`"data":{`,
@@ -64,10 +67,10 @@ func TestRecordConfirmEmailChange(t *testing.T) {
 			Name:   "non-email change token",
 			Method: http.MethodPost,
 			URL:    "/api/collections/users/confirm-email-change",
-			Body: strings.NewReader(`{
-				"token":"eyJhbGciOiJIUzI1NiJ9.eyJpZCI6IjRxMXhsY2xtZmxva3UzMyIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoiX3BiX3VzZXJzX2F1dGhfIiwiZXhwIjoyNTI0NjA0NDYxLCJyZWZyZXNoYWJsZSI6dHJ1ZX0.ZT3F0Z3iM-xbGgSG3LEKiEzHrPHr8t8IuHLZGGNuxLo",
+			Body: strings.NewReader(strings.ReplaceAll(`{
+				"token":"[token-placeholder]",
 				"password":"1234567890"
-			}`),
+			}`, "[token-placeholder]", tests.NewAuthTokenForTest("users", "test@example.com"))),
 			ExpectedStatus: 400,
 			ExpectedContent: []string{
 				`"data":{`,
@@ -80,10 +83,13 @@ func TestRecordConfirmEmailChange(t *testing.T) {
 			Name:   "valid token and incorrect password",
 			Method: http.MethodPost,
 			URL:    "/api/collections/users/confirm-email-change",
-			Body: strings.NewReader(`{
-				"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjRxMXhsY2xtZmxva3UzMyIsImNvbGxlY3Rpb25JZCI6Il9wYl91c2Vyc19hdXRoXyIsInR5cGUiOiJlbWFpbENoYW5nZSIsImVtYWlsIjoidGVzdEBleGFtcGxlLmNvbSIsIm5ld0VtYWlsIjoiY2hhbmdlQGV4YW1wbGUuY29tIiwiZXhwIjoyNTI0NjA0NDYxfQ.Y7mVlaEPhJiNPoIvIqbIosZU4c4lEhwysOrRR8c95iU",
+			Body: strings.NewReader(strings.ReplaceAll(`{
+				"token":"[token-placeholder]",
 				"password":"1234567891"
-			}`),
+			}`, "[token-placeholder]", tests.NewAuthTokenForTest("users", "test@example.com", tests.CustomToken("emailChange", map[string]any{
+				"email":    "test@example.com",
+				"newEmail": "change@example.com",
+			})))),
 			ExpectedStatus: 400,
 			ExpectedContent: []string{
 				`"data":{`,
@@ -96,10 +102,13 @@ func TestRecordConfirmEmailChange(t *testing.T) {
 			Name:   "valid token and correct password",
 			Method: http.MethodPost,
 			URL:    "/api/collections/users/confirm-email-change",
-			Body: strings.NewReader(`{
-				"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjRxMXhsY2xtZmxva3UzMyIsImNvbGxlY3Rpb25JZCI6Il9wYl91c2Vyc19hdXRoXyIsInR5cGUiOiJlbWFpbENoYW5nZSIsImVtYWlsIjoidGVzdEBleGFtcGxlLmNvbSIsIm5ld0VtYWlsIjoiY2hhbmdlQGV4YW1wbGUuY29tIiwiZXhwIjoyNTI0NjA0NDYxfQ.Y7mVlaEPhJiNPoIvIqbIosZU4c4lEhwysOrRR8c95iU",
+			Body: strings.NewReader(strings.ReplaceAll(`{
+				"token":"[token-placeholder]",
 				"password":"1234567890"
-			}`),
+			}`, "[token-placeholder]", tests.NewAuthTokenForTest("users", "test@example.com", tests.CustomToken("emailChange", map[string]any{
+				"email":    "test@example.com",
+				"newEmail": "change@example.com",
+			})))),
 			ExpectedStatus: 204,
 			ExpectedEvents: map[string]int{
 				"*":                                 0,
@@ -124,10 +133,13 @@ func TestRecordConfirmEmailChange(t *testing.T) {
 			Name:   "valid token in different auth collection",
 			Method: http.MethodPost,
 			URL:    "/api/collections/clients/confirm-email-change",
-			Body: strings.NewReader(`{
-				"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjRxMXhsY2xtZmxva3UzMyIsImNvbGxlY3Rpb25JZCI6Il9wYl91c2Vyc19hdXRoXyIsInR5cGUiOiJlbWFpbENoYW5nZSIsImVtYWlsIjoidGVzdEBleGFtcGxlLmNvbSIsIm5ld0VtYWlsIjoiY2hhbmdlQGV4YW1wbGUuY29tIiwiZXhwIjoyNTI0NjA0NDYxfQ.Y7mVlaEPhJiNPoIvIqbIosZU4c4lEhwysOrRR8c95iU",
+			Body: strings.NewReader(strings.ReplaceAll(`{
+				"token":"[token-placeholder]",
 				"password":"1234567890"
-			}`),
+			}`, "[token-placeholder]", tests.NewAuthTokenForTest("users", "test@example.com", tests.CustomToken("emailChange", map[string]any{
+				"email":    "test@example.com",
+				"newEmail": "change@example.com",
+			})))),
 			ExpectedStatus: 400,
 			ExpectedContent: []string{
 				`"data":{`,
@@ -139,10 +151,13 @@ func TestRecordConfirmEmailChange(t *testing.T) {
 			Name:   "OnRecordAfterConfirmEmailChangeRequest error response",
 			Method: http.MethodPost,
 			URL:    "/api/collections/users/confirm-email-change",
-			Body: strings.NewReader(`{
-				"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjRxMXhsY2xtZmxva3UzMyIsImNvbGxlY3Rpb25JZCI6Il9wYl91c2Vyc19hdXRoXyIsInR5cGUiOiJlbWFpbENoYW5nZSIsImVtYWlsIjoidGVzdEBleGFtcGxlLmNvbSIsIm5ld0VtYWlsIjoiY2hhbmdlQGV4YW1wbGUuY29tIiwiZXhwIjoyNTI0NjA0NDYxfQ.Y7mVlaEPhJiNPoIvIqbIosZU4c4lEhwysOrRR8c95iU",
+			Body: strings.NewReader(strings.ReplaceAll(`{
+				"token":"[token-placeholder]",
 				"password":"1234567890"
-			}`),
+			}`, "[token-placeholder]", tests.NewAuthTokenForTest("users", "test@example.com", tests.CustomToken("emailChange", map[string]any{
+				"email":    "test@example.com",
+				"newEmail": "change@example.com",
+			})))),
 			BeforeTestFunc: func(t testing.TB, app *tests.TestApp, e *core.ServeEvent) {
 				app.OnRecordConfirmEmailChangeRequest().BindFunc(func(e *core.RecordConfirmEmailChangeRequestEvent) error {
 					return errors.New("error")
@@ -162,10 +177,13 @@ func TestRecordConfirmEmailChange(t *testing.T) {
 			Name:   "RateLimit rule - users:confirmEmailChange",
 			Method: http.MethodPost,
 			URL:    "/api/collections/users/confirm-email-change",
-			Body: strings.NewReader(`{
-				"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjRxMXhsY2xtZmxva3UzMyIsImNvbGxlY3Rpb25JZCI6Il9wYl91c2Vyc19hdXRoXyIsInR5cGUiOiJlbWFpbENoYW5nZSIsImVtYWlsIjoidGVzdEBleGFtcGxlLmNvbSIsIm5ld0VtYWlsIjoiY2hhbmdlQGV4YW1wbGUuY29tIiwiZXhwIjoyNTI0NjA0NDYxfQ.Y7mVlaEPhJiNPoIvIqbIosZU4c4lEhwysOrRR8c95iU",
+			Body: strings.NewReader(strings.ReplaceAll(`{
+				"token":"[token-placeholder]",
 				"password":"1234567890"
-			}`),
+			}`, "[token-placeholder]", tests.NewAuthTokenForTest("users", "test@example.com", tests.CustomToken("emailChange", map[string]any{
+				"email":    "test@example.com",
+				"newEmail": "change@example.com",
+			})))),
 			BeforeTestFunc: func(t testing.TB, app *tests.TestApp, e *core.ServeEvent) {
 				app.Settings().RateLimits.Enabled = true
 				app.Settings().RateLimits.Rules = []core.RateLimitRule{
@@ -182,10 +200,13 @@ func TestRecordConfirmEmailChange(t *testing.T) {
 			Name:   "RateLimit rule - *:confirmEmailChange",
 			Method: http.MethodPost,
 			URL:    "/api/collections/users/confirm-email-change",
-			Body: strings.NewReader(`{
-				"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjRxMXhsY2xtZmxva3UzMyIsImNvbGxlY3Rpb25JZCI6Il9wYl91c2Vyc19hdXRoXyIsInR5cGUiOiJlbWFpbENoYW5nZSIsImVtYWlsIjoidGVzdEBleGFtcGxlLmNvbSIsIm5ld0VtYWlsIjoiY2hhbmdlQGV4YW1wbGUuY29tIiwiZXhwIjoyNTI0NjA0NDYxfQ.Y7mVlaEPhJiNPoIvIqbIosZU4c4lEhwysOrRR8c95iU",
+			Body: strings.NewReader(strings.ReplaceAll(`{
+				"token":"[token-placeholder]",
 				"password":"1234567890"
-			}`),
+			}`, "[token-placeholder]", tests.NewAuthTokenForTest("users", "test@example.com", tests.CustomToken("emailChange", map[string]any{
+				"email":    "test@example.com",
+				"newEmail": "change@example.com",
+			})))),
 			BeforeTestFunc: func(t testing.TB, app *tests.TestApp, e *core.ServeEvent) {
 				app.Settings().RateLimits.Enabled = true
 				app.Settings().RateLimits.Rules = []core.RateLimitRule{

@@ -15,7 +15,7 @@ func TestFindAllAuthOriginsByRecord(t *testing.T) {
 	app, _ := tests.NewTestApp()
 	defer app.Cleanup()
 
-	demo1, err := app.FindRecordById("demo1", "84nmscqy84lsi1t")
+	demo1, err := app.FindRecordById("demo1", "0196afca-7951-7ba1-8cef-b59777e4d838")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -40,9 +40,9 @@ func TestFindAllAuthOriginsByRecord(t *testing.T) {
 		expected []string
 	}{
 		{demo1, nil},
-		{superuser2, []string{"5798yh833k6w6w0", "ic55o70g4f8pcl4", "dmy260k6ksjr4ib"}},
+		{superuser2, []string{"0196afca-7950-7596-b740-a6167a4ab938", "0196afca-7950-737c-9b22-ef2eb4690b37", "0196afca-7950-70c4-b130-6660e4c8d20d"}},
 		{superuser4, nil},
-		{client1, []string{"9r2j0m74260ur8i"}},
+		{client1, []string{"0196afca-7950-7e99-906f-93f836ec07bf"}},
 	}
 
 	for _, s := range scenarios {
@@ -91,8 +91,8 @@ func TestFindAllAuthOriginsByCollection(t *testing.T) {
 		expected   []string
 	}{
 		{demo1, nil},
-		{superusers, []string{"5798yh833k6w6w0", "ic55o70g4f8pcl4", "dmy260k6ksjr4ib", "5f29jy38bf5zm3f"}},
-		{clients, []string{"9r2j0m74260ur8i"}},
+		{superusers, []string{"0196afca-7950-7596-b740-a6167a4ab938", "0196afca-7950-737c-9b22-ef2eb4690b37", "0196afca-7950-70c4-b130-6660e4c8d20d", "0196afca-7950-7437-9124-6025212f636e"}},
+		{clients, []string{"0196afca-7950-7e99-906f-93f836ec07bf"}},
 	}
 
 	for _, s := range scenarios {
@@ -126,8 +126,8 @@ func TestFindAuthOriginById(t *testing.T) {
 		expectError bool
 	}{
 		{"", true},
-		{"84nmscqy84lsi1t", true}, // non-origin id
-		{"9r2j0m74260ur8i", false},
+		{"0196afca-7951-7ba1-8cef-b59777e4d838", true}, // non-origin id
+		{"0196afca-7950-7e99-906f-93f836ec07bf", false},
 	}
 
 	for _, s := range scenarios {
@@ -156,7 +156,7 @@ func TestFindAuthOriginByRecordAndFingerprint(t *testing.T) {
 	app, _ := tests.NewTestApp()
 	defer app.Cleanup()
 
-	demo1, err := app.FindRecordById("demo1", "84nmscqy84lsi1t")
+	demo1, err := app.FindRecordById("demo1", "0196afca-7951-7ba1-8cef-b59777e4d838")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -208,7 +208,7 @@ func TestDeleteAllAuthOriginsByRecord(t *testing.T) {
 	testApp, _ := tests.NewTestApp()
 	defer testApp.Cleanup()
 
-	demo1, err := testApp.FindRecordById("demo1", "84nmscqy84lsi1t")
+	demo1, err := testApp.FindRecordById("demo1", "0196afca-7951-7ba1-8cef-b59777e4d838")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -233,9 +233,9 @@ func TestDeleteAllAuthOriginsByRecord(t *testing.T) {
 		deletedIds []string
 	}{
 		{demo1, nil}, // non-auth record
-		{superuser2, []string{"5798yh833k6w6w0", "ic55o70g4f8pcl4", "dmy260k6ksjr4ib"}},
+		{superuser2, []string{"0196afca-7950-7596-b740-a6167a4ab938", "0196afca-7950-737c-9b22-ef2eb4690b37", "0196afca-7950-70c4-b130-6660e4c8d20d"}},
 		{superuser4, nil},
-		{client1, []string{"9r2j0m74260ur8i"}},
+		{client1, []string{"0196afca-7950-7e99-906f-93f836ec07bf"}},
 	}
 
 	for i, s := range scenarios {

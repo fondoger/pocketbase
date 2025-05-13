@@ -8,11 +8,13 @@ import (
 	"strings"
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
+	"github.com/google/uuid"
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core/validators"
 	"github.com/pocketbase/pocketbase/tools/dbutils"
 	"github.com/pocketbase/pocketbase/tools/list"
 	"github.com/pocketbase/pocketbase/tools/search"
+	"github.com/pocketbase/pocketbase/tools/security"
 	"github.com/pocketbase/pocketbase/tools/types"
 )
 
@@ -86,7 +88,8 @@ func (validator *collectionValidator) run() error {
 			validation.When(
 				validator.original.IsNew(),
 				validation.Length(1, 100),
-				validation.Match(DefaultIdRegex),
+				// validation.Match(DefaultIdRegex),
+				security.UUIDValidator,
 				validation.By(validators.UniqueId(validator.app.DB(), validator.new.TableName())),
 			).Else(
 				validation.By(validators.Equal(validator.original.Id)),
@@ -173,7 +176,14 @@ func (validator *collectionValidator) checkUniqueName(value any) error {
 
 	// ensure that the collection name doesn't collide with the id of any collection
 	dummyCollection := &Collection{}
+	/* SQLite:
 	if validator.app.ModelQuery(dummyCollection).Model(v, dummyCollection) == nil {
+		return validation.NewError("validation_collection_name_id_duplicate", "The name must not match an existing collection id.")
+	}
+	*/
+	// PostgreSQL:
+	// Only check if the collection is a valid UUID.
+	if uuid.Validate(v) == nil && validator.app.ModelQuery(dummyCollection).Model(v, dummyCollection) == nil {
 		return validation.NewError("validation_collection_name_id_duplicate", "The name must not match an existing collection id.")
 	}
 

@@ -36,7 +36,7 @@ func TestRecordCrudExternalAuthList(t *testing.T) {
 			URL:    "/api/collections/" + core.CollectionNameExternalAuths + "/records",
 			Headers: map[string]string{
 				// clients, test@example.com
-				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6ImdrMzkwcWVnczR5NDd3biIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoidjg1MXE0cjc5MHJoa25sIiwiZXhwIjoyNTI0NjA0NDYxLCJyZWZyZXNoYWJsZSI6dHJ1ZX0.0ONnm_BsvPRZyDNT31GN1CKUB6uQRxvVvQ-Wc9AZfG0",
+				"Authorization": tests.NewAuthTokenForTest("clients", "test@example.com"),
 			},
 			ExpectedStatus: 200,
 			ExpectedContent: []string{
@@ -44,7 +44,7 @@ func TestRecordCrudExternalAuthList(t *testing.T) {
 				`"perPage":30`,
 				`"totalItems":1`,
 				`"totalPages":1`,
-				`"id":"f1z5b3843pzc964"`,
+				`"id":"0196afca-7951-7d5f-bc27-ab60c8e0aee6"`,
 			},
 			ExpectedEvents: map[string]int{
 				"*":                    0,
@@ -58,7 +58,7 @@ func TestRecordCrudExternalAuthList(t *testing.T) {
 			URL:    "/api/collections/" + core.CollectionNameExternalAuths + "/records",
 			Headers: map[string]string{
 				// users, test2@example.com
-				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6Im9hcDY0MGNvdDR5cnUycyIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoiX3BiX3VzZXJzX2F1dGhfIiwiZXhwIjoyNTI0NjA0NDYxLCJyZWZyZXNoYWJsZSI6dHJ1ZX0.GfJo6EHIobgas_AXt-M-tj5IoQendPnrkMSe9ExuSEY",
+				"Authorization": tests.NewAuthTokenForTest("users", "test2@example.com"),
 			},
 			ExpectedStatus: 200,
 			ExpectedContent: []string{
@@ -87,7 +87,7 @@ func TestRecordCrudExternalAuthView(t *testing.T) {
 		{
 			Name:            "guest",
 			Method:          http.MethodGet,
-			URL:             "/api/collections/" + core.CollectionNameExternalAuths + "/records/dlmflokuq1xl342",
+			URL:             "/api/collections/" + core.CollectionNameExternalAuths + "/records/0196afca-7951-71e7-8791-b7490a47960e",
 			ExpectedStatus:  404,
 			ExpectedContent: []string{`"data":{}`},
 			ExpectedEvents:  map[string]int{"*": 0},
@@ -95,10 +95,10 @@ func TestRecordCrudExternalAuthView(t *testing.T) {
 		{
 			Name:   "non-owner",
 			Method: http.MethodGet,
-			URL:    "/api/collections/" + core.CollectionNameExternalAuths + "/records/dlmflokuq1xl342",
+			URL:    "/api/collections/" + core.CollectionNameExternalAuths + "/records/0196afca-7951-71e7-8791-b7490a47960e",
 			Headers: map[string]string{
 				// clients, test@example.com
-				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6ImdrMzkwcWVnczR5NDd3biIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoidjg1MXE0cjc5MHJoa25sIiwiZXhwIjoyNTI0NjA0NDYxLCJyZWZyZXNoYWJsZSI6dHJ1ZX0.0ONnm_BsvPRZyDNT31GN1CKUB6uQRxvVvQ-Wc9AZfG0",
+				"Authorization": tests.NewAuthTokenForTest("clients", "test@example.com"),
 			},
 			ExpectedStatus:  404,
 			ExpectedContent: []string{`"data":{}`},
@@ -107,13 +107,13 @@ func TestRecordCrudExternalAuthView(t *testing.T) {
 		{
 			Name:   "owner",
 			Method: http.MethodGet,
-			URL:    "/api/collections/" + core.CollectionNameExternalAuths + "/records/dlmflokuq1xl342",
+			URL:    "/api/collections/" + core.CollectionNameExternalAuths + "/records/0196afca-7951-71e7-8791-b7490a47960e",
 			Headers: map[string]string{
 				// users, test@example.com
-				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6IjRxMXhsY2xtZmxva3UzMyIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoiX3BiX3VzZXJzX2F1dGhfIiwiZXhwIjoyNTI0NjA0NDYxLCJyZWZyZXNoYWJsZSI6dHJ1ZX0.ZT3F0Z3iM-xbGgSG3LEKiEzHrPHr8t8IuHLZGGNuxLo",
+				"Authorization": tests.NewAuthTokenForTest("users", "test@example.com"),
 			},
 			ExpectedStatus:  200,
-			ExpectedContent: []string{`"id":"dlmflokuq1xl342"`},
+			ExpectedContent: []string{`"id":"0196afca-7951-71e7-8791-b7490a47960e"`},
 			ExpectedEvents: map[string]int{
 				"*":                   0,
 				"OnRecordViewRequest": 1,
@@ -134,7 +134,7 @@ func TestRecordCrudExternalAuthDelete(t *testing.T) {
 		{
 			Name:            "guest",
 			Method:          http.MethodDelete,
-			URL:             "/api/collections/" + core.CollectionNameExternalAuths + "/records/dlmflokuq1xl342",
+			URL:             "/api/collections/" + core.CollectionNameExternalAuths + "/records/0196afca-7951-71e7-8791-b7490a47960e",
 			ExpectedStatus:  404,
 			ExpectedContent: []string{`"data":{}`},
 			ExpectedEvents:  map[string]int{"*": 0},
@@ -142,10 +142,10 @@ func TestRecordCrudExternalAuthDelete(t *testing.T) {
 		{
 			Name:   "non-owner",
 			Method: http.MethodDelete,
-			URL:    "/api/collections/" + core.CollectionNameExternalAuths + "/records/dlmflokuq1xl342",
+			URL:    "/api/collections/" + core.CollectionNameExternalAuths + "/records/0196afca-7951-71e7-8791-b7490a47960e",
 			Headers: map[string]string{
 				// clients, test@example.com
-				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6ImdrMzkwcWVnczR5NDd3biIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoidjg1MXE0cjc5MHJoa25sIiwiZXhwIjoyNTI0NjA0NDYxLCJyZWZyZXNoYWJsZSI6dHJ1ZX0.0ONnm_BsvPRZyDNT31GN1CKUB6uQRxvVvQ-Wc9AZfG0",
+				"Authorization": tests.NewAuthTokenForTest("clients", "test@example.com"),
 			},
 			ExpectedStatus:  404,
 			ExpectedContent: []string{`"data":{}`},
@@ -154,10 +154,10 @@ func TestRecordCrudExternalAuthDelete(t *testing.T) {
 		{
 			Name:   "owner",
 			Method: http.MethodDelete,
-			URL:    "/api/collections/" + core.CollectionNameExternalAuths + "/records/dlmflokuq1xl342",
+			URL:    "/api/collections/" + core.CollectionNameExternalAuths + "/records/0196afca-7951-71e7-8791-b7490a47960e",
 			Headers: map[string]string{
 				// users, test@example.com
-				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6IjRxMXhsY2xtZmxva3UzMyIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoiX3BiX3VzZXJzX2F1dGhfIiwiZXhwIjoyNTI0NjA0NDYxLCJyZWZyZXNoYWJsZSI6dHJ1ZX0.ZT3F0Z3iM-xbGgSG3LEKiEzHrPHr8t8IuHLZGGNuxLo",
+				"Authorization": tests.NewAuthTokenForTest("users", "test@example.com"),
 			},
 			ExpectedStatus: 204,
 			ExpectedEvents: map[string]int{
@@ -183,8 +183,8 @@ func TestRecordCrudExternalAuthCreate(t *testing.T) {
 
 	body := func() *strings.Reader {
 		return strings.NewReader(`{
-			"recordRef":     "4q1xlclmfloku33",
-			"collectionRef": "_pb_users_auth_",
+			"recordRef":     "0196afca-7951-76f3-b344-ae38a366ade2",
+			"collectionRef": "11111111-1111-1111-1111-111111111111",
 			"provider":      "github",
 			"providerId":    "abc"
 		}`)
@@ -206,7 +206,7 @@ func TestRecordCrudExternalAuthCreate(t *testing.T) {
 			URL:    "/api/collections/" + core.CollectionNameExternalAuths + "/records",
 			Headers: map[string]string{
 				// users, test@example.com
-				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6IjRxMXhsY2xtZmxva3UzMyIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoiX3BiX3VzZXJzX2F1dGhfIiwiZXhwIjoyNTI0NjA0NDYxLCJyZWZyZXNoYWJsZSI6dHJ1ZX0.ZT3F0Z3iM-xbGgSG3LEKiEzHrPHr8t8IuHLZGGNuxLo",
+				"Authorization": tests.NewAuthTokenForTest("users", "test@example.com"),
 			},
 			Body:            body(),
 			ExpectedStatus:  403,
@@ -219,11 +219,11 @@ func TestRecordCrudExternalAuthCreate(t *testing.T) {
 			URL:    "/api/collections/" + core.CollectionNameExternalAuths + "/records",
 			Headers: map[string]string{
 				// superusers, test@example.com
-				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6InN5d2JoZWNuaDQ2cmhtMCIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoicGJjXzMxNDI2MzU4MjMiLCJleHAiOjI1MjQ2MDQ0NjEsInJlZnJlc2hhYmxlIjp0cnVlfQ.UXgO3j-0BumcugrFjbd7j0M4MQvbrLggLlcu_YNGjoY",
+				"Authorization": tests.NewAuthTokenForTest("_superusers", "test@example.com"),
 			},
 			Body: body(),
 			ExpectedContent: []string{
-				`"recordRef":"4q1xlclmfloku33"`,
+				`"recordRef":"0196afca-7951-76f3-b344-ae38a366ade2"`,
 				`"providerId":"abc"`,
 			},
 			ExpectedStatus: 200,
@@ -261,7 +261,7 @@ func TestRecordCrudExternalAuthUpdate(t *testing.T) {
 		{
 			Name:            "guest",
 			Method:          http.MethodPatch,
-			URL:             "/api/collections/" + core.CollectionNameExternalAuths + "/records/dlmflokuq1xl342",
+			URL:             "/api/collections/" + core.CollectionNameExternalAuths + "/records/0196afca-7951-71e7-8791-b7490a47960e",
 			Body:            body(),
 			ExpectedStatus:  403,
 			ExpectedContent: []string{`"data":{}`},
@@ -270,10 +270,10 @@ func TestRecordCrudExternalAuthUpdate(t *testing.T) {
 		{
 			Name:   "owner regular auth",
 			Method: http.MethodPatch,
-			URL:    "/api/collections/" + core.CollectionNameExternalAuths + "/records/dlmflokuq1xl342",
+			URL:    "/api/collections/" + core.CollectionNameExternalAuths + "/records/0196afca-7951-71e7-8791-b7490a47960e",
 			Headers: map[string]string{
 				// clients, test@example.com
-				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6ImdrMzkwcWVnczR5NDd3biIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoidjg1MXE0cjc5MHJoa25sIiwiZXhwIjoyNTI0NjA0NDYxLCJyZWZyZXNoYWJsZSI6dHJ1ZX0.0ONnm_BsvPRZyDNT31GN1CKUB6uQRxvVvQ-Wc9AZfG0",
+				"Authorization": tests.NewAuthTokenForTest("clients", "test@example.com"),
 			},
 			Body:            body(),
 			ExpectedStatus:  403,
@@ -283,14 +283,14 @@ func TestRecordCrudExternalAuthUpdate(t *testing.T) {
 		{
 			Name:   "superusers auth",
 			Method: http.MethodPatch,
-			URL:    "/api/collections/" + core.CollectionNameExternalAuths + "/records/dlmflokuq1xl342",
+			URL:    "/api/collections/" + core.CollectionNameExternalAuths + "/records/0196afca-7951-71e7-8791-b7490a47960e",
 			Headers: map[string]string{
 				// superusers, test@example.com
-				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6InN5d2JoZWNuaDQ2cmhtMCIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoicGJjXzMxNDI2MzU4MjMiLCJleHAiOjI1MjQ2MDQ0NjEsInJlZnJlc2hhYmxlIjp0cnVlfQ.UXgO3j-0BumcugrFjbd7j0M4MQvbrLggLlcu_YNGjoY",
+				"Authorization": tests.NewAuthTokenForTest("_superusers", "test@example.com"),
 			},
 			Body: body(),
 			ExpectedContent: []string{
-				`"id":"dlmflokuq1xl342"`,
+				`"id":"0196afca-7951-71e7-8791-b7490a47960e"`,
 				`"providerId":"abc"`,
 			},
 			ExpectedStatus: 200,

@@ -16,6 +16,17 @@ var anyCharNotNLPairs = []rune{'A', 'Z', 'a', 'z', '0', '9'}
 
 const PredefinedAutoGeneratePattern_uuidv7 = "<uuidv7>"
 
+var UUIDValidator = (*uuidValidator)(nil)
+
+type uuidValidator struct{}
+
+func (v *uuidValidator) Validate(value interface{}) error {
+	if str, ok := value.(string); ok {
+		return uuid.Validate(str)
+	}
+	return fmt.Errorf("value is not a string")
+}
+
 // RandomStringByRegex generates a random string matching the regex pattern.
 // If optFlags is not set, fallbacks to [syntax.Perl].
 //

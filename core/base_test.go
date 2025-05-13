@@ -63,6 +63,7 @@ func TestBaseAppBootstrap(t *testing.T) {
 
 	app, cleanup := core.NewBaseAppForTest(core.BaseAppConfig{
 		DataDir: testDataDir,
+		IsDev:   true,
 	})
 	defer app.ResetBootstrapState()
 	defer cleanup()
@@ -136,6 +137,7 @@ func TestNewBaseAppIsTransactional(t *testing.T) {
 
 	app, cleanup := core.NewBaseAppForTest(core.BaseAppConfig{
 		DataDir: testDataDir,
+		IsDev:   true,
 	})
 	defer cleanup()
 

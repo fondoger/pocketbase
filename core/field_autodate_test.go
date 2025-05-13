@@ -363,7 +363,7 @@ func TestAutodateRecordResave(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	record, err := app.FindRecordById(collection, "llvuca81nly1qls")
+	record, err := app.FindRecordById(collection, "0196afca-7951-70d0-bcc5-206ed6a14bea")
 	if err != nil {
 		t.Fatal(err)
 	}

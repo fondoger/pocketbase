@@ -98,9 +98,9 @@ type ApiScenario struct {
 //	        ExpectedStatus: 200,
 //	        ExpectedContent: []string{
 //	            `"totalItems":3`,
-//	            `"id":"0yxhwia2amd8gec"`,
-//	            `"id":"achvryl401bhse3"`,
-//	            `"id":"llvuca81nly1qls"`,
+//	            `"id":"0196ab6f-d4cf-72d2-94da-863ee9f91458"`,
+//	            `"id":"0196ab6f-d4cf-79e3-b1aa-3e28075c7296"`,
+//	            `"id":"0196ab6f-d4cf-76a5-951b-702291e45e2b"`,
 //	        },
 //	        ExpectedEvents: map[string]int{
 //	            "OnRecordsListRequest": 1,
@@ -128,9 +128,9 @@ func (scenario *ApiScenario) Test(t *testing.T) {
 //	        ExpectedStatus: 200,
 //	        ExpectedContent: []string{
 //	            `"totalItems":3`,
-//	            `"id":"0yxhwia2amd8gec"`,
-//	            `"id":"achvryl401bhse3"`,
-//	            `"id":"llvuca81nly1qls"`,
+//	            `"id":"0196ab6f-d4cf-72d2-94da-863ee9f91458"`,
+//	            `"id":"0196ab6f-d4cf-79e3-b1aa-3e28075c7296"`,
+//	            `"id":"0196ab6f-d4cf-76a5-951b-702291e45e2b"`,
 //	        },
 //	        ExpectedEvents: map[string]int{
 //	            "OnRecordsListRequest": 1,

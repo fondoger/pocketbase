@@ -40,7 +40,7 @@ func TestExpandRecords(t *testing.T) {
 		{
 			"empty expand",
 			"demo4",
-			[]string{"i9naidtvr6qsgb4", "qzaqccwrmva4o1n"},
+			[]string{"0196afca-7951-7bca-95b3-3b8b92760ec5", "0196afca-7951-75c9-9c38-91315915f69d"},
 			[]string{},
 			func(c *core.Collection, ids []string) ([]*core.Record, error) {
 				return app.FindRecordsByIds(c.Id, ids, nil)
@@ -51,7 +51,7 @@ func TestExpandRecords(t *testing.T) {
 		{
 			"fetchFunc with error",
 			"demo4",
-			[]string{"i9naidtvr6qsgb4", "qzaqccwrmva4o1n"},
+			[]string{"0196afca-7951-7bca-95b3-3b8b92760ec5", "0196afca-7951-75c9-9c38-91315915f69d"},
 			[]string{"self_rel_one", "self_rel_many.self_rel_one"},
 			func(c *core.Collection, ids []string) ([]*core.Record, error) {
 				return nil, errors.New("test error")
@@ -62,7 +62,7 @@ func TestExpandRecords(t *testing.T) {
 		{
 			"missing relation field",
 			"demo4",
-			[]string{"i9naidtvr6qsgb4", "qzaqccwrmva4o1n"},
+			[]string{"0196afca-7951-7bca-95b3-3b8b92760ec5", "0196afca-7951-75c9-9c38-91315915f69d"},
 			[]string{"missing"},
 			func(c *core.Collection, ids []string) ([]*core.Record, error) {
 				return app.FindRecordsByIds(c.Id, ids, nil)
@@ -73,7 +73,7 @@ func TestExpandRecords(t *testing.T) {
 		{
 			"existing, but non-relation type field",
 			"demo4",
-			[]string{"i9naidtvr6qsgb4", "qzaqccwrmva4o1n"},
+			[]string{"0196afca-7951-7bca-95b3-3b8b92760ec5", "0196afca-7951-75c9-9c38-91315915f69d"},
 			[]string{"title"},
 			func(c *core.Collection, ids []string) ([]*core.Record, error) {
 				return app.FindRecordsByIds(c.Id, ids, nil)
@@ -84,7 +84,7 @@ func TestExpandRecords(t *testing.T) {
 		{
 			"invalid/missing second level expand",
 			"demo4",
-			[]string{"i9naidtvr6qsgb4", "qzaqccwrmva4o1n"},
+			[]string{"0196afca-7951-7bca-95b3-3b8b92760ec5", "0196afca-7951-75c9-9c38-91315915f69d"},
 			[]string{"rel_one_no_cascade.title"},
 			func(c *core.Collection, ids []string) ([]*core.Record, error) {
 				return app.FindRecordsByIds(c.Id, ids, nil)
@@ -96,9 +96,9 @@ func TestExpandRecords(t *testing.T) {
 			"with nil fetchfunc",
 			"users",
 			[]string{
-				"bgs820n361vj1qd",
-				"4q1xlclmfloku33",
-				"oap640cot4yru2s", // no rels
+				"0196afca-7951-7232-8306-426702662b74",
+				"0196afca-7951-76f3-b344-ae38a366ade2",
+				"0196afca-7951-77d1-ba15-923db9b774b2", // no rels
 			},
 			[]string{"rel"},
 			nil,
@@ -108,7 +108,7 @@ func TestExpandRecords(t *testing.T) {
 		{
 			"expand normalizations",
 			"demo4",
-			[]string{"i9naidtvr6qsgb4", "qzaqccwrmva4o1n"},
+			[]string{"0196afca-7951-7bca-95b3-3b8b92760ec5", "0196afca-7951-75c9-9c38-91315915f69d"},
 			[]string{
 				"self_rel_one", "self_rel_many.self_rel_many.rel_one_no_cascade",
 				"self_rel_many.self_rel_one.self_rel_many.self_rel_one.rel_one_no_cascade",
@@ -125,9 +125,9 @@ func TestExpandRecords(t *testing.T) {
 			"single expand",
 			"users",
 			[]string{
-				"bgs820n361vj1qd",
-				"4q1xlclmfloku33",
-				"oap640cot4yru2s", // no rels
+				"0196afca-7951-7232-8306-426702662b74",
+				"0196afca-7951-76f3-b344-ae38a366ade2",
+				"0196afca-7951-77d1-ba15-923db9b774b2", // no rels
 			},
 			[]string{"rel"},
 			func(c *core.Collection, ids []string) ([]*core.Record, error) {
@@ -140,9 +140,9 @@ func TestExpandRecords(t *testing.T) {
 			"with nil fetchfunc",
 			"users",
 			[]string{
-				"bgs820n361vj1qd",
-				"4q1xlclmfloku33",
-				"oap640cot4yru2s", // no rels
+				"0196afca-7951-7232-8306-426702662b74",
+				"0196afca-7951-76f3-b344-ae38a366ade2",
+				"0196afca-7951-77d1-ba15-923db9b774b2", // no rels
 			},
 			[]string{"rel"},
 			nil,
@@ -152,7 +152,7 @@ func TestExpandRecords(t *testing.T) {
 		{
 			"maxExpandDepth reached",
 			"demo4",
-			[]string{"qzaqccwrmva4o1n"},
+			[]string{"0196afca-7951-75c9-9c38-91315915f69d"},
 			[]string{"self_rel_many.self_rel_many.self_rel_many.self_rel_many.self_rel_many.self_rel_many.self_rel_many.self_rel_many.self_rel_many.self_rel_many.self_rel_many.self_rel_many"},
 			func(c *core.Collection, ids []string) ([]*core.Record, error) {
 				return app.FindRecordsByIds(c.Id, ids, nil)
@@ -163,7 +163,7 @@ func TestExpandRecords(t *testing.T) {
 		{
 			"simple back single relation field expand (deprecated syntax)",
 			"demo3",
-			[]string{"lcl9d87w22ml6jy"},
+			[]string{"0196afca-7951-7100-b4f8-93182f5a1f9d"},
 			[]string{"demo4(rel_one_no_cascade_required)"},
 			func(c *core.Collection, ids []string) ([]*core.Record, error) {
 				return app.FindRecordsByIds(c.Id, ids, nil)
@@ -174,7 +174,7 @@ func TestExpandRecords(t *testing.T) {
 		{
 			"simple back expand via single relation field",
 			"demo3",
-			[]string{"lcl9d87w22ml6jy"},
+			[]string{"0196afca-7951-7100-b4f8-93182f5a1f9d"},
 			[]string{"demo4_via_rel_one_no_cascade_required"},
 			func(c *core.Collection, ids []string) ([]*core.Record, error) {
 				return app.FindRecordsByIds(c.Id, ids, nil)
@@ -185,7 +185,7 @@ func TestExpandRecords(t *testing.T) {
 		{
 			"nested back expand via single relation field",
 			"demo3",
-			[]string{"lcl9d87w22ml6jy"},
+			[]string{"0196afca-7951-7100-b4f8-93182f5a1f9d"},
 			[]string{
 				"demo4_via_rel_one_no_cascade_required.self_rel_many.self_rel_many.self_rel_one",
 			},
@@ -198,7 +198,7 @@ func TestExpandRecords(t *testing.T) {
 		{
 			"nested back expand via multiple relation field",
 			"demo3",
-			[]string{"lcl9d87w22ml6jy"},
+			[]string{"0196afca-7951-7100-b4f8-93182f5a1f9d"},
 			[]string{
 				"demo4_via_rel_many_no_cascade_required.self_rel_many.rel_many_no_cascade_required.demo4_via_rel_many_no_cascade_required",
 			},
@@ -211,7 +211,7 @@ func TestExpandRecords(t *testing.T) {
 		{
 			"expand multiple relations sharing a common path",
 			"demo4",
-			[]string{"qzaqccwrmva4o1n"},
+			[]string{"0196afca-7951-75c9-9c38-91315915f69d"},
 			[]string{
 				"rel_one_no_cascade",
 				"rel_many_no_cascade",
@@ -267,7 +267,7 @@ func TestExpandRecord(t *testing.T) {
 		{
 			"empty expand",
 			"demo4",
-			"i9naidtvr6qsgb4",
+			"0196afca-7951-7bca-95b3-3b8b92760ec5",
 			[]string{},
 			func(c *core.Collection, ids []string) ([]*core.Record, error) {
 				return app.FindRecordsByIds(c.Id, ids, nil)
@@ -278,7 +278,7 @@ func TestExpandRecord(t *testing.T) {
 		{
 			"fetchFunc with error",
 			"demo4",
-			"i9naidtvr6qsgb4",
+			"0196afca-7951-7bca-95b3-3b8b92760ec5",
 			[]string{"self_rel_one", "self_rel_many.self_rel_one"},
 			func(c *core.Collection, ids []string) ([]*core.Record, error) {
 				return nil, errors.New("test error")
@@ -289,7 +289,7 @@ func TestExpandRecord(t *testing.T) {
 		{
 			"missing relation field",
 			"demo4",
-			"i9naidtvr6qsgb4",
+			"0196afca-7951-7bca-95b3-3b8b92760ec5",
 			[]string{"missing"},
 			func(c *core.Collection, ids []string) ([]*core.Record, error) {
 				return app.FindRecordsByIds(c.Id, ids, nil)
@@ -300,7 +300,7 @@ func TestExpandRecord(t *testing.T) {
 		{
 			"existing, but non-relation type field",
 			"demo4",
-			"i9naidtvr6qsgb4",
+			"0196afca-7951-7bca-95b3-3b8b92760ec5",
 			[]string{"title"},
 			func(c *core.Collection, ids []string) ([]*core.Record, error) {
 				return app.FindRecordsByIds(c.Id, ids, nil)
@@ -311,7 +311,7 @@ func TestExpandRecord(t *testing.T) {
 		{
 			"invalid/missing second level expand",
 			"demo4",
-			"qzaqccwrmva4o1n",
+			"0196afca-7951-75c9-9c38-91315915f69d",
 			[]string{"rel_one_no_cascade.title"},
 			func(c *core.Collection, ids []string) ([]*core.Record, error) {
 				return app.FindRecordsByIds(c.Id, ids, nil)
@@ -322,7 +322,7 @@ func TestExpandRecord(t *testing.T) {
 		{
 			"expand normalizations",
 			"demo4",
-			"qzaqccwrmva4o1n",
+			"0196afca-7951-75c9-9c38-91315915f69d",
 			[]string{
 				"self_rel_one", "self_rel_many.self_rel_many.rel_one_no_cascade",
 				"self_rel_many.self_rel_one.self_rel_many.self_rel_one.rel_one_no_cascade",
@@ -338,7 +338,7 @@ func TestExpandRecord(t *testing.T) {
 		{
 			"no rels to expand",
 			"users",
-			"oap640cot4yru2s",
+			"0196afca-7951-77d1-ba15-923db9b774b2",
 			[]string{"rel"},
 			func(c *core.Collection, ids []string) ([]*core.Record, error) {
 				return app.FindRecordsByIds(c.Id, ids, nil)
@@ -349,7 +349,7 @@ func TestExpandRecord(t *testing.T) {
 		{
 			"maxExpandDepth reached",
 			"demo4",
-			"qzaqccwrmva4o1n",
+			"0196afca-7951-75c9-9c38-91315915f69d",
 			[]string{"self_rel_many.self_rel_many.self_rel_many.self_rel_many.self_rel_many.self_rel_many.self_rel_many.self_rel_many.self_rel_many.self_rel_many.self_rel_many.self_rel_many"},
 			func(c *core.Collection, ids []string) ([]*core.Record, error) {
 				return app.FindRecordsByIds(c.Id, ids, nil)
@@ -360,7 +360,7 @@ func TestExpandRecord(t *testing.T) {
 		{
 			"simple indirect expand via single relation field (deprecated syntax)",
 			"demo3",
-			"lcl9d87w22ml6jy",
+			"0196afca-7951-7100-b4f8-93182f5a1f9d",
 			[]string{"demo4(rel_one_no_cascade_required)"},
 			func(c *core.Collection, ids []string) ([]*core.Record, error) {
 				return app.FindRecordsByIds(c.Id, ids, nil)
@@ -371,7 +371,7 @@ func TestExpandRecord(t *testing.T) {
 		{
 			"simple indirect expand via single relation field",
 			"demo3",
-			"lcl9d87w22ml6jy",
+			"0196afca-7951-7100-b4f8-93182f5a1f9d",
 			[]string{"demo4_via_rel_one_no_cascade_required"},
 			func(c *core.Collection, ids []string) ([]*core.Record, error) {
 				return app.FindRecordsByIds(c.Id, ids, nil)
@@ -382,7 +382,7 @@ func TestExpandRecord(t *testing.T) {
 		{
 			"nested indirect expand via single relation field",
 			"demo3",
-			"lcl9d87w22ml6jy",
+			"0196afca-7951-7100-b4f8-93182f5a1f9d",
 			[]string{
 				"demo4(rel_one_no_cascade_required).self_rel_many.self_rel_many.self_rel_one",
 			},
@@ -395,7 +395,7 @@ func TestExpandRecord(t *testing.T) {
 		{
 			"nested indirect expand via single relation field",
 			"demo3",
-			"lcl9d87w22ml6jy",
+			"0196afca-7951-7100-b4f8-93182f5a1f9d",
 			[]string{
 				"demo4_via_rel_many_no_cascade_required.self_rel_many.rel_many_no_cascade_required.demo4_via_rel_many_no_cascade_required",
 			},
@@ -435,7 +435,7 @@ func TestBackRelationExpandSingeVsArrayResult(t *testing.T) {
 	app, _ := tests.NewTestApp()
 	defer app.Cleanup()
 
-	record, err := app.FindRecordById("demo3", "7nwo8tuiatetxdm")
+	record, err := app.FindRecordById("demo3", "0196afca-7951-70d4-bb39-344bd3a8d4f7")
 	if err != nil {
 		t.Fatal(err)
 	}

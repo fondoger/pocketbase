@@ -2,6 +2,7 @@ package apis_test
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 	"testing"
@@ -12,6 +13,13 @@ import (
 
 func TestRecordConfirmVerification(t *testing.T) {
 	t.Parallel()
+
+	validVerificationToken := tests.NewAuthTokenForTest("users", "test@example.com", tests.CustomToken("verification", map[string]any{
+		"email": "test@example.com",
+	}))
+	validVerificationBody := strings.NewReader(fmt.Sprintf(`{
+		"token":"%s"
+	}`, validVerificationToken))
 
 	scenarios := []tests.ApiScenario{
 		{
@@ -39,9 +47,11 @@ func TestRecordConfirmVerification(t *testing.T) {
 			Name:   "expired token",
 			Method: http.MethodPost,
 			URL:    "/api/collections/users/confirm-verification",
-			Body: strings.NewReader(`{
-				"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjRxMXhsY2xtZmxva3UzMyIsImV4cCI6MTY0MDk5MTY2MSwidHlwZSI6InZlcmlmaWNhdGlvbiIsImNvbGxlY3Rpb25JZCI6Il9wYl91c2Vyc19hdXRoXyIsImVtYWlsIjoidGVzdEBleGFtcGxlLmNvbSJ9.qqelNNL2Udl6K_TJ282sNHYCpASgA6SIuSVKGfBHMZU"
-			}`),
+			Body: strings.NewReader(fmt.Sprintf(`{
+				"token": "%s"
+			}`, tests.NewAuthTokenForTest("users", "test@example.com", tests.CustomToken("verification", map[string]any{
+				"email": "test@example.com",
+			}), tests.TokenExpired(true)))),
 			ExpectedStatus: 400,
 			ExpectedContent: []string{
 				`"data":{`,
@@ -53,9 +63,11 @@ func TestRecordConfirmVerification(t *testing.T) {
 			Name:   "non-verification token",
 			Method: http.MethodPost,
 			URL:    "/api/collections/users/confirm-verification",
-			Body: strings.NewReader(`{
-				"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjRxMXhsY2xtZmxva3UzMyIsImV4cCI6MjUyNDYwNDQ2MSwidHlwZSI6InBhc3N3b3JkUmVzZXQiLCJjb2xsZWN0aW9uSWQiOiJfcGJfdXNlcnNfYXV0aF8iLCJlbWFpbCI6InRlc3RAZXhhbXBsZS5jb20ifQ.xR-xq1oHDy0D8Q4NDOAEyYKGHWd_swzoiSoL8FLFBHY"
-			}`),
+			Body: strings.NewReader(fmt.Sprintf(`{
+				"token": "%s"
+			}`, tests.NewAuthTokenForTest("users", "test@example.com", tests.CustomToken("passwordReset", map[string]any{
+				"email": "test@example.com",
+			})))),
 			ExpectedStatus: 400,
 			ExpectedContent: []string{
 				`"data":{`,
@@ -64,23 +76,19 @@ func TestRecordConfirmVerification(t *testing.T) {
 			ExpectedEvents: map[string]int{"*": 0},
 		},
 		{
-			Name:   "non auth collection",
-			Method: http.MethodPost,
-			URL:    "/api/collections/demo1/confirm-verification?expand=rel,missing",
-			Body: strings.NewReader(`{
-				"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjRxMXhsY2xtZmxva3UzMyIsImV4cCI6MjUyNDYwNDQ2MSwidHlwZSI6InZlcmlmaWNhdGlvbiIsImNvbGxlY3Rpb25JZCI6Il9wYl91c2Vyc19hdXRoXyIsImVtYWlsIjoidGVzdEBleGFtcGxlLmNvbSJ9.SetHpu2H-x-q4TIUz-xiQjwi7MNwLCLvSs4O0hUSp0E"
-			}`),
+			Name:            "non auth collection",
+			Method:          http.MethodPost,
+			URL:             "/api/collections/demo1/confirm-verification?expand=rel,missing",
+			Body:            validVerificationBody,
 			ExpectedStatus:  404,
 			ExpectedContent: []string{`"data":{}`},
 			ExpectedEvents:  map[string]int{"*": 0},
 		},
 		{
-			Name:   "different auth collection",
-			Method: http.MethodPost,
-			URL:    "/api/collections/clients/confirm-verification?expand=rel,missing",
-			Body: strings.NewReader(`{
-				"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjRxMXhsY2xtZmxva3UzMyIsImV4cCI6MjUyNDYwNDQ2MSwidHlwZSI6InZlcmlmaWNhdGlvbiIsImNvbGxlY3Rpb25JZCI6Il9wYl91c2Vyc19hdXRoXyIsImVtYWlsIjoidGVzdEBleGFtcGxlLmNvbSJ9.SetHpu2H-x-q4TIUz-xiQjwi7MNwLCLvSs4O0hUSp0E"
-			}`),
+			Name:           "different auth collection",
+			Method:         http.MethodPost,
+			URL:            "/api/collections/clients/confirm-verification?expand=rel,missing",
+			Body:           validVerificationBody,
 			ExpectedStatus: 400,
 			ExpectedContent: []string{
 				`"data":{"token":{"code":"validation_token_collection_mismatch"`,
@@ -88,12 +96,10 @@ func TestRecordConfirmVerification(t *testing.T) {
 			ExpectedEvents: map[string]int{"*": 0},
 		},
 		{
-			Name:   "valid token",
-			Method: http.MethodPost,
-			URL:    "/api/collections/users/confirm-verification",
-			Body: strings.NewReader(`{
-				"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjRxMXhsY2xtZmxva3UzMyIsImV4cCI6MjUyNDYwNDQ2MSwidHlwZSI6InZlcmlmaWNhdGlvbiIsImNvbGxlY3Rpb25JZCI6Il9wYl91c2Vyc19hdXRoXyIsImVtYWlsIjoidGVzdEBleGFtcGxlLmNvbSJ9.SetHpu2H-x-q4TIUz-xiQjwi7MNwLCLvSs4O0hUSp0E"
-			}`),
+			Name:           "valid token",
+			Method:         http.MethodPost,
+			URL:            "/api/collections/users/confirm-verification",
+			Body:           validVerificationBody,
 			ExpectedStatus: 204,
 			ExpectedEvents: map[string]int{
 				"*":                                  0,
@@ -112,9 +118,11 @@ func TestRecordConfirmVerification(t *testing.T) {
 			Name:   "valid token (already verified)",
 			Method: http.MethodPost,
 			URL:    "/api/collections/users/confirm-verification",
-			Body: strings.NewReader(`{
-				"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6Im9hcDY0MGNvdDR5cnUycyIsImV4cCI6MjUyNDYwNDQ2MSwidHlwZSI6InZlcmlmaWNhdGlvbiIsImNvbGxlY3Rpb25JZCI6Il9wYl91c2Vyc19hdXRoXyIsImVtYWlsIjoidGVzdDJAZXhhbXBsZS5jb20ifQ.QQmM3odNFVk6u4J4-5H8IBM3dfk9YCD7mPW-8PhBAI8"
-			}`),
+			Body: strings.NewReader(fmt.Sprintf(`{
+				"token": "%s"
+			}`, tests.NewAuthTokenForTest("users", "test2@example.com", tests.CustomToken("verification", map[string]any{
+				"email": "test2@example.com",
+			}), tests.TokenExpired(true)))),
 			ExpectedStatus: 204,
 			ExpectedEvents: map[string]int{
 				"*":                                  0,
@@ -125,9 +133,11 @@ func TestRecordConfirmVerification(t *testing.T) {
 			Name:   "valid verification token from a collection without allowed login",
 			Method: http.MethodPost,
 			URL:    "/api/collections/nologin/confirm-verification",
-			Body: strings.NewReader(`{
-				"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImRjNDlrNmpnZWpuNDBoMyIsImV4cCI6MjUyNDYwNDQ2MSwidHlwZSI6InZlcmlmaWNhdGlvbiIsImNvbGxlY3Rpb25JZCI6ImtwdjcwOXNrMmxxYnFrOCIsImVtYWlsIjoidGVzdEBleGFtcGxlLmNvbSJ9.5GmuZr4vmwk3Cb_3ZZWNxwbE75KZC-j71xxIPR9AsVw"
-			}`),
+			Body: strings.NewReader(fmt.Sprintf(`{
+				"token": "%s"
+			}`, tests.NewAuthTokenForTest("nologin", "test@example.com", tests.CustomToken("verification", map[string]any{
+				"email": "test@example.com",
+			})))),
 			ExpectedStatus:  204,
 			ExpectedContent: []string{},
 			ExpectedEvents: map[string]int{
@@ -147,9 +157,7 @@ func TestRecordConfirmVerification(t *testing.T) {
 			Name:   "OnRecordAfterConfirmVerificationRequest error response",
 			Method: http.MethodPost,
 			URL:    "/api/collections/users/confirm-verification",
-			Body: strings.NewReader(`{
-				"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjRxMXhsY2xtZmxva3UzMyIsImV4cCI6MjUyNDYwNDQ2MSwidHlwZSI6InZlcmlmaWNhdGlvbiIsImNvbGxlY3Rpb25JZCI6Il9wYl91c2Vyc19hdXRoXyIsImVtYWlsIjoidGVzdEBleGFtcGxlLmNvbSJ9.SetHpu2H-x-q4TIUz-xiQjwi7MNwLCLvSs4O0hUSp0E"
-			}`),
+			Body:   validVerificationBody,
 			BeforeTestFunc: func(t testing.TB, app *tests.TestApp, e *core.ServeEvent) {
 				app.OnRecordConfirmVerificationRequest().BindFunc(func(e *core.RecordConfirmVerificationRequestEvent) error {
 					return errors.New("error")
@@ -169,9 +177,7 @@ func TestRecordConfirmVerification(t *testing.T) {
 			Name:   "RateLimit rule - nologin:confirmVerification",
 			Method: http.MethodPost,
 			URL:    "/api/collections/nologin/confirm-verification",
-			Body: strings.NewReader(`{
-				"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImRjNDlrNmpnZWpuNDBoMyIsImV4cCI6MjUyNDYwNDQ2MSwidHlwZSI6InZlcmlmaWNhdGlvbiIsImNvbGxlY3Rpb25JZCI6ImtwdjcwOXNrMmxxYnFrOCIsImVtYWlsIjoidGVzdEBleGFtcGxlLmNvbSJ9.5GmuZr4vmwk3Cb_3ZZWNxwbE75KZC-j71xxIPR9AsVw"
-			}`),
+			Body:   validVerificationBody,
 			BeforeTestFunc: func(t testing.TB, app *tests.TestApp, e *core.ServeEvent) {
 				app.Settings().RateLimits.Enabled = true
 				app.Settings().RateLimits.Rules = []core.RateLimitRule{
@@ -188,9 +194,7 @@ func TestRecordConfirmVerification(t *testing.T) {
 			Name:   "RateLimit rule - *:confirmVerification",
 			Method: http.MethodPost,
 			URL:    "/api/collections/nologin/confirm-verification",
-			Body: strings.NewReader(`{
-				"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImRjNDlrNmpnZWpuNDBoMyIsImV4cCI6MjUyNDYwNDQ2MSwidHlwZSI6InZlcmlmaWNhdGlvbiIsImNvbGxlY3Rpb25JZCI6ImtwdjcwOXNrMmxxYnFrOCIsImVtYWlsIjoidGVzdEBleGFtcGxlLmNvbSJ9.5GmuZr4vmwk3Cb_3ZZWNxwbE75KZC-j71xxIPR9AsVw"
-			}`),
+			Body:   validVerificationBody,
 			BeforeTestFunc: func(t testing.TB, app *tests.TestApp, e *core.ServeEvent) {
 				app.Settings().RateLimits.Enabled = true
 				app.Settings().RateLimits.Rules = []core.RateLimitRule{
