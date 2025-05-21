@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PocketBase Realtime Chat Demo</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            background-color: #f0f2f5;
+            /* Lighter gray background */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: #1c1e21;
+            /* Darker text for better contrast */
+        }
+
+        .chat-container {
+            width: 100%;
+            max-width: 700px;
+            /* Slightly wider */
+            background-color: #ffffff;
+            /* White chat background */
+            border-radius: 12px;
+            /* Softer rounded corners */
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+            /* Softer shadow */
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            height: calc(100vh - 40px);
+            max-height: 800px;
+        }
+
+        .chat-header {
+            padding: 15px 20px;
+            background-color: #f0f2f5;
+            /* Light background for header */
+            border-bottom: 1px solid #ccd0d5;
+            /* Separator line */
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            /* Align title to left, user info to right */
+        }
+
+        .chat-header-title {
+            font-size: 1.2em;
+            font-weight: 600;
+            color: #1c1e21;
+        }
+
+        .current-user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .current-user-info .avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background-color: transparent;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.6em;
+            /* Slightly larger avatar in header */
+        }
+
+        .current-user-info .username {
+            font-size: 0.95em;
+            font-weight: 500;
+            color: #050505;
+        }
+
+        .dice-button {
+            cursor: pointer;
+            font-size: 1.5em;
+            /* Adjust size as needed */
+            padding-left: 8px;
+            user-select: none;
+            /* Prevent text selection */
+        }
+
+        .dice-button:hover {
+            opacity: 0.7;
+        }
+
+        .messages {
+            flex-grow: 1;
+            padding: 20px 20px 10px 20px;
+            /* Adjusted padding */
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            /* Reduced gap between messages */
+        }
+
+        .message {
+            display: flex;
+            align-items: flex-end;
+            /* Align avatar with bottom of bubble */
+            gap: 8px;
+            max-width: 75%;
+            /* Max width for bubbles */
+        }
+
+        .message.sent {
+            align-self: flex-end;
+        }
+
+        .message.received {
+            align-self: flex-start;
+        }
+
+        .message .avatar {
+            width: 32px;
+            /* Smaller avatar */
+            height: 32px;
+            border-radius: 50%;
+            background-color: transparent;
+            /* No background for emoji */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.4em;
+            /* Slightly larger emoji if needed */
+            flex-shrink: 0;
+            margin-bottom: 5px;
+            /* Align with first line of text in bubble */
+        }
+
+        .message.sent .avatar {
+            order: 1;
+            /* Move avatar to the right for sent messages */
+        }
+
+
+        .message .content-wrapper {
+            background-color: #e4e6eb;
+            /* Light gray for received messages */
+            color: #050505;
+            padding: 10px 14px;
+            border-radius: 18px;
+            /* More rounded bubbles */
+            display: flex;
+            flex-direction: column;
+            word-wrap: break-word;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+
+        .message.sent .content-wrapper {
+            background-color: #007aff;
+            /* Apple blue for sent messages */
+            color: white;
+        }
+
+        .message .username-time {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 3px;
+        }
+
+        .message.received .username-time {
+            /* For received, username can be above bubble if desired, or integrated */
+            margin-bottom: 4px;
+        }
+
+        .message .username {
+            font-size: 0.75em;
+            /* Smaller username */
+            font-weight: 500;
+            /* Slightly bolder username */
+            color: #65676b;
+            /* Subtler username color */
+        }
+
+        .message.sent .username {
+            color: #f0f0f0;
+            /* Light username color for sent messages */
+            /* align-self: flex-end; /* No longer needed if username is inside bubble */
+        }
+
+        .message .timestamp {
+            font-size: 0.7em;
+            color: #8a8d91;
+            /* Subtler timestamp */
+            margin-left: 8px;
+            /* Space between username and time if on same line */
+        }
+
+        .message.sent .timestamp {
+            color: #e0e0e0;
+        }
+
+        .message .text {
+            font-size: 0.98em;
+            /* Slightly larger text */
+            line-height: 1.4;
+        }
+
+        .message-form {
+            display: flex;
+            padding: 12px 15px;
+            /* Adjusted padding */
+            border-top: 1px solid #ccd0d5;
+            /* Lighter border */
+            background-color: #f0f2f5;
+            /* Match body background */
+            align-items: center;
+            /* Vertically align items */
+        }
+
+        .message-form input[type="text"] {
+            flex-grow: 1;
+            padding: 10px 18px;
+            /* More padding */
+            border: 1px solid #ccd0d5;
+            border-radius: 20px;
+            /* Pill shape */
+            margin-right: 10px;
+            font-size: 0.95em;
+            background-color: #ffffff;
+        }
+
+        .message-form input[type="text"]:focus {
+            outline: none;
+            border-color: #007aff;
+            box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.2);
+        }
+
+        .message-form button {
+            padding: 0;
+            background-color: transparent;
+            /* Transparent background */
+            color: #007aff;
+            /* Blue send icon */
+            border: none;
+            border-radius: 50%;
+            /* Circular button */
+            cursor: pointer;
+            font-size: 1.5em;
+            /* Larger icon */
+            width: 38px;
+            height: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s;
+        }
+
+        .message-form button:hover {
+            background-color: rgba(0, 123, 255, 0.1);
+            /* Light blue hover */
+        }
+    </style>
+</head>
+
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            <div class="chat-header-title">PocketBase Realtime Chat Demo</div>
+            <div class="current-user-info">
+                <div class="avatar" id="currentUserAvatar"></div>
+                <span class="username" id="currentUserName"></span>
+                <span class="dice-button" id="diceButton">🎲</span>
+            </div>
+        </div>
+        <div class="messages" id="messages">
+            <!-- Messages will be appended here -->
+        </div>
+        <form class="message-form" id="messageForm">
+            <input type="text" id="messageInput" placeholder="Type a message..." autocomplete="off" />
+            <button type="submit">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                    class="feather feather-arrow-up-circle">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="16 12 12 8 8 12"></polyline>
+                    <line x1="12" y1="16" x2="12" y2="8"></line>
+                </svg>
+            </button>
+        </form>
+    </div>
+
+    <script type="module">
+        import PocketBase from "https://cdn.jsdelivr.net/gh/pocketbase/js-sdk@master/dist/pocketbase.es.mjs"
+
+        const pb = new PocketBase(window.location.origin);
+        const messagesDiv = document.getElementById('messages');
+        const messageForm = document.getElementById('messageForm');
+        const messageInput = document.getElementById('messageInput');
+        const currentUserAvatarDiv = document.getElementById('currentUserAvatar');
+        const currentUserNameSpan = document.getElementById('currentUserName');
+                const diceButton = document.getElementById('diceButton');
+
+        let currentUser = null;
+                let displayedMessages = []; // To store message elements and their timestamps
+
+        // --- Usernames and Avatars ---
+        const adjectives = ["Happy", "Clever", "Witty", "Brave", "Kind", "Sunny", "Gentle", "Proud", "Funny", "Calm"];
+
+    // Noun to Emoji Mapping
+    const nounToEmojiMap = new Map([
+        ["Panda", "🐼"],
+        ["Tiger", "🐯"],
+        ["Lion", "🦁"],
+        ["Eagle", "🦅"],
+        ["Dolphin", "🐬"],
+        ["Fox", "🦊"],
+        ["Wolf", "🐺"],
+        ["Bear", "🐻"],
+        ["Rabbit", "🐰"],
+        ["Owl", "🦉"],
+        ["Monkey", "🐵"],
+        ["Frog", "🐸"],
+        ["Koala", "🐨"],
+        ["Unicorn", "🦄"],
+        ["Chicken", "🐔"],
+        ["Penguin", "🐧"],
+        ["Dragon", "🐲"],
+        ["Octopus", "🐙"],
+        ["Snail", "🐌"],
+        ["Butterfly", "🦋"],
+        ["Hippo", "🦛"], // Added Hippo emoji
+        ["Gorilla", "🦍"],
+        ["Camel", "🐪"],
+        ["Squirrel", "🐿️"],
+        ["Hedgehog", "🦔"],
+        ["Bat", "🦇"],
+        ["Swan", "🦢"],
+        ["Peacock", "🦚"],
+        ["Parrot", "🦜"],
+        ["Lobster", "🦞"],
+        ["Crab", "🦀"],
+        ["Fish", "🐠"],
+        ["Blowfish", "🐡"],
+        ["Turtle", "🐢"],
+        ["Snake", "🐍"],
+        ["Elephant", "🐘"],
+        ["Giraffe", "🦒"],
+        ["Zebra", "🦓"],
+        ["Kangaroo", "🦘"],
+        ["Rhinoceros", "🦏"]
+    ]);
+
+    const nouns = Array.from(nounToEmojiMap.keys()); // Derive nouns from the map
+
+        const avatarColors = ["#FFC107", "#4CAF50", "#2196F3", "#9C27B0", "#F44336", "#FF9800", "#795548", "#607D8B", "#E91E63", "#00BCD4"];
+            // General list of emojis for fallback, includes all mapped emojis plus any others.
+            const animalEmojis = Array.from(nounToEmojiMap.values());
+
+        function getRandomElement(arr) {
+            return arr[Math.floor(Math.random() * arr.length)];
+        }
+
+        function generateUsername() {
+            return `${getRandomElement(adjectives)}${getRandomElement(nouns)}${Math.floor(Math.random() * 100)}`;
+        }
+
+        function getAvatarData(username) {
+            const lowerUsername = username.toLowerCase();
+
+            // Priority 1: Explicit "Panda" check
+            if (lowerUsername.includes("panda")) {
+                return { emoji: "🐼" };
+            }
+
+            // Priority 2: Check for nouns from the map
+            for (const [noun, emoji] of nounToEmojiMap) {
+                if (lowerUsername.includes(noun.toLowerCase())) {
+                    return { emoji: emoji };
+                }
+            }
+
+            // Fallback: Simple hash function to pick an emoji from the general animalEmojis list
+            let hash = 0;
+            for (let i = 0; i < username.length; i++) {
+                hash = username.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            const emoji = animalEmojis[Math.abs(hash) % animalEmojis.length];
+            return { emoji };
+        }
+
+        function formatTime(dateString) {
+            const now = new Date();
+            const date = new Date(dateString);
+            const diffSeconds = Math.round((now - date) / 1000);
+            const diffMinutes = Math.round(diffSeconds / 60);
+            const diffHours = Math.round(diffMinutes / 60);
+
+            const pad = (num) => String(num).padStart(2, '0');
+            const time = `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+
+            if (diffSeconds < 60) {
+                return "just now";
+            }
+            if (diffMinutes < 60) {
+                return `${diffMinutes} minute${diffMinutes > 1 ? "s" : ""} ago`;
+            }
+            // Check if it's today
+            if (now.toDateString() === date.toDateString()) {
+                return time; // HH:MM
+            }
+            // Check if it was yesterday
+            const yesterday = new Date(now);
+            yesterday.setDate(now.getDate() - 1);
+            if (yesterday.toDateString() === date.toDateString()) {
+                return `Yesterday ${time}`;
+            }
+            // Older than yesterday
+            return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${time}`;
+        }
+
+        async function initApp() {
+            try {
+                // 1. Create or authenticate a user
+                // pb.authStore.clear(); // Clear any in-memory auth state first
+                if (pb.authStore.isValid) {
+                    currentUser = pb.authStore.model;
+                    console.log("Authenticated user:", currentUser);
+                } else {
+                    console.log("No valid auth store, creating new user...");
+                    await createAndAuthNewUser();
+                }
+
+                currentUser = pb.authStore.model;
+                if (!currentUser.username || currentUser.username.startsWith('user_')) { // Pocketbase default is user_...
+                    const newUsername = generateUsername();
+                    await pb.collection('users').update(currentUser.id, { username: newUsername });
+                    currentUser.username = newUsername; // Update local copy
+                    console.log("Updated username for user:", currentUser.id, "to", newUsername);
+                }
+
+                // Display current user info in header
+                if (currentUser && currentUser.username) {
+                    const avatarData = getAvatarData(currentUser.username);
+                    currentUserAvatarDiv.textContent = avatarData.emoji;
+                    currentUserNameSpan.textContent = currentUser.username;
+                    document.title = `Chat - ${currentUser.username}`; // Update page title with username
+                }
+
+                // Add event listener for dice button
+                diceButton.addEventListener('click', handleChangeUserIdentity);
+
+                // 2. Subscribe to new messages
+                pb.collection('messages').subscribe('*', async function (e) {
+                    console.log('Realtime event:', e.action, e.record);
+                    if (e.action === 'create') {
+                        const message = e.record;
+                        // Fetch sender's username if not expanded
+                        let senderUsername = message.sender_username;
+                        if (message.expand && message.expand.sender && message.expand.sender.username) {
+                            senderUsername = message.expand.sender.username;
+                        } else if (!senderUsername && message.sender) {
+                            // Fallback if not expanded and no sender_username field
+                            try {
+                                const senderUser = await pb.collection('users').getOne(message.sender);
+                                senderUsername = senderUser.username;
+                            } catch (err) {
+                                console.error("Could not fetch sender username:", err);
+                                senderUsername = "Unknown User";
+                            }
+                        }
+                        displayMessage(message.text, senderUsername || "Unknown User", message.sender === currentUser.id, message.created);
+                    }
+                }, { expand: 'sender' }); // expand sender to get username easily
+
+                // Load initial messages
+                loadInitialMessages();
+
+            } catch (error) {
+                console.error("Initialization error:", error);
+                messagesDiv.innerHTML = "<p>Error connecting to chat. Please refresh.</p>";
+            }
+        }
+
+        async function createAndAuthNewUser() {
+            const newUsername = generateUsername();
+            const email = `${newUsername.toLowerCase().replace(/[^a-z0-9]/g, '')}${Date.now()}@example.com`;
+            const password = Math.random().toString(36).slice(-10) + "A1!"; // Simple password for demo
+
+            try {
+                const newUser = await pb.collection('users').create({
+                    email: email,
+                    password: password,
+                    passwordConfirm: password,
+                    username: newUsername, // Set username at creation
+                    emailVisibility: false
+                });
+                console.log("Created new user:", newUser);
+                await pb.collection('users').authWithPassword(email, password);
+                console.log("Authenticated new user:", pb.authStore.model);
+            } catch (err) {
+                console.error("Error creating/authenticating new user:", err);
+                // Fallback if creation with username fails (e.g. unique constraint)
+                // This part might need adjustment based on your PocketBase setup
+                const fallbackUsername = `user_${Date.now()}`;
+                const fallbackEmail = `${fallbackUsername}@example.com`;
+                try {
+                    const fallbackUser = await pb.collection('users').create({
+                        email: fallbackEmail,
+                        password: password,
+                        passwordConfirm: password,
+                        username: fallbackUsername,
+                        emailVisibility: false
+                    });
+                    console.log("Created fallback new user:", fallbackUser);
+                    await pb.collection('users').authWithPassword(fallbackEmail, password);
+                    console.log("Authenticated fallback new user:", pb.authStore.model);
+                } catch (deepErr) {
+                    console.error("Deep error creating/authenticating user:", deepErr);
+                    throw deepErr; // Re-throw if even fallback fails
+                }
+            }
+        }
+
+                async function handleChangeUserIdentity() {
+                    if (!currentUser) return;
+
+                    const newUsername = generateUsername();
+                    try {
+                        await pb.collection('users').update(currentUser.id, { username: newUsername });
+                        currentUser.username = newUsername; // Update local copy
+
+                        // Update UI
+                        const avatarData = getAvatarData(newUsername);
+                        currentUserAvatarDiv.textContent = avatarData.emoji;
+                        currentUserNameSpan.textContent = newUsername;
+                        document.title = `Chat - ${newUsername}`;
+                        console.log("User identity changed to:", newUsername);
+
+                        // Optionally, send a system message or update existing messages from this user?
+                        // For now, we'll just update the header.
+                    } catch (error) {
+                        console.error("Error changing user identity:", error);
+                        alert("Could not change your name/avatar. Please try again.");
+                    }
+                }
+
+        async function loadInitialMessages() {
+            try {
+                const resultList = await pb.collection('messages').getList(1, 50, {
+                    sort: '-created',
+                    expand: 'sender' // expand sender to get username
+                });
+                messagesDiv.innerHTML = ''; // Clear previous messages
+                resultList.items.reverse().forEach(message => {
+                    let senderUsername = message.sender_username;
+                    if (message.expand && message.expand.sender && message.expand.sender.username) {
+                        senderUsername = message.expand.sender.username;
+                    } else if (!senderUsername && message.sender) {
+                        // This is a fallback, ideally expand works or sender_username is populated
+                        senderUsername = "Unknown User"; // Or fetch it, but could be slow for many messages
+                    }
+                    displayMessage(message.text, senderUsername || "Unknown User", message.sender === currentUser.id, message.created);
+                });
+            } catch (error) {
+                console.error("Error loading initial messages:", error);
+            }
+        }
+
+        function displayMessage(text, username, isSent, timestamp) {
+            const messageEl = document.createElement('div');
+            messageEl.classList.add('message', isSent ? 'sent' : 'received');
+
+            const avatarData = getAvatarData(username);
+            const formattedTime = formatTime(timestamp); // Initial formatting
+
+            messageEl.innerHTML = `
+                <div class="avatar">${avatarData.emoji}</div>
+                <div class="content-wrapper">
+                    <div class="username-time">
+                        <span class="username">${username}</span>
+                        <span class="timestamp" data-timestamp="${timestamp}">${formattedTime}</span>
+                    </div>
+                    <div class="text">${escapeHTML(text)}</div>
+                </div>
+            `;
+            messagesDiv.appendChild(messageEl);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight; // Scroll to bottom
+
+            // Store for dynamic updates
+            const timestampEl = messageEl.querySelector('.timestamp');
+            displayedMessages.push({ element: timestampEl, rawTime: timestamp });
+        }
+
+        function escapeHTML(str) {
+            var p = document.createElement('p');
+            p.appendChild(document.createTextNode(str));
+            return p.innerHTML;
+        }
+
+        messageForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const messageText = messageInput.value.trim();
+
+            if (messageText && currentUser) {
+                try {
+                    await pb.collection('messages').create({
+                        text: messageText,
+                        sender: currentUser.id,
+                        sender_username: currentUser.username // Store username directly for easier display
+                    });
+                    messageInput.value = '';
+                    // Realtime subscription will handle displaying the sent message
+                } catch (error) {
+                    console.error("Error sending message:", error);
+                    alert("Could not send message. Please try again.");
+                }
+            }
+        });
+
+        initApp();
+
+    // Function to update all visible message timestamps
+    function updateAllMessageTimestamps() {
+        displayedMessages.forEach(msg => {
+            if (msg.element && msg.rawTime) {
+                msg.element.textContent = formatTime(msg.rawTime);
+            }
+        });
+    }
+
+    // Update timestamps every 60 seconds
+    setInterval(updateAllMessageTimestamps, 60000);
+
+    </script>
+</body>
+
+</html>
