@@ -1,14 +1,83 @@
+# PcketBase with PostgresSQL
 
-Advantages Of PostgresSQL:
+**Features**
 
-- JSON Operations IS Much Faster due to the native JSONB support in PostgresSQL.
-- UUID V7 as primary key the index speed is also faster.
-- PostgresSQL makes it possible to horizontally scale the instances of PocketBase.
+- ✅ PostgresSQL support
+- ✅ Support horizontal scaling
+- ✅ Realtime events works normally with horizontal scaling
+- ✅ 100% test case pass rate across total 4701 unit tests
+- ✅ Fully compatible with latest PocketBase SDKs/Docs
 
+**Demo App**
+
+To demonstrate the horizontal scaling and realtime capabilities, I have deployed a **realtime chat demo app** on two different PocketBase instances.
+
+- Instance 1: [pocketbase-chat-01.mimimiao.com](https://pocketbase-chat-01.mimimiao.com)
+- Instance 2: [pocketbase-chat-02.mimimiao.com](https://pocketbase-chat-02.mimimiao.com)
+
+![Realtime Chat Demo](./.github/chat-page-demo.png)
+
+> [!TIP]
+> The above demo app is free hosted on ClawCloud Run and Neon DB, see [Free Hosting Guide](https://github.com/fondoger/pocketbase/tree/realtime-demo) for more details.
+
+**Get Started**
+
+Everything is the same as the original PocketBase, except that an additional environment variable `POSTGRES_URL` is required.
+
+```sh
+export POSTGRES_URL=postgres://user:pass@127.0.0.1:5432/postgres?sslmode=disable
+./pocketbase serve
+```
+
+See: [pocketbase/pocketbase](https://github.com/pocketbase/pocketbase)
+
+**Deploy with Docker**
+
+1. Start PostgresSQL:
+
+   ```sh
+   docker run -d \
+     --name postgres \
+     -p 5432:5432 \
+     -e POSTGRES_USER=user \
+     -e POSTGRES_PASSWORD=pass \
+     postgres:alpine
+   ```
+
+2. Start PocketBase (Don't use @latest tag, use a specific version in production)
+
+   ```sh
+   docker run -d \
+     --network=host \
+     --name pocketbase \
+     -v ./pb_data:/data \
+     -e PB_HTTP_ADDR=127.0.0.1:8090 \
+     -e PB_DATA_DIR="/data" \
+     -e POSTGRES_URL="postgres://user:pass@127.0.0.1:5432/postgres?sslmode=disable" \
+     ghcr.io/fondoger/pocketbase:latest
+   ```
+
+3. Get admin password reset link
+   ```sh
+   docker logs -f pocketbase
+   ```
+
+**Limitations**
+
+- Local file system is not synced across multiple instances.
+  > You need to add a S3 storage account if you are deploying multiple instances and need the file upload feature.
+- The built-in SQLite Backup feature is not supported
+  > PostgresSQL have many mature and stable backup solutions. Eg: `pg_dump`, `docker-pg-backup`, `postgres-backup-s3`.
+
+**Disclaimer**
+
+I don't want to create another fork of PocketBase, but I really need PostgresSQL support for my project. The eventual goal is to merge this code back into the main PocketBase repository.
+
+If you want to contribute, please first go to [pocketbase/pocketbase](https://github.com/pocketbase/pocketbase). This repository only handles the bugs related to PostgresSQL.
 
 ---
-Original README.md file
-----
+
+## Original README.md file
 
 <p align="center">
     <a href="https://pocketbase.io" target="_blank" rel="noopener">
@@ -44,7 +113,6 @@ The easiest way to interact with the PocketBase Web APIs is to use one of the of
 
 You could also check the recommendations in https://pocketbase.io/docs/how-to-use/.
 
-
 ## Overview
 
 ### Use as standalone app
@@ -64,33 +132,34 @@ Here is a minimal example:
 0. [Install Go 1.23+](https://go.dev/doc/install) (_if you haven't already_)
 
 1. Create a new project directory with the following `main.go` file inside it:
-    ```go
-    package main
 
-    import (
-        "log"
+   ```go
+   package main
 
-        "github.com/pocketbase/pocketbase"
-        "github.com/pocketbase/pocketbase/core"
-    )
+   import (
+       "log"
 
-    func main() {
-        app := pocketbase.New()
+       "github.com/pocketbase/pocketbase"
+       "github.com/pocketbase/pocketbase/core"
+   )
 
-        app.OnServe().BindFunc(func(se *core.ServeEvent) error {
-            // registers new "GET /hello" route
-            se.Router.GET("/hello", func(re *core.RequestEvent) error {
-                return re.String(200, "Hello world!")
-            })
+   func main() {
+       app := pocketbase.New()
 
-            return se.Next()
-        })
+       app.OnServe().BindFunc(func(se *core.ServeEvent) error {
+           // registers new "GET /hello" route
+           se.Router.GET("/hello", func(re *core.RequestEvent) error {
+               return re.String(200, "Hello world!")
+           })
 
-        if err := app.Start(); err != nil {
-            log.Fatal(err)
-        }
-    }
-    ```
+           return se.Next()
+       })
+
+       if err := app.Start(); err != nil {
+           log.Fatal(err)
+       }
+   }
+   ```
 
 2. To init the dependencies, run `go mod init myapp && go mod tidy`.
 
