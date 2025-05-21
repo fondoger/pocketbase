@@ -1,12 +1,64 @@
+# PcketBase with PostgresSQL
 
-Advantages Of PostgresSQL:
+**Features**
 
-- JSON Operations IS Much Faster due to the native JSONB support in PostgresSQL.
-- UUID V7 as primary key the index speed is also faster.
-- PostgresSQL makes it possible to horizontally scale the instances of PocketBase.
+- [x] PostgresSQL support
+- [x] Support horizontal scaling
+- [x] Realtime events works normally with horizontal scaling
+- [x] 100% test case pass rate across total 4701 unit tests
+- [x] Fully compatible with latest PocketBase SDKs/Docs
+
+**Get Started**
+
+Everything is the same as the original PocketBase, except that an additional environment variable `POSTGRES_URL` is required.
+
+```sh
+export POSTGRES_URL=postgres://user:pass@127.0.0.1:5432/postgres?sslmode=disable
+./pocketbase serve
+```
+
+See: [pocketbase/pocketbase](https://github.com/pocketbase/pocketbase)
+
+**Deploy with Docker**
+
+1. Start PostgresSQL:
+    ```sh
+    docker run -d \
+      --name postgres \
+      -p 5432:5432 \
+      -e POSTGRES_USER=user \
+      -e POSTGRES_PASSWORD=pass \
+      postgres:alpine
+    ```
+
+2. Start PocketBase (Don't use @latest tag, use a specific version in production)
+    ```sh
+    docker run -d \
+      --network=host \
+      --name pocketbase \
+      -v ./pb_data:/data \
+      -e PB_HTTP_ADDR=127.0.0.1:8090 \
+      -e PB_DATA_DIR="/data" \
+      -e POSTGRES_URL="postgres://user:pass@127.0.0.1:5432/postgres?sslmode=disable" \
+      ghcr.io/fondoger/pocketbase:latest
+    ```
+
+3. Get admin password reset link
+    ```sh
+    docker logs -f pocketbase
+    ```
+
+**Limitations**
+- Local file system is not synced across multiple instances.
+  > You need to add a S3 storage account if you are deploying multiple instances and need the file upload feature.
+- The built-in SQLite Backup feature is not supported
+  > PostgresSQL have many mature and stable backup solutions. Eg: `pg_dump`, `docker-pg-backup`, `postgres-backup-s3`.
 
 
----
+> [!NOTE]  
+> I don't want to create another fork of PocketBase, but I really need PostgresSQL support for my project. The eventual goal is to merge this code back into the main PocketBase repository.
+
+----
 Original README.md file
 ----
 
