@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"log/slog"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -72,8 +73,9 @@ type BaseAppConfig struct {
 	AuxMaxOpenConns  int
 	AuxMaxIdleConns  int
 	PostgresURL      string // eg: "postgres://user:pass@localhost:5432?sslmode=disable"
-	PostgresDataDB   string // eg: "data"
-	PostgresAuxDB    string // eg: "auxiliary"
+	PostgresDataDB   string // eg: "pb-data"
+	PostgresAuxDB    string // eg: "pb-auxiliary"
+	IsRealtimeBridge bool
 	IsDev            bool
 }
 
@@ -511,6 +513,21 @@ func (app *BaseApp) ResetBootstrapState() error {
 	}
 
 	return nil
+}
+
+// PostgresURL returns the PostgreSQL connection URL to the main data db.
+// It is now used in realtime_bridge.go to create a pgx native connection pool.
+func (app *BaseApp) PostgresURL() string {
+	url, _ := url.Parse(app.config.PostgresURL)
+	url.Path = "/" + app.config.PostgresDataDB
+	return url.String()
+}
+
+// IsRealtimeBridgeEnabled returns whether the app is in realtime bridge mode.
+// If you need both realtime feature and horizontal scale support, you could
+// enable it. We will use Postgres's LISTEN/NOTIFY feature to sync realtime events.
+func (app *BaseApp) IsRealtimeBridgeEnabled() bool {
+	return app.config.IsRealtimeBridge
 }
 
 // DB returns the default app data.db builder instance.
