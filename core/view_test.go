@@ -530,7 +530,8 @@ func TestCreateViewFields(t *testing.T) {
 						end
 					) as int
 				) as cast_int
-			from demo1 a`,
+			from demo1 a
+			group by 1`,
 			false,
 			map[string]string{
 				"id":       core.FieldTypeText,
