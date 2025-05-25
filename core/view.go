@@ -736,7 +736,7 @@ func findDependentViews(app App, tableOrViewName string) ([]viewDef, error) {
 		if def, ok := nodes[row.ViewName]; !ok || def.SQL == "[TABLE]" {
 			nodes[row.ViewName] = viewDef{
 				Name: row.ViewName,
-				SQL:  fmt.Sprintf("CREATE VIEW %s AS %s", row.ViewName, row.ViewDefinition),
+				SQL:  fmt.Sprintf(`CREATE VIEW "%s" AS %s`, row.ViewName, row.ViewDefinition),
 			}
 		}
 		if !slices.Contains(graph[row.ReferencedTableName], row.ViewName) {
@@ -799,7 +799,7 @@ func findAllViewsInDependencyOrder(app App) ([]viewDef, error) {
 		if def, ok := nodes[row.ViewName]; !ok || def.SQL == "[TABLE]" {
 			nodes[row.ViewName] = viewDef{
 				Name: row.ViewName,
-				SQL:  fmt.Sprintf("CREATE VIEW %s AS %s", row.ViewName, row.ViewDefinition),
+				SQL:  fmt.Sprintf(`CREATE VIEW "%s" AS %s`, row.ViewName, row.ViewDefinition),
 			}
 		}
 		if !slices.Contains(graph[row.ReferencedTableName], row.ViewName) {

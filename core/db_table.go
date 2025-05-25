@@ -159,7 +159,7 @@ func (app *BaseApp) DeleteTable(tableName string) error {
 		return fmt.Errorf("invalid table name")
 	}
 	_, err := app.ConcurrentDB().NewQuery(fmt.Sprintf(
-		"DROP TABLE IF EXISTS %s CASCADE",
+		"DROP TABLE IF EXISTS {{%s}} CASCADE",
 		tableName,
 	)).Execute()
 
