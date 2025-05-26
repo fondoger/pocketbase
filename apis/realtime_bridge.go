@@ -82,7 +82,7 @@ func bindRealtimeBridge(app core.App) {
 // listenSharedBridgeChannelLoop listens to the shared bridge channel.
 // It is a common communication channel between all pocketbase instances.
 // Currently, it has two purposes:
-// 1. Listen upsert, delete events in _realtime_clients table.
+// 1. Listen upsert, delete events in _realtimeClients table.
 // 2. Listen collection_updated and settings_updated events.
 func (t *RealtimeBridge) listenSharedBridgeChannelLoop(ctx context.Context) {
 	loopOnNotification(ctx, t.pool, "shared_bridge_channel", func() {
@@ -161,9 +161,9 @@ func (t *RealtimeBridge) SendViaBridge(channelId string, clientId string, messag
 		panic("Cannot send bridged message to self channel")
 	}
 	_, err := t.app.DB().NewQuery(`
-		SELECT pg_notify({:channel_id}, {:payload})
+		SELECT pg_notify({:channelId}, {:payload})
 	`).Bind(dbx.Params{
-		"channel_id": channelId,
+		"channelId": channelId,
 		"payload":    clientId + "|" + message.Name + "|" + string(message.Data),
 	}).Execute()
 	if err != nil {
@@ -209,11 +209,11 @@ var pgTypes = pgtype.NewMap()
 // reload all remote realtime subscriptions
 func (t *RealtimeBridge) fullRefreshSubscriptions() {
 	rows, err := t.app.DB().NewQuery(`
-		SELECT client_id, channel_id, subscriptions, auth_collection_ref, auth_record_ref, updated_by_channel_id
-		FROM _realtime_clients
-		WHERE updated_by_channel_id != {:self_channel_id}
+		SELECT "clientId", "channelId", "subscriptions", "authCollectionRef", "authRecordRef", "updatedByChannelId"
+		FROM "_realtimeClients"
+		WHERE "updatedByChannelId" != {:selfChannelId}
 	`).Bind(dbx.Params{
-		"self_channel_id": t.SelfChannelId(),
+		"selfChannelId": t.SelfChannelId(),
 	}).Rows()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Error loading subscriptions:", err)
@@ -260,19 +260,19 @@ func (t *RealtimeBridge) fullRefreshSubscriptions() {
 
 func (t *RealtimeBridge) mustCreateTables() {
 	_, err := t.app.DB().NewQuery(`
-		CREATE TABLE IF NOT EXISTS _realtime_channels (
-			channel_id TEXT PRIMARY KEY,
-			valid_until TIMESTAMP NOT NULL
+		CREATE TABLE IF NOT EXISTS "_realtimeChannels" (
+			"channelId" TEXT PRIMARY KEY,
+			"validUntil" TIMESTAMP NOT NULL
 		);
-		CREATE TABLE IF NOT EXISTS _realtime_clients (
-			client_id TEXT NOT NULL PRIMARY KEY,
-			channel_id TEXT NOT NULL,
-			subscriptions TEXT[] NOT NULL,
-			auth_collection_ref TEXT NOT NULL DEFAULT '',
-			auth_record_ref TEXT NOT NULL DEFAULT '',
-			updated_by_channel_id TEXT NOT NULL DEFAULT ''
+		CREATE TABLE IF NOT EXISTS "_realtimeClients" (
+			"clientId" TEXT NOT NULL PRIMARY KEY,
+			"channelId" TEXT NOT NULL,
+			"subscriptions" TEXT[] NOT NULL,
+			"authCollectionRef" TEXT NOT NULL DEFAULT '',
+			"authRecordRef" TEXT NOT NULL DEFAULT '',
+			"updatedByChannelId" TEXT NOT NULL DEFAULT ''
 		);
-		CREATE INDEX IF NOT EXISTS _realtime_clients_channel_id_idx ON _realtime_clients (channel_id);
+		CREATE INDEX IF NOT EXISTS "_realtimeClients_channelId_idx" ON "_realtimeClients" ("channelId");
 	`).Execute()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Error creating tables tables:", err)
@@ -280,7 +280,7 @@ func (t *RealtimeBridge) mustCreateTables() {
 	}
 }
 
-// heartbeatLoop periodically updates its status in the _realtime_channels table
+// heartbeatLoop periodically updates its status in the _realtimeChannels table
 // to tell other pocketbase instances that it is still alive.
 // It also helps to broadcast the subscription_channel_offline event to all pocketbase instances
 // if any of them is offline.
@@ -298,23 +298,23 @@ func (t *RealtimeBridge) heartbeatLoop(ctx context.Context) {
 			_, err := t.app.DB().NewQuery(`
 				WITH 
 					insert_operation AS (
-						INSERT INTO _realtime_channels (channel_id, valid_until)
-						VALUES ({:channel_id}, now() + interval '40 seconds')
-						ON CONFLICT (channel_id) DO UPDATE
-						SET valid_until = EXCLUDED.valid_until
+						INSERT INTO "_realtimeChannels" ("channelId", "validUntil")
+						VALUES ({:channelId}, now() + interval '40 seconds')
+						ON CONFLICT ("channelId") DO UPDATE
+						SET "validUntil" = EXCLUDED."validUntil"
 					),
 					deleted_channels AS (
-						DELETE FROM _realtime_channels
-						WHERE valid_until < now()
-						RETURNING channel_id
+						DELETE FROM "_realtimeChannels"
+						WHERE "validUntil" < now()
+						RETURNING "channelId"
 					),
 					_ AS (
-						DELETE FROM _realtime_clients
-						WHERE channel_id IN (SELECT channel_id FROM deleted_channels)
+						DELETE FROM "_realtimeClients"
+						WHERE "channelId" IN (SELECT "channelId" FROM deleted_channels)
 					)
-				SELECT pg_notify('shared_bridge_channel', 'subscription_channel_offline|' || channel_id) FROM deleted_channels;
+				SELECT pg_notify('shared_bridge_channel', 'subscription_channel_offline|' || "channelId") FROM deleted_channels;
 			`).Bind(dbx.Params{
-				"channel_id": t.channelId,
+				"channelId": t.channelId,
 			}).Execute()
 			if err != nil {
 				fmt.Fprintln(os.Stderr, "Error sending heartbeat:", err)

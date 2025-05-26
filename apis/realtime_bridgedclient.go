@@ -31,16 +31,16 @@ type IBridgedClient interface {
 	ReceiveChanges(newSubscription *ClientSubscription, authRecordJson string)
 }
 
-// ClientSubscription is stored in the _realtime_clients table in PostgreSQL.
+// ClientSubscription is stored in the _realtimeClients table in PostgreSQL.
 // Every time a new client connects to the pocketbase server, a new row is created.
 // And other pocketbase servers are notified via Postgres's Listen/Notify feature.
 type ClientSubscription struct {
-	ClientId           string   `db:"pk,client_id" json:"client_id"`
-	ChannelId          string   `db:"channel_id" json:"channel_id"`
+	ClientId           string   `db:"pk,clientId" json:"clientId"`
+	ChannelId          string   `db:"channelId" json:"channelId"`
 	Subscriptions      []string `db:"subscriptions" json:"subscriptions"`
-	AuthCollectionRef  string   `db:"auth_collection_ref" json:"auth_collection_ref"`
-	AuthRecordRef      string   `db:"auth_record_ref" json:"auth_record_ref"`
-	UpdatedByChannelId string   `db:"updated_by_channel_id" json:"updated_by_channel_id"`
+	AuthCollectionRef  string   `db:"authCollectionRef" json:"authCollectionRef"`
+	AuthRecordRef      string   `db:"authRecordRef" json:"authRecordRef"`
+	UpdatedByChannelId string   `db:"updatedByChannelId" json:"updatedByChannelId"`
 }
 
 var _ subscriptions.Client = (*BridgedClient)(nil)
@@ -88,13 +88,13 @@ func (r *BridgedClient) BroadcastGoOffline() {
 	// delete and notify
 	_, err := r.bridge.App().DB().NewQuery(`
 		WITH deleted AS (
-			DELETE FROM _realtime_clients
-			WHERE client_id = {:client_id}
+			DELETE FROM "_realtimeClients"
+			WHERE "clientId" = {:clientId}
 			RETURNING *
 		)
-		SELECT pg_notify('shared_bridge_channel', 'subscription_delete|' || deleted.client_id::text) FROM deleted;
+		SELECT pg_notify('shared_bridge_channel', 'subscription_delete|' || deleted."clientId") FROM deleted;
 	`).Bind(dbx.Params{
-		"client_id": r.subscription.ClientId,
+		"clientId": r.subscription.ClientId,
 	}).Execute()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Error deleting subscription:", err)
@@ -125,9 +125,9 @@ func (r *BridgedClient) BroadcastChanges() {
 	if record, _ := r.Get(RealtimeClientAuthKey).(*core.Record); record != nil {
 		r.subscription.AuthCollectionRef = record.Collection().Id
 		r.subscription.AuthRecordRef = record.Id
-		authSQL = fmt.Sprintf(`SELECT * FROM {{%s}} WHERE id = {:auth_record_id} LIMIT 1`, record.TableName())
+		authSQL = fmt.Sprintf(`SELECT * FROM {{%s}} WHERE id = {:authRecordRef} LIMIT 1`, record.TableName())
 		authParams = dbx.Params{
-			"auth_record_id": record.Id,
+			"authRecordRef": record.Id,
 		}
 	} else {
 		r.subscription.AuthCollectionRef = ""
@@ -139,15 +139,15 @@ func (r *BridgedClient) BroadcastChanges() {
 	_, err := r.bridge.App().DB().NewQuery(fmt.Sprintf(`
 		WITH
 			updated AS (
-				INSERT INTO _realtime_clients (
-					client_id, channel_id, subscriptions, auth_collection_ref, auth_record_ref, updated_by_channel_id
+				INSERT INTO "_realtimeClients" (
+					"clientId", "channelId", "subscriptions", "authCollectionRef", "authRecordRef", "updatedByChannelId"
 				) VALUES (
-					{:client_id}, {:channel_id}, {:subscriptions}, {:auth_collection_ref}, {:auth_record_ref}, {:updated_by_channel_id}
-				) ON CONFLICT (client_id) DO UPDATE
-				SET subscriptions = EXCLUDED.subscriptions,
-					auth_collection_ref = EXCLUDED.auth_collection_ref,
-					auth_record_ref = EXCLUDED.auth_record_ref,
-					updated_by_channel_id = EXCLUDED.updated_by_channel_id
+					{:clientId}, {:channelId}, {:subscriptions}, {:authCollectionRef}, {:authRecordRef}, {:updatedByChannelId}
+				) ON CONFLICT ("clientId") DO UPDATE
+				SET "subscriptions" = EXCLUDED."subscriptions",
+					"authCollectionRef" = EXCLUDED."authCollectionRef",
+					"authRecordRef" = EXCLUDED."authRecordRef",
+					"updatedByChannelId" = EXCLUDED."updatedByChannelId"
 				RETURNING *
 			),
 			auth AS (
@@ -163,12 +163,12 @@ func (r *BridgedClient) BroadcastChanges() {
 			)
 		);
 	`, authSQL)).Bind(authParams).Bind(dbx.Params{
-		"client_id":             r.subscription.ClientId,
-		"channel_id":            r.subscription.ChannelId,
+		"clientId":             r.subscription.ClientId,
+		"channelId":            r.subscription.ChannelId,
 		"subscriptions":         r.subscription.Subscriptions,
-		"auth_collection_ref":   r.subscription.AuthCollectionRef,
-		"auth_record_ref":       r.subscription.AuthRecordRef,
-		"updated_by_channel_id": r.subscription.UpdatedByChannelId,
+		"authCollectionRef":   r.subscription.AuthCollectionRef,
+		"authRecordRef":       r.subscription.AuthRecordRef,
+		"updatedByChannelId": r.subscription.UpdatedByChannelId,
 	}).Execute()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Error updating subscription:", err)

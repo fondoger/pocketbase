@@ -259,8 +259,8 @@ func TestRealtimeBridge_ChannelOffline(t *testing.T) {
 
 		// Pretend that heartbeat event in app1 stopped 1 hour ago
 		_, err := app1.DB().NewQuery(`
-			UPDATE _realtime_channels
-			SET valid_until = now() - interval '1 hour'
+			UPDATE "_realtimeChannels"
+			SET "validUntil" = now() - interval '1 hour'
 		`).Execute()
 		if err != nil {
 			t.Fatalf("Failed to update client heartbeat: %v", err)
