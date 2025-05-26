@@ -38,7 +38,8 @@ type ClientSubscription struct {
 	ClientId           string   `db:"pk,client_id" json:"client_id"`
 	ChannelId          string   `db:"channel_id" json:"channel_id"`
 	Subscriptions      []string `db:"subscriptions" json:"subscriptions"`
-	ClientAuthId       string   `db:"client_auth_id" json:"client_auth_id"`
+	AuthCollectionRef  string   `db:"auth_collection_ref" json:"auth_collection_ref"`
+	AuthRecordRef      string   `db:"auth_record_ref" json:"auth_record_ref"`
 	UpdatedByChannelId string   `db:"updated_by_channel_id" json:"updated_by_channel_id"`
 }
 
@@ -70,7 +71,8 @@ func NewBridgedClient(bridge IRealtimeBridge, optionalSubscription ...*ClientSub
 			ClientId:           client.Id(),
 			ChannelId:          bridge.SelfChannelId(),
 			Subscriptions:      []string{},
-			ClientAuthId:       "",
+			AuthCollectionRef:  "",
+			AuthRecordRef:      "",
 			UpdatedByChannelId: "",
 		}
 	}
@@ -117,17 +119,19 @@ func (r *BridgedClient) BroadcastChanges() {
 	// 4. updatedByChannelId is set to the current channelId
 	r.subscription.UpdatedByChannelId = r.bridge.SelfChannelId()
 
-	// 5. update auth id
+	// 5. update auth collection and record refs
 	var authSQL string
 	var authParams dbx.Params
 	if record, _ := r.Get(RealtimeClientAuthKey).(*core.Record); record != nil {
-		r.subscription.ClientAuthId = record.TableName() + "/" + record.Id
+		r.subscription.AuthCollectionRef = record.Collection().Id
+		r.subscription.AuthRecordRef = record.Id
 		authSQL = fmt.Sprintf(`SELECT * FROM {{%s}} WHERE id = {:auth_record_id} LIMIT 1`, record.TableName())
 		authParams = dbx.Params{
 			"auth_record_id": record.Id,
 		}
 	} else {
-		r.subscription.ClientAuthId = ""
+		r.subscription.AuthCollectionRef = ""
+		r.subscription.AuthRecordRef = ""
 		authSQL = "SELECT WHERE 1=0" // empty rows.
 	}
 
@@ -136,12 +140,13 @@ func (r *BridgedClient) BroadcastChanges() {
 		WITH
 			updated AS (
 				INSERT INTO _realtime_clients (
-					client_id, channel_id, subscriptions, client_auth_id, updated_by_channel_id
+					client_id, channel_id, subscriptions, auth_collection_ref, auth_record_ref, updated_by_channel_id
 				) VALUES (
-					{:client_id}, {:channel_id}, {:subscriptions}, {:client_auth_id}, {:updated_by_channel_id}
+					{:client_id}, {:channel_id}, {:subscriptions}, {:auth_collection_ref}, {:auth_record_ref}, {:updated_by_channel_id}
 				) ON CONFLICT (client_id) DO UPDATE
 				SET subscriptions = EXCLUDED.subscriptions,
-					client_auth_id = EXCLUDED.client_auth_id,
+					auth_collection_ref = EXCLUDED.auth_collection_ref,
+					auth_record_ref = EXCLUDED.auth_record_ref,
 					updated_by_channel_id = EXCLUDED.updated_by_channel_id
 				RETURNING *
 			),
@@ -161,7 +166,8 @@ func (r *BridgedClient) BroadcastChanges() {
 		"client_id":             r.subscription.ClientId,
 		"channel_id":            r.subscription.ChannelId,
 		"subscriptions":         r.subscription.Subscriptions,
-		"client_auth_id":        r.subscription.ClientAuthId,
+		"auth_collection_ref":   r.subscription.AuthCollectionRef,
+		"auth_record_ref":       r.subscription.AuthRecordRef,
 		"updated_by_channel_id": r.subscription.UpdatedByChannelId,
 	}).Execute()
 	if err != nil {
@@ -177,11 +183,11 @@ func (r *BridgedClient) ReceiveChanges(newSubscription *ClientSubscription, auth
 	// 3. update subscriptions
 	r.Client.Unsubscribe() // clear previous subscriptions
 	r.Client.Subscribe(newSubscription.Subscriptions...)
-	// 4. update auth record
-	if newSubscription.ClientAuthId == "" {
+	// 4. update auth collection and record refs
+	if newSubscription.AuthRecordRef == "" || newSubscription.AuthCollectionRef == "" {
 		r.Client.Unset(RealtimeClientAuthKey)
 	} else {
-		authRecord, err := AuthRecordFromJson(r.bridge.App(), newSubscription.ClientAuthId, authRecordJson)
+		authRecord, err := AuthRecordFromJson(r.bridge.App(), newSubscription.AuthCollectionRef, authRecordJson)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "Error unmarshalling auth record JSON:", err)
 			return
@@ -217,15 +223,11 @@ func (r *BridgedClient) ClientSubscription() *ClientSubscription {
 	return r.subscription
 }
 
-func AuthRecordFromJson(app core.App, clientAuthId string, authRecordJson string) (*core.Record, error) {
+func AuthRecordFromJson(app core.App, authCollectionNameOrId string, authRecordJson string) (*core.Record, error) {
 	if authRecordJson == "" {
 		return nil, nil
 	}
-	collectionName, _, ok := split2(clientAuthId, "/") // format: collectionName/recordId
-	if !ok {
-		return nil, fmt.Errorf("invalid client auth ID: %s", clientAuthId)
-	}
-	collection, err := app.FindCachedCollectionByNameOrId(collectionName)
+	collection, err := app.FindCachedCollectionByNameOrId(authCollectionNameOrId)
 	if err != nil {
 		return nil, fmt.Errorf("error finding collection by name or ID: %w", err)
 	}

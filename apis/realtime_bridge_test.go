@@ -31,7 +31,7 @@ func TestAuthRecordFromJson(t *testing.T) {
 		t.Fatalf("Failed to get JSON string: %v", err)
 	}
 
-	authRecord, err := apis.AuthRecordFromJson(app, "users/"+id, jsonStr)
+	authRecord, err := apis.AuthRecordFromJson(app, "users", jsonStr)
 	if err != nil {
 		t.Fatalf("Failed to create AuthRecord from JSON: %v", err)
 	}

@@ -209,7 +209,7 @@ var pgTypes = pgtype.NewMap()
 // reload all remote realtime subscriptions
 func (t *RealtimeBridge) fullRefreshSubscriptions() {
 	rows, err := t.app.DB().NewQuery(`
-		SELECT client_id, channel_id, subscriptions, client_auth_id, updated_by_channel_id
+		SELECT client_id, channel_id, subscriptions, auth_collection_ref, auth_record_ref, updated_by_channel_id
 		FROM _realtime_clients
 		WHERE updated_by_channel_id != {:self_channel_id}
 	`).Bind(dbx.Params{
@@ -233,7 +233,8 @@ func (t *RealtimeBridge) fullRefreshSubscriptions() {
 			&subscription.ClientId,
 			&subscription.ChannelId,
 			pgTypes.SQLScanner(&subscription.Subscriptions),
-			&subscription.ClientAuthId,
+			&subscription.AuthCollectionRef,
+			&subscription.AuthRecordRef,
 			&subscription.UpdatedByChannelId,
 		)
 		if err != nil {
@@ -267,7 +268,8 @@ func (t *RealtimeBridge) mustCreateTables() {
 			client_id TEXT NOT NULL PRIMARY KEY,
 			channel_id TEXT NOT NULL,
 			subscriptions TEXT[] NOT NULL,
-			client_auth_id TEXT NOT NULL DEFAULT '',
+			auth_collection_ref TEXT NOT NULL DEFAULT '',
+			auth_record_ref TEXT NOT NULL DEFAULT '',
 			updated_by_channel_id TEXT NOT NULL DEFAULT ''
 		);
 		CREATE INDEX IF NOT EXISTS _realtime_clients_channel_id_idx ON _realtime_clients (channel_id);
