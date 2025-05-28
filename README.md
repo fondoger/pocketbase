@@ -2,11 +2,23 @@
 
 **Features**
 
-- [x] PostgresSQL support
-- [x] Support horizontal scaling
-- [x] Realtime events works normally with horizontal scaling
-- [x] 100% test case pass rate across total 4701 unit tests
-- [x] Fully compatible with latest PocketBase SDKs/Docs
+- ✅ PostgresSQL support
+- ✅ Support horizontal scaling
+- ✅ Realtime events works normally with horizontal scaling
+- ✅ 100% test case pass rate across total 4701 unit tests
+- ✅ Fully compatible with latest PocketBase SDKs/Docs
+
+**Demo App**
+
+To demonstrate the horizontal scaling and realtime capabilities, I have deployed a **realtime chat demo app** on two different PocketBase instances.
+
+- Instance 1: [pocketbase-chat-01.mimimiao.com](https://pocketbase-chat-01.mimimiao.com)
+- Instance 2: [pocketbase-chat-02.mimimiao.com](https://pocketbase-chat-02.mimimiao.com)
+
+![Realtime Chat Demo](./.github/chat-page-demo.png)
+
+> [!TIP]
+> The above demo app is free hosted on ClawCloud Run and Neon DB, see [Free Hosting Guide](https://github.com/fondoger/pocketbase/tree/realtime-demo) for more details.
 
 **Get Started**
 
@@ -22,41 +34,46 @@ See: [pocketbase/pocketbase](https://github.com/pocketbase/pocketbase)
 **Deploy with Docker**
 
 1. Start PostgresSQL:
-    ```sh
-    docker run -d \
-      --name postgres \
-      -p 5432:5432 \
-      -e POSTGRES_USER=user \
-      -e POSTGRES_PASSWORD=pass \
-      postgres:alpine
-    ```
+
+   ```sh
+   docker run -d \
+     --name postgres \
+     -p 5432:5432 \
+     -e POSTGRES_USER=user \
+     -e POSTGRES_PASSWORD=pass \
+     postgres:alpine
+   ```
 
 2. Start PocketBase (Don't use @latest tag, use a specific version in production)
-    ```sh
-    docker run -d \
-      --network=host \
-      --name pocketbase \
-      -v ./pb_data:/data \
-      -e PB_HTTP_ADDR=127.0.0.1:8090 \
-      -e PB_DATA_DIR="/data" \
-      -e POSTGRES_URL="postgres://user:pass@127.0.0.1:5432/postgres?sslmode=disable" \
-      ghcr.io/fondoger/pocketbase:latest
-    ```
+
+   ```sh
+   docker run -d \
+     --network=host \
+     --name pocketbase \
+     -v ./pb_data:/data \
+     -e PB_HTTP_ADDR=127.0.0.1:8090 \
+     -e PB_DATA_DIR="/data" \
+     -e POSTGRES_URL="postgres://user:pass@127.0.0.1:5432/postgres?sslmode=disable" \
+     ghcr.io/fondoger/pocketbase:latest
+   ```
 
 3. Get admin password reset link
-    ```sh
-    docker logs -f pocketbase
-    ```
+   ```sh
+   docker logs -f pocketbase
+   ```
 
 **Limitations**
+
 - Local file system is not synced across multiple instances.
   > You need to add a S3 storage account if you are deploying multiple instances and need the file upload feature.
 - The built-in SQLite Backup feature is not supported
   > PostgresSQL have many mature and stable backup solutions. Eg: `pg_dump`, `docker-pg-backup`, `postgres-backup-s3`.
 
+**Disclaimer**
 
-> [!NOTE]  
-> I don't want to create another fork of PocketBase, but I really need PostgresSQL support for my project. The eventual goal is to merge this code back into the main PocketBase repository.
+I don't want to create another fork of PocketBase, but I really need PostgresSQL support for my project. The eventual goal is to merge this code back into the main PocketBase repository.
+
+If you want to contribute, please first go to [pocketbase/pocketbase](https://github.com/pocketbase/pocketbase). This repository only handles the bugs related to PostgresSQL.
 
 ----
 Original README.md file
