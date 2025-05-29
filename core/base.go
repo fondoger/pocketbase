@@ -72,9 +72,9 @@ type BaseAppConfig struct {
 	DataMaxIdleConns int
 	AuxMaxOpenConns  int
 	AuxMaxIdleConns  int
-	PostgresURL      string // eg: "postgres://user:pass@localhost:5432?sslmode=disable"
-	PostgresDataDB   string // eg: "data"
-	PostgresAuxDB    string // eg: "auxiliary"
+	PostgresURL      string // default: "postgres://user:pass@localhost:5432?sslmode=disable"
+	PostgresDataDB   string // default: "pb-data"
+	PostgresAuxDB    string // default: "pb-auxiliary"
 	IsRealtimeBridge bool
 	IsDev            bool
 }
@@ -439,40 +439,66 @@ func (app *BaseApp) Bootstrap() error {
 			return err
 		}
 
-		if err := app.initDataDB(); err != nil {
-			return err
-		}
+		maxGoroutines := 4
+		errChan := make(chan error, maxGoroutines)
 
-		if err := app.initAuxDB(); err != nil {
-			return err
-		}
+		go func() {
+			if err := app.initAuxDB(); err != nil {
+				errChan <- fmt.Errorf("init aux db error: %w", err)
+				return
+			}
+			if err := createGenerateUuidV7Function(app.AuxDB()); err != nil {
+				errChan <- fmt.Errorf("create uuid_generate_v7 function error: %w", err)
+				return
+			}
+			errChan <- nil
+		}()
+
+		go func() {
+			if err := app.initDataDB(); err != nil {
+				errChan <- fmt.Errorf("init data db error: %w", err)
+				return
+			}
+			// fix uuid_generate_v7 function if it is not already created
+			if err := createGenerateUuidV7Function(app.DB()); err != nil {
+				errChan <- fmt.Errorf("create uuid_generate_v7 function error: %w", err)
+				return
+			}
+			if err := app.RunSystemMigrations(); err != nil {
+				errChan <- fmt.Errorf("run system migrations error: %w", err)
+				return
+			}
+			errChan <- nil
+
+			go func() {
+				if err := app.ReloadCachedCollections(); err != nil {
+					errChan <- fmt.Errorf("reload cached collections error: %w", err)
+					return
+				}
+				errChan <- nil
+			}()
+			go func() {
+				if err := app.ReloadSettings(); err != nil {
+					errChan <- fmt.Errorf("reload settings error: %w", err)
+					return
+				}
+				errChan <- nil
+			}()
+		}()
 
 		if err := app.initLogger(); err != nil {
 			return err
 		}
 
-		// fix uuid_generate_v7 function if it is not already created
-		if err := createGenerateUuidV7Function(app.DB()); err != nil {
-			return fmt.Errorf("create uuid_generate_v7 function error: %w", err)
-		}
-		if err := createGenerateUuidV7Function(app.AuxDB()); err != nil {
-			return fmt.Errorf("create uuid_generate_v7 function error: %w", err)
-		}
-
-		if err := app.RunSystemMigrations(); err != nil {
-			return err
-		}
-
-		if err := app.ReloadCachedCollections(); err != nil {
-			return err
-		}
-
-		if err := app.ReloadSettings(); err != nil {
-			return err
-		}
-
 		// try to cleanup the pb_data temp directory (if any)
 		_ = os.RemoveAll(filepath.Join(app.DataDir(), LocalTempDirName))
+
+		for i := 0; i < maxGoroutines; i++ {
+			if err := <-errChan; err != nil {
+				// if any of the goroutines failed, return the error
+				return err
+			}
+		}
 
 		return nil
 	})
@@ -531,9 +557,9 @@ func (app *BaseApp) PostgresURL() string {
 	return url.String()
 }
 
-	// IsRealtimeBridgeEnabled returns whether the app is in realtime bridge mode.
-	// If you need both realtime feature and horizontal scale support, you could
-	// enable it. We will use Postgres's LISTEN/NOTIFY feature to sync realtime events.
+// IsRealtimeBridgeEnabled returns whether the app is in realtime bridge mode.
+// If you need both realtime feature and horizontal scale support, you could
+// enable it. We will use Postgres's LISTEN/NOTIFY feature to sync realtime events.
 func (app *BaseApp) IsRealtimeBridgeEnabled() bool {
 	return app.config.IsRealtimeBridge
 }
@@ -1339,6 +1365,7 @@ func (app *BaseApp) initAuxDB() error {
 	concurrentDB.DB().SetMaxIdleConns(app.config.AuxMaxIdleConns)
 	concurrentDB.DB().SetConnMaxIdleTime(3 * time.Minute)
 
+	/* SQLite:
 	nonconcurrentDB, err := app.config.DBConnect(app.config.PostgresAuxDB)
 	if err != nil {
 		return err
@@ -1346,6 +1373,9 @@ func (app *BaseApp) initAuxDB() error {
 	nonconcurrentDB.DB().SetMaxOpenConns(1)
 	nonconcurrentDB.DB().SetMaxIdleConns(1)
 	nonconcurrentDB.DB().SetConnMaxIdleTime(3 * time.Minute)
+	*/
+	// PostgreSQL:
+	nonconcurrentDB := concurrentDB
 
 	app.auxConcurrentDB = concurrentDB
 	app.auxNonconcurrentDB = nonconcurrentDB
