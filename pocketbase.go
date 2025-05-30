@@ -118,7 +118,7 @@ func NewWithConfig(config Config) *PocketBase {
 		}
 	}
 	if config.DefaultRealtimeBridge == nil {
-		if enable, err := strconv.ParseBool(os.Getenv("PB_REALTIME_BRIDGE")); err != nil {
+		if enable, err := strconv.ParseBool(os.Getenv("PB_REALTIME_BRIDGE")); err == nil {
 			config.DefaultRealtimeBridge = &enable
 		} else {
 			enable = true

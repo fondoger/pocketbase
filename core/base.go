@@ -72,9 +72,9 @@ type BaseAppConfig struct {
 	DataMaxIdleConns int
 	AuxMaxOpenConns  int
 	AuxMaxIdleConns  int
-	PostgresURL      string // default: "postgres://user:pass@localhost:5432?sslmode=disable"
-	PostgresDataDB   string // default: "pb-data"
-	PostgresAuxDB    string // default: "pb-auxiliary"
+	PostgresURL      string // eg: "postgres://user:pass@localhost:5432?sslmode=disable"
+	PostgresDataDB   string // eg: "pb-data"
+	PostgresAuxDB    string // eg: "pb-auxiliary"
 	IsRealtimeBridge bool
 	IsDev            bool
 }
