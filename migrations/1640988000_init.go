@@ -28,6 +28,10 @@ func Register(
 
 func init() {
 	core.SystemMigrations.Register(func(txApp core.App) error {
+		if err := createSQLiteEquivalentFunctions(txApp.DB()); err != nil {
+			return fmt.Errorf("createSQLiteEquivalentFunctions error: %w", err)
+		}
+
 		if err := createParamsTable(txApp); err != nil {
 			return fmt.Errorf("_params exec error: %w", err)
 		}

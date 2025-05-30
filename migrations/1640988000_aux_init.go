@@ -1,12 +1,17 @@
 package migrations
 
 import (
+	"fmt"
+
 	"github.com/pocketbase/pocketbase/core"
 )
 
 func init() {
 	core.SystemMigrations.Add(&core.Migration{
 		Up: func(txApp core.App) error {
+			if err := createSQLiteEquivalentFunctions(txApp.AuxDB()); err != nil {
+				return fmt.Errorf("createSQLiteEquivalentFunctions error: %w", err)
+			}
 
 			/*
 				CREATE TABLE IF NOT EXISTS {{_logs}} (

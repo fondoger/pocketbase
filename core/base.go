@@ -439,66 +439,32 @@ func (app *BaseApp) Bootstrap() error {
 			return err
 		}
 
-		maxGoroutines := 4
-		errChan := make(chan error, maxGoroutines)
+		if err := app.initDataDB(); err != nil {
+			return err
+		}
 
-		go func() {
-			if err := app.initAuxDB(); err != nil {
-				errChan <- fmt.Errorf("init aux db error: %w", err)
-				return
-			}
-			if err := createGenerateUuidV7Function(app.AuxDB()); err != nil {
-				errChan <- fmt.Errorf("create uuid_generate_v7 function error: %w", err)
-				return
-			}
-			errChan <- nil
-		}()
-
-		go func() {
-			if err := app.initDataDB(); err != nil {
-				errChan <- fmt.Errorf("init data db error: %w", err)
-				return
-			}
-			// fix uuid_generate_v7 function if it is not already created
-			if err := createGenerateUuidV7Function(app.DB()); err != nil {
-				errChan <- fmt.Errorf("create uuid_generate_v7 function error: %w", err)
-				return
-			}
-			if err := app.RunSystemMigrations(); err != nil {
-				errChan <- fmt.Errorf("run system migrations error: %w", err)
-				return
-			}
-			errChan <- nil
-
-			go func() {
-				if err := app.ReloadCachedCollections(); err != nil {
-					errChan <- fmt.Errorf("reload cached collections error: %w", err)
-					return
-				}
-				errChan <- nil
-			}()
-			go func() {
-				if err := app.ReloadSettings(); err != nil {
-					errChan <- fmt.Errorf("reload settings error: %w", err)
-					return
-				}
-				errChan <- nil
-			}()
-		}()
+		if err := app.initAuxDB(); err != nil {
+			return err
+		}
 
 		if err := app.initLogger(); err != nil {
 			return err
 		}
 
+		if err := app.RunSystemMigrations(); err != nil {
+			return err
+		}
+
+		if err := app.ReloadCachedCollections(); err != nil {
+			return err
+		}
+
+		if err := app.ReloadSettings(); err != nil {
+			return err
+		}
+
 		// try to cleanup the pb_data temp directory (if any)
 		_ = os.RemoveAll(filepath.Join(app.DataDir(), LocalTempDirName))
-
-		for i := 0; i < maxGoroutines; i++ {
-			if err := <-errChan; err != nil {
-				// if any of the goroutines failed, return the error
-				return err
-			}
-		}
 
 		return nil
 	})
