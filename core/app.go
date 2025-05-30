@@ -225,6 +225,12 @@ type App interface {
 	// In a transaction the AuxConcurrentDB() and AuxNonconcurrentDB() refer to the same *dbx.TX instance.
 	AuxNonconcurrentDB() dbx.Builder
 
+	// DataDBDriverName returns the driver name of the data db. Eg: `pgx`, `postgres`, `sqlite`, etc.
+	DataDBDriverName() string
+
+	// AuxDBDriverName returns the driver name of the aux db. Eg: `pgx`, `postgres`, `sqlite`, etc.
+	AuxDBDriverName() string
+
 	// HasTable checks if a table (or view) with the provided name exists (case insensitive).
 	// in the data.db.
 	HasTable(tableName string) bool

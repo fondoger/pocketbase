@@ -95,6 +95,8 @@ type BaseApp struct {
 	nonconcurrentDB     dbx.Builder
 	auxConcurrentDB     dbx.Builder
 	auxNonconcurrentDB  dbx.Builder
+	dataDBDriverName    string
+	auxDBDriverName     string
 
 	// app event hooks
 	onBootstrap     *hook.Hook[*BootstrapEvent]
@@ -626,6 +628,16 @@ func (app *BaseApp) AuxConcurrentDB() dbx.Builder {
 // In a transaction the AuxConcurrentDB() and AuxNonconcurrentDB() refer to the same *dbx.TX instance.
 func (app *BaseApp) AuxNonconcurrentDB() dbx.Builder {
 	return app.auxNonconcurrentDB
+}
+
+// DataDBDriverName returns the name of the main data db driver used by the app. eg: "pgx", "postgres" or "sqlite3".
+func (app *BaseApp) DataDBDriverName() string {
+	return app.dataDBDriverName
+}
+
+// AuxDBDriverName returns the name of the auxiliary db driver used by the app. eg: "pgx", "postgres" or "sqlite3".
+func (app *BaseApp) AuxDBDriverName() string {
+	return app.auxDBDriverName
 }
 
 // DataDir returns the app data directory path.
@@ -1277,6 +1289,7 @@ func (app *BaseApp) initDataDB() error {
 
 	app.concurrentDB = concurrentDB
 	app.nonconcurrentDB = nonconcurrentDB
+	app.dataDBDriverName = concurrentDB.DriverName()
 
 	return nil
 }
@@ -1345,6 +1358,7 @@ func (app *BaseApp) initAuxDB() error {
 
 	app.auxConcurrentDB = concurrentDB
 	app.auxNonconcurrentDB = nonconcurrentDB
+	app.auxDBDriverName = concurrentDB.DriverName()
 
 	return nil
 }
