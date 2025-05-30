@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/pocketbase/dbx"
-	"github.com/pocketbase/pocketbase/tools/dbutils"
 	"github.com/pocketbase/pocketbase/tools/inflector"
 	"github.com/pocketbase/pocketbase/tools/list"
 )
@@ -91,16 +90,14 @@ func (r *SimpleFieldResolver) Resolve(field string) (*ResolverResult, error) {
 
 	// treat as json path
 	var jsonPath strings.Builder
-	// jsonPath.WriteString("$")
+	jsonPath.WriteString("$")
 	for _, part := range parts[1:] {
 		if _, err := strconv.Atoi(part); err == nil {
 			jsonPath.WriteString("[")
 			jsonPath.WriteString(inflector.Columnify(part))
 			jsonPath.WriteString("]")
 		} else {
-			if jsonPath.Len() > 0 {
-				jsonPath.WriteString(".")
-			}
+			jsonPath.WriteString(".")
 			jsonPath.WriteString(inflector.Columnify(part))
 		}
 	}
@@ -115,7 +112,11 @@ func (r *SimpleFieldResolver) Resolve(field string) (*ResolverResult, error) {
 		),
 		*/
 		// PostgreSQL:
-		Identifier: dbutils.JSONExtract(
+		// Note: we have to cast it to text because PostgreSQL always
+		// requires a determistic type for any expression. We will do
+		// more type casting while building the final db expression.
+		Identifier: fmt.Sprintf(
+			"(JSON_QUERY([[%s]]::jsonb, '%s') #>> '{}')::text",
 			inflector.Columnify(parts[0]),
 			jsonPath.String(),
 		),
