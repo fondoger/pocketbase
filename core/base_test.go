@@ -551,7 +551,15 @@ func TestBaseAppAuxDBDualBuilder(t *testing.T) {
 
 	allTests := append(regularTests, txTests...)
 	for _, item := range allTests {
+		/* SQLite:
 		if item.isConcurrent {
+		*/
+		// PostgreSQL:
+		// Note:
+		// In SQLite, we have to seperate concurrent and nonconcurrent queries because
+		// SQLite does not allow connurrent write operations.
+		// But in PostgreSQL allows concurrent write operations.
+		if 1 == -1 {
 			if !slices.Contains(concurrentQueries, item.query) {
 				t.Fatalf("Expected concurrent query\n%q\ngot\nconcurrent:%v\nnonconcurrent:%v", item.query, concurrentQueries, nonconcurrentQueries)
 			}

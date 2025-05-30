@@ -72,9 +72,9 @@ type BaseAppConfig struct {
 	DataMaxIdleConns int
 	AuxMaxOpenConns  int
 	AuxMaxIdleConns  int
-	PostgresURL      string // eg: "postgres://user:pass@localhost:5432?sslmode=disable"
-	PostgresDataDB   string // eg: "data"
-	PostgresAuxDB    string // eg: "auxiliary"
+	PostgresURL      string // default: "postgres://user:pass@localhost:5432?sslmode=disable"
+	PostgresDataDB   string // default: "pb-data"
+	PostgresAuxDB    string // default: "pb-auxiliary"
 	IsRealtimeBridge bool
 	IsDev            bool
 }
@@ -451,14 +451,6 @@ func (app *BaseApp) Bootstrap() error {
 			return err
 		}
 
-		// fix uuid_generate_v7 function if it is not already created
-		if err := createGenerateUuidV7Function(app.DB()); err != nil {
-			return fmt.Errorf("create uuid_generate_v7 function error: %w", err)
-		}
-		if err := createGenerateUuidV7Function(app.AuxDB()); err != nil {
-			return fmt.Errorf("create uuid_generate_v7 function error: %w", err)
-		}
-
 		if err := app.RunSystemMigrations(); err != nil {
 			return err
 		}
@@ -531,9 +523,9 @@ func (app *BaseApp) PostgresURL() string {
 	return url.String()
 }
 
-	// IsRealtimeBridgeEnabled returns whether the app is in realtime bridge mode.
-	// If you need both realtime feature and horizontal scale support, you could
-	// enable it. We will use Postgres's LISTEN/NOTIFY feature to sync realtime events.
+// IsRealtimeBridgeEnabled returns whether the app is in realtime bridge mode.
+// If you need both realtime feature and horizontal scale support, you could
+// enable it. We will use Postgres's LISTEN/NOTIFY feature to sync realtime events.
 func (app *BaseApp) IsRealtimeBridgeEnabled() bool {
 	return app.config.IsRealtimeBridge
 }
@@ -1339,6 +1331,7 @@ func (app *BaseApp) initAuxDB() error {
 	concurrentDB.DB().SetMaxIdleConns(app.config.AuxMaxIdleConns)
 	concurrentDB.DB().SetConnMaxIdleTime(3 * time.Minute)
 
+	/* SQLite:
 	nonconcurrentDB, err := app.config.DBConnect(app.config.PostgresAuxDB)
 	if err != nil {
 		return err
@@ -1346,6 +1339,9 @@ func (app *BaseApp) initAuxDB() error {
 	nonconcurrentDB.DB().SetMaxOpenConns(1)
 	nonconcurrentDB.DB().SetMaxIdleConns(1)
 	nonconcurrentDB.DB().SetConnMaxIdleTime(3 * time.Minute)
+	*/
+	// PostgreSQL:
+	nonconcurrentDB := concurrentDB
 
 	app.auxConcurrentDB = concurrentDB
 	app.auxNonconcurrentDB = nonconcurrentDB

@@ -44,7 +44,7 @@ func (app *BaseApp) runInTransaction(db dbx.Builder, fn func(txApp App) error, i
 
 		return txErr
 	default:
-		return errors.New("failed to start transaction (unknown db type)")
+		return errors.New("failed to start transaction (unknown db type): " + fmt.Sprintf("%T", db))
 	}
 }
 

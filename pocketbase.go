@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -117,8 +118,12 @@ func NewWithConfig(config Config) *PocketBase {
 		}
 	}
 	if config.DefaultRealtimeBridge == nil {
-		enableRealtimeBridge := true
-		config.DefaultRealtimeBridge = &enableRealtimeBridge
+		if enable, err := strconv.ParseBool(os.Getenv("PB_REALTIME_BRIDGE")); err != nil {
+			config.DefaultRealtimeBridge = &enable
+		} else {
+			enable = true
+			config.DefaultRealtimeBridge = &enable
+		}
 	}
 
 	if config.DefaultQueryTimeout == 0 {

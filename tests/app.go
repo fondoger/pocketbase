@@ -2,6 +2,7 @@
 package tests
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"os"
@@ -868,17 +869,23 @@ func CopyTempPostgresDB(config core.BaseAppConfig) (string, string, error) {
 		case func():
 			cmd()
 		case string:
-			fmt.Println("Running command:", cmd)
+			var stdout, stderr bytes.Buffer
+			fmt.Fprintln(&stdout, "Running command:", cmd)
 			command := exec.Command("sh", "-c", cmd)
 			command.Dir = config.DataDir
-			command.Stdout = os.Stdout
-			command.Stderr = os.Stderr
+			command.Stdout = &stdout
+			command.Stderr = io.MultiWriter(&stdout, &stderr) // combine stdout and stderr to get ordered output
 			err := command.Run()
 			if err != nil {
 				panic(err.Error())
 			}
 			if command.ProcessState.ExitCode() != 0 {
+				fmt.Fprintln(&stdout, "Command output:", stdout.String())
 				return "", "", fmt.Errorf("command failed with exit code %d", command.ProcessState.ExitCode())
+			}
+			if stderr.Len() > 0 {
+				fmt.Fprintln(&stdout, "Command output:", stdout.String())
+				return "", "", fmt.Errorf("command stderr: %s", stderr.String())
 			}
 		}
 	}
