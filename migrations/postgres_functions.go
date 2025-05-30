@@ -5,12 +5,15 @@ import "github.com/pocketbase/dbx"
 func createSQLiteEquivalentFunctions(db dbx.Builder) error {
 	//PostgreSQL:
 	// 1. Check existance
-	sql := `select count(pg_get_functiondef('uuid_generate_v7()'::regprocedure));`
-	var exists int
-	_ = db.NewQuery(sql).Row(&exists)
-	if exists > 0 {
+	sql := `SELECT EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'uuid_generate_v7');`
+	var exists bool
+	if err := db.NewQuery(sql).Row(&exists); err != nil {
+		return err
+	} else if exists {
+		// The function already exists, no need to create it again
 		return nil
 	}
+
 	// Postgres:
 	// 2. Create function
 	funcDef := `
