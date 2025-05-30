@@ -38,12 +38,15 @@ type LogsStatsItem struct {
 func (app *BaseApp) LogsStats(expr dbx.Expression) ([]*LogsStatsItem, error) {
 	result := []*LogsStatsItem{}
 
+	var dateColumn string
+	if app.AuxDBDriverName() == "sqlite" { // SQLite:
+		dateColumn = "strftime('%Y-%m-%d %H:00:00', created) as date"
+	} else { // PostgreSQL:
+		dateColumn = "date_trunc('hour', created) as date"
+	}
+
 	query := app.LogQuery().
-		/* SQLite:
-		Select("count(id) as total", "strftime('%Y-%m-%d %H:00:00', created) as date").
-		*/
-		// PostgreSQL:
-		Select("count(id) as total", "date_trunc('hour', created) as date").
+		Select("count(id) as total", dateColumn).
 		GroupBy("date").
 		OrderBy("date ASC")
 
