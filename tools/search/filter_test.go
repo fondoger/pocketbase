@@ -107,7 +107,7 @@ func TestFilterDataBuildExpr(t *testing.T) {
 			,
 			*/
 			// PostgreSQL:
-			`(((CASE WHEN [[test5]] IS JSON OR json_valid([[test5]]::text) THEN JSON_QUERY([[test5]]::jsonb, '$.a') ELSE NULL END) #>> '{}')::text = ((CASE WHEN [[test5]] IS JSON OR json_valid([[test5]]::text) THEN JSON_QUERY([[test5]]::jsonb, '$.b') ELSE NULL END) #>> '{}')::text OR ((CASE WHEN [[test5]] IS JSON OR json_valid([[test5]]::text) THEN JSON_QUERY([[test5]]::jsonb, '$.c') ELSE NULL END) #>> '{}')::text != ((CASE WHEN [[test5]] IS JSON OR json_valid([[test5]]::text) THEN JSON_QUERY([[test5]]::jsonb, '$.d') ELSE NULL END) #>> '{}')::text)`,
+			`((JSON_QUERY([[test5]]::jsonb, '$.a') #>> '{}')::text = (JSON_QUERY([[test5]]::jsonb, '$.b') #>> '{}')::text OR (JSON_QUERY([[test5]]::jsonb, '$.c') #>> '{}')::text != (JSON_QUERY([[test5]]::jsonb, '$.d') #>> '{}')::text)`,
 		},
 		{
 			"macros",
@@ -171,6 +171,7 @@ func TestFilterDataBuildExpr(t *testing.T) {
 			/* SQLite:
 			"(6371 * acos(cos(radians({:TEST})) * cos(radians({:TEST})) * cos(radians({:TEST}) - radians({:TEST})) + sin(radians({:TEST})) * sin(radians({:TEST})))) < {:TEST}",
 			*/
+			// PostgreSQL:
 			`(6371 * acos(cos(radians({:TEST}::numeric)) * cos(radians({:TEST}::numeric)) * cos(radians({:TEST}::numeric) - radians({:TEST}::numeric)) + sin(radians({:TEST}::numeric)) * sin(radians({:TEST}::numeric))))::numeric < {:TEST}::numeric`,
 		},
 	}
