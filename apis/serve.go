@@ -33,6 +33,9 @@ type ServeConfig struct {
 	// HttpsAddr is the TCP address to listen for the HTTPS server (eg. "127.0.0.1:443").
 	HttpsAddr string
 
+	// PathPrefix is an optional prefix to use for the API and dashboard routes.
+	PathPrefix string
+
 	// Optional domains list to use when issuing the TLS certificate.
 	//
 	// If not set, the host from the bound server address will be used.
@@ -214,6 +217,11 @@ func Serve(app core.App, config ServeConfig) error {
 			return err
 		}
 
+		// Support path prefix for the API and dashboard routes.
+		if config.PathPrefix != "" {
+			handler = http.StripPrefix(config.PathPrefix, handler)
+		}
+
 		e.Server.Handler = handler
 
 		if config.HttpsAddr == "" {
@@ -275,8 +283,8 @@ func Serve(app core.App, config ServeConfig) error {
 		)
 
 		regular := color.New()
-		regular.Printf("├─ REST API:  %s\n", color.CyanString("%s/api/", strings.ReplaceAll(baseURL, "0.0.0.0", "127.0.0.1")))
-		regular.Printf("└─ Dashboard: %s\n", color.CyanString("%s/_/", strings.ReplaceAll(baseURL, "0.0.0.0", "127.0.0.1")))
+		regular.Printf("├─ REST API:  %s\n", color.CyanString("%s/api/", strings.ReplaceAll(baseURL, "0.0.0.0", "127.0.0.1")+config.PathPrefix))
+		regular.Printf("└─ Dashboard: %s\n", color.CyanString("%s/_/", strings.ReplaceAll(baseURL, "0.0.0.0", "127.0.0.1")+config.PathPrefix))
 	}
 
 	var serveErr error
