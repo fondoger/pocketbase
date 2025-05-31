@@ -62,6 +62,21 @@ See: [pocketbase/pocketbase](https://github.com/pocketbase/pocketbase)
    docker logs -f pocketbase
    ```
 
+**Available Environment Variables**
+| Environment Variable | Description | Default |
+|---------------------|-------------|---------|
+| `POSTGRES_URL` | PostgresSQL connection URL (required) | required |
+| `POSTGRES_DATA_DB` | Database name for the PocketBase data | `pb-data` |
+| `POSTGRES_AUX_DB` | Database name for the PocketBase logs data | `pb-auxiliary` |
+| `PB_DATA_DIR` | Directory to store the PocketBase data | `./pb_data` |
+| `PB_PUBLIC_DIR` | Directory to store the public files | `./pb_public` |
+| `PB_HOOKS_DIR` | Directory to store the custom hooks | `./pb_hooks` |
+| `PB_REALTIME_BRIDGE` | Enable/Disable the realtime bridge. Disable it if you don't need horizontal scaling or don't need realtime feature. | `true` |
+| `PB_HTTP_ADDR` | TCP address to listen for the HTTP server | `127.0.0.1:8090` if no domain specified |
+| `PB_HTTPS_ADDR` | TCP address to listen for the HTTPS server | - |
+| `PB_PATH_PREFIX` | URL path prefix for the HTTP server (Useful when reuse same domain for diffrent sites behind nginx) | - |
+| `PB_ALLOWED_ORIGINS` | Comma separated list of allowed CORS origins | `*` (all origins) |
+
 **Limitations**
 
 - Local file system is not synced across multiple instances.
