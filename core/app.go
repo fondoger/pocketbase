@@ -68,10 +68,6 @@ type App interface {
 	// (currently used primarily for optional settings encryption but this may change in the future).
 	EncryptionEnv() string
 
-	// PostgresURL returns the PostgreSQL connection URL.
-	// It is now used in realtime_bridge.go to create a pgx native connection pool.
-	PostgresURL() string
-
 	// IsRealtimeBridgeEnabled returns whether the app is in realtime bridge mode.
 	// If you need both realtime feature and horizontal scale support, you could
 	// enable it. We will use Postgres's LISTEN/NOTIFY feature to sync realtime events.

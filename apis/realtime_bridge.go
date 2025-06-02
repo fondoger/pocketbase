@@ -9,9 +9,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tools/security"
@@ -36,7 +37,6 @@ var _ IRealtimeBridge = (*RealtimeBridge)(nil)
 type RealtimeBridge struct {
 	channelId string
 	app       core.App
-	pool      *pgxpool.Pool
 }
 
 var RealtimeBridgeInstanceKey = "realtime_bridge_instance"
@@ -49,13 +49,6 @@ func bindRealtimeBridge(app core.App) {
 	}
 
 	app.OnServe().BindFunc(func(e *core.ServeEvent) error {
-		var err error
-		bridge.pool, err = pgxpool.New(ctx, app.PostgresURL())
-		if err != nil {
-			fmt.Fprintln(os.Stderr, "Unable to connect to database:", err)
-			os.Exit(1)
-		}
-
 		bridge.mustCreateTables()
 		go bridge.heartbeatLoop(ctx)
 		go bridge.listenSharedBridgeChannelLoop(ctx)
@@ -85,7 +78,7 @@ func bindRealtimeBridge(app core.App) {
 // 1. Listen upsert, delete events in _realtimeClients table.
 // 2. Listen collection_updated and settings_updated events.
 func (t *RealtimeBridge) listenSharedBridgeChannelLoop(ctx context.Context) {
-	loopOnNotification(ctx, t.pool, "shared_bridge_channel", func() {
+	loopOnNotification(ctx, t.app, "shared_bridge_channel", func() {
 		// When it connected to the stream, we need to reload all subscriptions
 		// to make sure that we have the latest state.
 		t.fullRefreshSubscriptions()
@@ -164,7 +157,7 @@ func (t *RealtimeBridge) SendViaBridge(channelId string, clientId string, messag
 		SELECT pg_notify({:channelId}, {:payload})
 	`).Bind(dbx.Params{
 		"channelId": channelId,
-		"payload":    clientId + "|" + message.Name + "|" + string(message.Data),
+		"payload":   clientId + "|" + message.Name + "|" + string(message.Data),
 	}).Execute()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Error sending notification:", err)
@@ -173,7 +166,7 @@ func (t *RealtimeBridge) SendViaBridge(channelId string, clientId string, messag
 }
 
 func (b *RealtimeBridge) listenBridgeMessagesLoop(ctx context.Context) {
-	loopOnNotification(ctx, b.pool, b.SelfChannelId(), nil, func(notification *pgconn.Notification) {
+	loopOnNotification(ctx, b.app, b.SelfChannelId(), nil, func(notification *pgconn.Notification) {
 		if b.app.IsDev() {
 			fmt.Println("PID:", notification.PID, "Channel:", notification.Channel, "Payload:", notification.Payload)
 		}
@@ -355,44 +348,40 @@ func genChannelId() string {
 	return channelId
 }
 
-func loopOnNotification(ctx context.Context, pool *pgxpool.Pool, channel string, afterListenFunc func(), handler func(*pgconn.Notification)) {
+func loopOnNotification(ctx context.Context, app core.App, channel string, afterListenFunc func(), handler func(*pgconn.Notification)) {
 	for {
 		select {
 		case <-ctx.Done():
 			fmt.Fprintln(os.Stderr, "Stopping PostgreSQL stream listener loop on channel:", channel)
 			return
 		default:
-			conn, err := pool.Acquire(ctx)
-			if err != nil {
-				fmt.Fprintln(os.Stderr, "Error acquiring connection:", err)
-				time.Sleep(time.Second * 1)
-				continue
-			}
-
-			_, err = conn.Exec(ctx, fmt.Sprintf("LISTEN %s", channel))
-			if err != nil {
-				fmt.Fprintln(os.Stderr, "Error listening to channel:", err)
-				conn.Release()
-				time.Sleep(time.Second * 1)
-				continue
-			}
-
-			if afterListenFunc != nil {
-				afterListenFunc()
-			}
-
-			for {
-				notification, err := conn.Conn().WaitForNotification(ctx)
+			err := runPgxCommand(ctx, app, func(pgxConn *pgx.Conn) error {
+				_, err := pgxConn.Exec(ctx, fmt.Sprintf("LISTEN %s", channel))
 				if err != nil {
-					if err == context.Canceled {
-						fmt.Fprintln(os.Stderr, "Context canceled, stopping listener loop on channel:", channel)
-						conn.Release()
-						return
-					}
-					fmt.Fprintln(os.Stderr, "Error waiting for notification:", err)
-					break
+					return fmt.Errorf("error listening on channel %s: %w", channel, err)
 				}
-				handler(notification)
+
+				if afterListenFunc != nil {
+					afterListenFunc()
+				}
+
+				for {
+					notification, err := pgxConn.WaitForNotification(ctx)
+					if err != nil {
+						if err == context.Canceled {
+							app.Logger().Info("Context was canceled, exiting the loop on channel", "channel", channel)
+							return nil // context was canceled, exit the loop
+						}
+						return fmt.Errorf("error waiting for notification on channel %s: %w", channel, err)
+					}
+					handler(notification)
+				}
+			})
+			if err != nil {
+				app.Logger().Error("Error in PostgreSQL stream listener loop on channel", "channel", channel, "error", err)
+				fmt.Fprintln(os.Stderr, "Error in PostgreSQL stream listener loop on channel", channel, ":", err)
+				time.Sleep(time.Second * 1)
+				continue
 			}
 		}
 	}
@@ -430,4 +419,29 @@ func (t *RealtimeBridge) broadcastSettingsUpdated(e *core.SettingsUpdateRequestE
 		// ignore the error as it is not critical
 	}
 	return nil
+}
+
+// runPgxCommand aquires a connection from connection pool, runs the provided pgxFunc,
+// and put the connection back to the pool.
+// *dbx.DB -> *sql.DB -> *sql.Conn -> *pgx.Conn
+func runPgxCommand(ctx context.Context, app core.App, pgxFunc func(*pgx.Conn) error) error {
+	dbxDB, _ := app.NonconcurrentDB().(*dbx.DB)
+	if dbxDB == nil {
+		return fmt.Errorf("app.NonconcurrentDB() is not a *dbx.DB instance")
+	}
+	sqlDB := dbxDB.DB() // *sql.DB, a connection pool
+	sqlConn, err := sqlDB.Conn(ctx)
+	if err != nil {
+		return fmt.Errorf("error acquiring SQL connection: %w", err)
+	}
+	defer sqlConn.Close() // Put back to connection pool
+
+	return sqlConn.Raw(func(driverConn any) error {
+		stdlibConn, ok := driverConn.(*stdlib.Conn)
+		if !ok {
+			return fmt.Errorf("driverConn is not a *stdlib.Conn instance, are you using the pgx's database/sql driver?")
+		}
+		pgxConn := stdlibConn.Conn()
+		return pgxFunc(pgxConn)
+	})
 }
