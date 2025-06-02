@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"log"
 	"log/slog"
-	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -513,14 +512,6 @@ func (app *BaseApp) ResetBootstrapState() error {
 	}
 
 	return nil
-}
-
-// PostgresURL returns the PostgreSQL connection URL to the main data db.
-// It is now used in realtime_bridge.go to create a pgx native connection pool.
-func (app *BaseApp) PostgresURL() string {
-	url, _ := url.Parse(app.config.PostgresURL)
-	url.Path = "/" + app.config.PostgresDataDB
-	return url.String()
 }
 
 // IsRealtimeBridgeEnabled returns whether the app is in realtime bridge mode.
