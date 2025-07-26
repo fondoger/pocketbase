@@ -292,6 +292,11 @@ func (app *BaseApp) registerAutobackupHooks() {
 		}
 
 		app.Cron().Add(jobId, rawSchedule, func() {
+			// Only run backups on leader instances
+			if !app.IsLeader() {
+				return
+			}
+
 			const autoPrefix = "@auto_pb_backup_"
 
 			name := generateBackupName(app, autoPrefix)

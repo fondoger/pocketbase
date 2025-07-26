@@ -200,6 +200,11 @@ func destroyRateLimitersStore(app core.App) {
 
 func initRateLimitersStore(app core.App) *store.Store[string, *rateLimiter] {
 	app.Cron().Add(rateLimitersCronKey, "2 * * * *", func() { // offset a little since too many cleanup tasks execute at 00
+		// Only run rate limiter cleanup on leader instances
+		if !app.IsLeader() {
+			return
+		}
+
 		limitersStore, ok := app.Store().Get(rateLimitersStoreKey).(*store.Store[string, *rateLimiter])
 		if !ok {
 			return

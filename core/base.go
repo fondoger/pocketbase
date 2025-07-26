@@ -75,6 +75,7 @@ type BaseAppConfig struct {
 	PostgresDataDB   string // eg: "pb-data"
 	PostgresAuxDB    string // eg: "pb-auxiliary"
 	IsRealtimeBridge bool
+	IsLeader         bool
 	IsDev            bool
 }
 
@@ -424,6 +425,8 @@ func (app *BaseApp) IsBootstrapped() bool {
 //
 // It will call ResetBootstrapState() if the application was already bootstrapped.
 func (app *BaseApp) Bootstrap() error {
+	app.Logger().Debug("Starting bootstrap process", slog.Bool("isLeader", app.IsLeader()))
+
 	event := &BootstrapEvent{}
 	event.App = app
 
@@ -645,6 +648,13 @@ func (app *BaseApp) EncryptionEnv() string {
 // When enabled logs, executed sql statements, etc. are printed to the stderr.
 func (app *BaseApp) IsDev() bool {
 	return app.config.IsDev
+}
+
+// IsLeader returns whether the app is in leader mode.
+//
+// When enabled, the instance will run cron jobs and other leader-only operations.
+func (app *BaseApp) IsLeader() bool {
+	return app.config.IsLeader
 }
 
 // Settings returns the loaded app settings.
@@ -1431,7 +1441,13 @@ func (app *BaseApp) registerBaseHooks() {
 	app.OnServe().Bind(&hook.Handler[*ServeEvent]{
 		Id: "__pbCronStart__",
 		Func: func(e *ServeEvent) error {
-			app.Cron().Start()
+			// Only start cron if this instance is configured as a leader
+			if app.IsLeader() {
+				app.Logger().Debug("Starting cron ticker (leader instance)")
+				app.Cron().Start()
+			} else {
+				app.Logger().Debug("Skipping cron start (non-leader instance)")
+			}
 
 			return e.Next()
 		},
@@ -1439,6 +1455,12 @@ func (app *BaseApp) registerBaseHooks() {
 	})
 
 	app.Cron().Add("__pbDBOptimize__", "0 0 * * *", func() {
+		// Only run DB optimization on leader instances
+		if !app.IsLeader() {
+			app.Logger().Debug("Skipping DB optimization on non-leader instance")
+			return
+		}
+
 		_, execErr := app.NonconcurrentDB().NewQuery("PRAGMA wal_checkpoint(TRUNCATE)").Execute()
 		if execErr != nil {
 			app.Logger().Warn("Failed to run periodic PRAGMA wal_checkpoint for the main DB", slog.String("error", execErr.Error()))
@@ -1454,6 +1476,8 @@ func (app *BaseApp) registerBaseHooks() {
 			app.Logger().Warn("Failed to run periodic PRAGMA optimize", slog.String("error", execErr.Error()))
 		}
 	})
+
+	app.Logger().Debug("Registered __pbDBOptimize__ cron job", slog.Bool("isLeader", app.IsLeader()))
 
 	app.registerSettingsHooks()
 	app.registerAutobackupHooks()
@@ -1609,11 +1633,20 @@ func (app *BaseApp) initLogger() error {
 
 	// cleanup old logs
 	app.Cron().Add("__pbLogsCleanup__", "0 */6 * * *", func() {
+		// Only run logs cleanup on leader instances
+		app.Logger().Debug("App is leader", slog.Bool("isLeader", app.IsLeader()))
+		if !app.IsLeader() {
+			app.Logger().Debug("Skipping logs cleanup on non-leader instance")
+			return
+		}
+
 		deleteErr := app.DeleteOldLogs(time.Now().AddDate(0, 0, -1*app.Settings().Logs.MaxDays))
 		if deleteErr != nil {
 			app.Logger().Warn("Failed to delete old logs", "error", deleteErr)
 		}
 	})
+
+	app.Logger().Debug("Registered __pbLogsCleanup__ cron job", slog.Bool("isLeader", app.IsLeader()))
 
 	return nil
 }

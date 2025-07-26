@@ -40,6 +40,7 @@ type PocketBase struct {
 	postgresDataDBFlag string
 	postgresAuxDBFlag  string
 	realtimeBridgeFlag bool
+	leaderFlag         bool
 	encryptionEnvFlag  string
 	queryTimeout       int
 	hideStartBanner    bool
@@ -60,6 +61,7 @@ type Config struct {
 	DefaultPostgresDataDb string // if not set, it will fallback to "pb-data"
 	DefaultPostgresAuxDb  string // if not set, it will fallback to "pb-auxiliary"
 	DefaultRealtimeBridge *bool  // if not set, it will fallback to the `true`
+	DefaultLeader         *bool  // if not set, it will fallback to the `false`
 	DefaultEncryptionEnv  string
 	DefaultQueryTimeout   time.Duration // default to core.DefaultQueryTimeout (in seconds)
 
@@ -126,6 +128,15 @@ func NewWithConfig(config Config) *PocketBase {
 		}
 	}
 
+	if config.DefaultLeader == nil {
+		if enable, err := strconv.ParseBool(os.Getenv("PB_LEADER")); err == nil {
+			config.DefaultLeader = &enable
+		} else {
+			enable = false
+			config.DefaultLeader = &enable
+		}
+	}
+
 	if config.DefaultQueryTimeout == 0 {
 		config.DefaultQueryTimeout = core.DefaultQueryTimeout
 	}
@@ -151,6 +162,7 @@ func NewWithConfig(config Config) *PocketBase {
 		postgresDataDBFlag: config.DefaultPostgresDataDb,
 		postgresAuxDBFlag:  config.DefaultPostgresAuxDb,
 		realtimeBridgeFlag: *config.DefaultRealtimeBridge,
+		leaderFlag:         *config.DefaultLeader,
 		encryptionEnvFlag:  config.DefaultEncryptionEnv,
 		hideStartBanner:    config.HideStartBanner,
 	}
@@ -170,6 +182,7 @@ func NewWithConfig(config Config) *PocketBase {
 		PostgresDataDB:   pb.postgresDataDBFlag,
 		PostgresAuxDB:    pb.postgresAuxDBFlag,
 		IsRealtimeBridge: pb.realtimeBridgeFlag,
+		IsLeader:         pb.leaderFlag,
 		EncryptionEnv:    pb.encryptionEnvFlag,
 		QueryTimeout:     time.Duration(pb.queryTimeout) * time.Second,
 		DataMaxOpenConns: config.DataMaxOpenConns,
@@ -311,6 +324,13 @@ func (pb *PocketBase) eagerParseFlags(config *Config) error {
 		"realtimeBridge",
 		*config.DefaultRealtimeBridge,
 		fmt.Sprintf("enable/disable the realtime bridge (default %v). You must not disable this flag if you plan horizontally scale your app.", *config.DefaultRealtimeBridge),
+	)
+
+	pb.RootCmd.PersistentFlags().BoolVar(
+		&pb.leaderFlag,
+		"leader",
+		*config.DefaultLeader,
+		"enable/disable the leader mode (default false)",
 	)
 
 	return pb.RootCmd.ParseFlags(os.Args[1:])

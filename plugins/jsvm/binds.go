@@ -105,6 +105,11 @@ func cronBinds(app core.App, loader *goja.Runtime, executors *vmsPool) {
 		pr := goja.MustCompile(defaultScriptPath, "{("+handler+").apply(undefined)}", true)
 
 		err := app.Cron().Add(jobId, cronExpr, func() {
+			// Only execute cron job on leader instances
+			if !app.IsLeader() {
+				return
+			}
+
 			err := executors.run(func(executor *goja.Runtime) error {
 				_, err := executor.RunProgram(pr)
 				return err

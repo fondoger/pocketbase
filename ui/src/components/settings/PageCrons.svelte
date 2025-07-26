@@ -10,6 +10,7 @@
     $pageTitle = "Crons";
 
     let crons = [];
+    let isLeader = false;
     let isLoading = false;
     let isRunning = {};
 
@@ -19,7 +20,18 @@
         isLoading = true;
 
         try {
-            crons = await ApiClient.crons.getFullList();
+            // Load crons list and leader status in parallel
+            const [cronsResponse, leaderResponse] = await Promise.all([
+                ApiClient.crons.getFullList(),
+                fetch(`${ApiClient.baseUrl}/api/crons/leader-status`, {
+                    headers: {
+                        'Authorization': ApiClient.authStore.token ? `Bearer ${ApiClient.authStore.token}` : '',
+                    },
+                }).then(res => res.json())
+            ]);
+
+            crons = cronsResponse;
+            isLeader = leaderResponse.isLeader || false;
             isLoading = false;
         } catch (err) {
             if (!err.isAbort) {
@@ -30,6 +42,11 @@
     }
 
     async function cronRun(jobId) {
+        if (!isLeader) {
+            ApiClient.error(new Error("Manual cron job execution is only allowed on leader instances"));
+            return;
+        }
+
         isRunning[jobId] = true;
 
         try {
@@ -56,11 +73,42 @@
     </header>
 
     <div class="wrapper">
-        <div class="panel" autocomplete="off">
+        <div class="panel" autocomplete="on">
             <div class="flex m-b-sm flex-gap-10">
                 <span class="txt-xl">Registered app cron jobs</span>
-                <RefreshButton class="btn-sm" tooltip={"Refresh"} on:refresh={loadCrons} />
+                <div class="flex flex-gap-xs">
+                    {#if isLoading}
+                        <span class="skeleton-loader skeleton-loader-sm" />
+                    {:else}
+                        {#if isLeader}
+                        <span class="label label-success">
+                            <i class="ri-crown-line"></i>
+                            Leader Instance
+                        </span>
+                    {:else}
+                        <span class="label label-warning">
+                            <i class="ri-team-line"></i>
+                            Follower Instance
+                        </span>
+                        {/if}
+                        <RefreshButton class="btn-sm" tooltip={"Refresh"} on:refresh={loadCrons} />
+                    {/if}
+                </div>
             </div>
+
+            {#if !isLeader && !isLoading}
+                <div class="alert alert-warning m-b-sm">
+                    <div class="icon">
+                        <i class="ri-information-line"></i>
+                    </div>
+                    <div class="content">
+                        <p>
+                            This is a follower instance. Cron jobs are only executed on leader instances.
+                            Manual cron execution is disabled.
+                        </p>
+                    </div>
+                </div>
+            {/if}
 
             <div class="list list-compact">
                 <div class="list-content">
@@ -92,9 +140,9 @@
                                         type="button"
                                         class="btn btn-sm btn-circle btn-hint btn-transparent"
                                         class:btn-loading={isRunning[cron.id]}
-                                        disabled={isRunning[cron.id]}
-                                        aria-label="Run"
-                                        use:tooltip={"Run"}
+                                        disabled={isRunning[cron.id] || !isLeader}
+                                        aria-label={isLeader ? "Run" : "Run (disabled - not leader)"}
+                                        use:tooltip={isLeader ? "Run" : "Run (disabled - not leader)"}
                                         on:click|preventDefault={() => cronRun(cron.id)}
                                     >
                                         <i class="ri-play-large-line"></i>

@@ -78,6 +78,11 @@ type App interface {
 	// When enabled logs, executed sql statements, etc. are printed to the stderr.
 	IsDev() bool
 
+	// IsLeader returns whether the app is in leader mode.
+	//
+	// When enabled, the instance will run cron jobs and other leader-only operations.
+	IsLeader() bool
+
 	// Settings returns the loaded app settings.
 	Settings() *Settings
 
