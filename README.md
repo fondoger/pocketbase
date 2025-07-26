@@ -7,6 +7,7 @@
 - ✅ Realtime events works normally with horizontal scaling
 - ✅ 100% test case pass rate across total 4701 unit tests
 - ✅ Fully compatible with latest PocketBase SDKs/Docs
+- ✅ Leader instance can execute cron jobs (for now...).
 
 **Demo App**
 
@@ -54,6 +55,7 @@ See: [pocketbase/pocketbase](https://github.com/pocketbase/pocketbase)
      -e PB_HTTP_ADDR=127.0.0.1:8090 \
      -e PB_DATA_DIR="/data" \
      -e POSTGRES_URL="postgres://user:pass@127.0.0.1:5432/postgres?sslmode=disable" \
+     -e PB_LEADER=true \
      ghcr.io/fondoger/pocketbase:latest
    ```
 
@@ -76,6 +78,7 @@ See: [pocketbase/pocketbase](https://github.com/pocketbase/pocketbase)
 | `PB_HTTPS_ADDR` | TCP address to listen for the HTTPS server | - |
 | `PB_PATH_PREFIX` | URL path prefix for the HTTP server (Useful when reuse same domain for diffrent sites behind nginx) | - |
 | `PB_ALLOWED_ORIGINS` | Comma separated list of allowed CORS origins | `*` (all origins) |
+| `PB_LEADER` | Enable/Disable the leader instance. Only leader instance can execute cron jobs (thinking of other leader-only features). | `false` |
 
 **Limitations**
 
@@ -83,6 +86,11 @@ See: [pocketbase/pocketbase](https://github.com/pocketbase/pocketbase)
   > You need to add a S3 storage account if you are deploying multiple instances and need the file upload feature.
 - The built-in SQLite Backup feature is not supported
   > PostgresSQL have many mature and stable backup solutions. Eg: `pg_dump`, `docker-pg-backup`, `postgres-backup-s3`.
+
+**Leader Instance**
+
+- Leader instance can execute cron jobs.
+- The status of leader will be available at `/api/crons/leader-status`.
 
 **Disclaimer**
 
@@ -128,7 +136,6 @@ The easiest way to interact with the PocketBase Web APIs is to use one of the of
 
 You could also check the recommendations in https://pocketbase.io/docs/how-to-use/.
 
-
 ## Overview
 
 ### Use as standalone app
@@ -148,33 +155,34 @@ Here is a minimal example:
 0. [Install Go 1.23+](https://go.dev/doc/install) (_if you haven't already_)
 
 1. Create a new project directory with the following `main.go` file inside it:
-    ```go
-    package main
 
-    import (
-        "log"
+   ```go
+   package main
 
-        "github.com/pocketbase/pocketbase"
-        "github.com/pocketbase/pocketbase/core"
-    )
+   import (
+       "log"
 
-    func main() {
-        app := pocketbase.New()
+       "github.com/pocketbase/pocketbase"
+       "github.com/pocketbase/pocketbase/core"
+   )
 
-        app.OnServe().BindFunc(func(se *core.ServeEvent) error {
-            // registers new "GET /hello" route
-            se.Router.GET("/hello", func(re *core.RequestEvent) error {
-                return re.String(200, "Hello world!")
-            })
+   func main() {
+       app := pocketbase.New()
 
-            return se.Next()
-        })
+       app.OnServe().BindFunc(func(se *core.ServeEvent) error {
+           // registers new "GET /hello" route
+           se.Router.GET("/hello", func(re *core.RequestEvent) error {
+               return re.String(200, "Hello world!")
+           })
 
-        if err := app.Start(); err != nil {
-            log.Fatal(err)
-        }
-    }
-    ```
+           return se.Next()
+       })
+
+       if err := app.Start(); err != nil {
+           log.Fatal(err)
+       }
+   }
+   ```
 
 2. To init the dependencies, run `go mod init myapp && go mod tidy`.
 
