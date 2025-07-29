@@ -1,11 +1,15 @@
 # Build Golang binary
 FROM golang:alpine AS builder-golang
 WORKDIR /directory-to-build-golang-app
+RUN echo 'http://dl-cdn.alpinelinux.org/alpine/edge/main' > /etc/apk/repositories
+RUN apk update --allow-untrusted
+RUN apk upgrade --allow-untrusted
+RUN apk add postgresql17-client --allow-untrusted
 # Download dependencies in seperate step for docker layer caching
 COPY [ "go.mod", "go.sum", "./" ]
 RUN go mod download
 # Copy everything else and build
-COPY . . 
+COPY . .
 RUN cd examples/base && go build -o pocketbase ./
 
 # Build the final image

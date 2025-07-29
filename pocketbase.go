@@ -132,7 +132,7 @@ func NewWithConfig(config Config) *PocketBase {
 		if enable, err := strconv.ParseBool(os.Getenv("PB_LEADER")); err == nil {
 			config.DefaultLeader = &enable
 		} else {
-			enable = false
+			enable = true
 			config.DefaultLeader = &enable
 		}
 	}
@@ -330,7 +330,7 @@ func (pb *PocketBase) eagerParseFlags(config *Config) error {
 		&pb.leaderFlag,
 		"leader",
 		*config.DefaultLeader,
-		"enable/disable the leader mode (default false)",
+		"enable/disable the leader mode",
 	)
 
 	return pb.RootCmd.ParseFlags(os.Args[1:])

@@ -1,12 +1,15 @@
 package core
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"io"
 	"log/slog"
+	"net/url"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"sort"
@@ -23,7 +26,362 @@ const (
 	StoreKeyActiveBackup = "@activeBackup"
 )
 
-// CreateBackup creates a new backup of the current app pb_data directory.
+// PostgresConnectionInfo holds the parsed connection details
+type PostgresConnectionInfo struct {
+	Host     string
+	Port     string
+	User     string
+	Password string
+	Database string
+	SSLMode  string
+}
+
+// copyDir copies a directory recursively
+func copyDir(src string, dest string) error {
+	if err := os.MkdirAll(dest, os.ModePerm); err != nil {
+		return err
+	}
+
+	sourceDir, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer sourceDir.Close()
+
+	items, err := sourceDir.Readdir(-1)
+	if err != nil {
+		return err
+	}
+
+	for _, item := range items {
+		fullSrcPath := filepath.Join(src, item.Name())
+		fullDestPath := filepath.Join(dest, item.Name())
+
+		var copyErr error
+		if item.IsDir() {
+			copyErr = copyDir(fullSrcPath, fullDestPath)
+		} else {
+			copyErr = copyFile(fullSrcPath, fullDestPath)
+		}
+
+		if copyErr != nil {
+			return copyErr
+		}
+	}
+
+	return nil
+}
+
+// copyFile copies a single file
+func copyFile(src string, dest string) error {
+	srcFile, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer srcFile.Close()
+
+	destFile, err := os.Create(dest)
+	if err != nil {
+		return err
+	}
+	defer destFile.Close()
+
+	if _, err := io.Copy(destFile, srcFile); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// parsePostgresURL parses a PostgreSQL connection URL and extracts connection parameters
+func parsePostgresURL(connectionURL string) (*PostgresConnectionInfo, error) {
+	u, err := url.Parse(connectionURL)
+	if err != nil {
+		return nil, fmt.Errorf("invalid connection URL: %w", err)
+	}
+
+	info := &PostgresConnectionInfo{
+		Host:     u.Hostname(),
+		Port:     u.Port(),
+		Database: u.Path[1:], // Remove leading slash
+		SSLMode:  "disable",  // Default
+	}
+
+	if info.Port == "" {
+		info.Port = "5432" // Default PostgreSQL port
+	}
+
+	if u.User != nil {
+		info.User = u.User.Username()
+		if password, ok := u.User.Password(); ok {
+			info.Password = password
+		}
+	}
+
+	// Parse query parameters
+	if sslmode := u.Query().Get("sslmode"); sslmode != "" {
+		info.SSLMode = sslmode
+	}
+
+	return info, nil
+}
+
+// getPostgresURL extracts the PostgreSQL URL from a BaseApp instance
+func getPostgresURL(app App) (string, error) {
+	// Type assert to BaseApp to access the config
+	baseApp, ok := app.(*BaseApp)
+	if !ok {
+		return "", errors.New("app is not a BaseApp instance")
+	}
+	return baseApp.config.PostgresURL, nil
+}
+
+// createPostgresDump creates a PostgreSQL dump using pg_dump
+func createPostgresDump(connInfo *PostgresConnectionInfo, database, outputPath string) error {
+	// Prepare pg_dump command
+	args := []string{
+		"pg_dump",
+		"-h", connInfo.Host,
+		"-p", connInfo.Port,
+		"-U", connInfo.User,
+		"-d", database,
+		"--no-password",
+		"--verbose",
+		"--clean",
+		"--if-exists",
+		"--create",
+		"--file", outputPath,
+	}
+
+	cmd := exec.Command(args[0], args[1:]...)
+
+	// Set PGPASSWORD environment variable if password is provided
+	if connInfo.Password != "" {
+		cmd.Env = append(os.Environ(), "PGPASSWORD="+connInfo.Password)
+	}
+
+	// Capture output for debugging
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+
+	err := cmd.Run()
+	if err != nil {
+		return fmt.Errorf("pg_dump failed for database %s: %w\nStderr: %s", database, err, stderr.String())
+	}
+
+	return nil
+}
+
+// restorePostgresDumpSafe restores a PostgreSQL dump without dropping the database
+func restorePostgresDumpSafe(connInfo *PostgresConnectionInfo, database, dumpPath string) error {
+	// First, try to clean the database by dropping all tables/schemas
+	cleanArgs := []string{
+		"psql",
+		"-h", connInfo.Host,
+		"-p", connInfo.Port,
+		"-U", connInfo.User,
+		"-d", database,
+		"--no-password",
+		"-c", `
+			DO $$
+			DECLARE
+				r RECORD;
+			BEGIN
+				-- Drop all tables
+				FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public') LOOP
+					EXECUTE 'DROP TABLE IF EXISTS ' || quote_ident(r.tablename) || ' CASCADE';
+				END LOOP;
+				-- Drop all sequences
+				FOR r IN (SELECT sequence_name FROM information_schema.sequences WHERE sequence_schema = 'public') LOOP
+					EXECUTE 'DROP SEQUENCE IF EXISTS ' || quote_ident(r.sequence_name) || ' CASCADE';
+				END LOOP;
+				-- Drop all functions with proper signature handling
+				FOR r IN (SELECT routine_name, specific_name FROM information_schema.routines WHERE routine_schema = 'public' AND routine_type = 'FUNCTION') LOOP
+					BEGIN
+						EXECUTE 'DROP FUNCTION IF EXISTS ' || quote_ident(r.specific_name) || ' CASCADE';
+					EXCEPTION WHEN OTHERS THEN
+						-- Ignore errors for functions that can't be dropped
+						NULL;
+					END;
+				END LOOP;
+				-- Drop all types
+				FOR r IN (SELECT typname FROM pg_type WHERE typnamespace = (SELECT oid FROM pg_namespace WHERE nspname = 'public') AND typtype = 'c') LOOP
+					EXECUTE 'DROP TYPE IF EXISTS ' || quote_ident(r.typname) || ' CASCADE';
+				END LOOP;
+			END $$;
+		`,
+	}
+
+	cleanCmd := exec.Command(cleanArgs[0], cleanArgs[1:]...)
+
+	// Set PGPASSWORD environment variable if password is provided
+	if connInfo.Password != "" {
+		cleanCmd.Env = append(os.Environ(), "PGPASSWORD="+connInfo.Password)
+	}
+
+	// Capture output for debugging
+	var cleanStderr bytes.Buffer
+	cleanCmd.Stderr = &cleanStderr
+
+	if err := cleanCmd.Run(); err != nil {
+		// Log warning but don't fail - database might be empty
+		fmt.Printf("Warning: failed to clean database %s: %v\nStderr: %s\n", database, err, cleanStderr.String())
+	}
+
+	// Now restore from the dump file
+	restoreArgs := []string{
+		"psql",
+		"-h", connInfo.Host,
+		"-p", connInfo.Port,
+		"-U", connInfo.User,
+		"-d", database,
+		"--no-password",
+		"-f", dumpPath,
+	}
+
+	restoreCmd := exec.Command(restoreArgs[0], restoreArgs[1:]...)
+
+	// Set PGPASSWORD environment variable if password is provided
+	if connInfo.Password != "" {
+		restoreCmd.Env = append(os.Environ(), "PGPASSWORD="+connInfo.Password)
+	}
+
+	// Capture output for debugging
+	var restoreStderr bytes.Buffer
+	restoreCmd.Stderr = &restoreStderr
+
+	err := restoreCmd.Run()
+	if err != nil {
+		return fmt.Errorf("psql restore failed for database %s: %w\nStderr: %s", database, err, restoreStderr.String())
+	}
+
+	return nil
+}
+
+// restorePostgresDump restores a PostgreSQL dump using psql
+func restorePostgresDump(connInfo *PostgresConnectionInfo, database, dumpPath string) error {
+	// Try the safe method first (without dropping database)
+	if err := restorePostgresDumpSafe(connInfo, database, dumpPath); err != nil {
+		// If safe method fails, try the original method with database recreation
+		fmt.Printf("Safe restore failed, trying with database recreation: %v\n", err)
+
+		// First, try to drop and recreate the database
+		if err := dropAndCreateDatabase(connInfo, database); err != nil {
+			return fmt.Errorf("failed to recreate database %s: %w", database, err)
+		}
+
+		// Prepare psql command to restore the dump
+		args := []string{
+			"psql",
+			"-h", connInfo.Host,
+			"-p", connInfo.Port,
+			"-U", connInfo.User,
+			"-d", database,
+			"--no-password",
+			"-f", dumpPath,
+		}
+
+		cmd := exec.Command(args[0], args[1:]...)
+
+		// Set PGPASSWORD environment variable if password is provided
+		if connInfo.Password != "" {
+			cmd.Env = append(os.Environ(), "PGPASSWORD="+connInfo.Password)
+		}
+
+		// Capture output for debugging
+		var stderr bytes.Buffer
+		cmd.Stderr = &stderr
+
+		err := cmd.Run()
+		if err != nil {
+			return fmt.Errorf("psql restore failed for database %s: %w\nStderr: %s", database, err, stderr.String())
+		}
+	}
+
+	return nil
+}
+
+// dropAndCreateDatabase drops and recreates a PostgreSQL database
+func dropAndCreateDatabase(connInfo *PostgresConnectionInfo, database string) error {
+	// Connect to the default 'postgres' database to perform admin operations
+	adminConnInfo := *connInfo
+	adminConnInfo.Database = "postgres"
+
+	// First, terminate all active connections to the target database
+	terminateArgs := []string{
+		"psql",
+		"-h", adminConnInfo.Host,
+		"-p", adminConnInfo.Port,
+		"-U", adminConnInfo.User,
+		"-d", adminConnInfo.Database,
+		"--no-password",
+		"-c", fmt.Sprintf(`
+			SELECT pg_terminate_backend(pid)
+			FROM pg_stat_activity
+			WHERE datname = '%s' AND pid <> pg_backend_pid();
+		`, database),
+	}
+
+	terminateCmd := exec.Command(terminateArgs[0], terminateArgs[1:]...)
+	if adminConnInfo.Password != "" {
+		terminateCmd.Env = append(os.Environ(), "PGPASSWORD="+adminConnInfo.Password)
+	}
+
+	// Ignore errors from terminate command as the database might not exist or have no connections
+	_ = terminateCmd.Run()
+
+	// Drop database if exists
+	dropArgs := []string{
+		"psql",
+		"-h", adminConnInfo.Host,
+		"-p", adminConnInfo.Port,
+		"-U", adminConnInfo.User,
+		"-d", adminConnInfo.Database,
+		"--no-password",
+		"-c", fmt.Sprintf(`DROP DATABASE IF EXISTS "%s"`, database),
+	}
+
+	dropCmd := exec.Command(dropArgs[0], dropArgs[1:]...)
+	if adminConnInfo.Password != "" {
+		dropCmd.Env = append(os.Environ(), "PGPASSWORD="+adminConnInfo.Password)
+	}
+
+	// Capture stderr for better error reporting
+	var dropStderr bytes.Buffer
+	dropCmd.Stderr = &dropStderr
+
+	if err := dropCmd.Run(); err != nil {
+		return fmt.Errorf("failed to drop database %s: %w\nStderr: %s", database, err, dropStderr.String())
+	}
+
+	// Create database
+	createArgs := []string{
+		"psql",
+		"-h", adminConnInfo.Host,
+		"-p", adminConnInfo.Port,
+		"-U", adminConnInfo.User,
+		"-d", adminConnInfo.Database,
+		"--no-password",
+		"-c", fmt.Sprintf(`CREATE DATABASE "%s"`, database),
+	}
+
+	createCmd := exec.Command(createArgs[0], createArgs[1:]...)
+	if adminConnInfo.Password != "" {
+		createCmd.Env = append(os.Environ(), "PGPASSWORD="+adminConnInfo.Password)
+	}
+
+	// Capture stderr for better error reporting
+	var createStderr bytes.Buffer
+	createCmd.Stderr = &createStderr
+
+	if err := createCmd.Run(); err != nil {
+		return fmt.Errorf("failed to create database %s: %w\nStderr: %s", database, err, createStderr.String())
+	}
+
+	return nil
+}
+
+// CreateBackup creates a new backup of the current app pb_data directory and PostgreSQL databases.
 //
 // If name is empty, it will be autogenerated.
 // If backup with the same name exists, the new backup file will replace it.
@@ -32,7 +390,7 @@ const (
 // will be temporary "blocked" until the backup file is generated.
 //
 // To safely perform the backup, it is recommended to have free disk space
-// for at least 2x the size of the pb_data directory.
+// for at least 2x the size of the pb_data directory plus database dump sizes.
 //
 // By default backups are stored in pb_data/backups
 // (the backups directory itself is excluded from the generated backup).
@@ -69,23 +427,105 @@ func (app *BaseApp) CreateBackup(ctx context.Context, name string) error {
 			return fmt.Errorf("failed to create a temp dir: %w", err)
 		}
 
-		// archive pb_data in a temp directory, exluding the "backups" and the temp dirs
-		//
-		// run in transaction to temporary block other writes (transactions uses the NonconcurrentDB connection)
-		// ---
-		tempPath := filepath.Join(localTempDir, "pb_backup_"+security.PseudorandomString(6))
+		// Parse PostgreSQL connection info
+		postgresURL, err := getPostgresURL(e.App)
+		if err != nil {
+			return fmt.Errorf("failed to get PostgreSQL URL: %w", err)
+		}
+
+		connInfo, err := parsePostgresURL(postgresURL)
+		if err != nil {
+			return fmt.Errorf("failed to parse PostgreSQL connection URL: %w", err)
+		}
+
+		// Create temporary backup directory
+		tempBackupDir := filepath.Join(localTempDir, "pb_backup_"+security.PseudorandomString(6))
+		if err := os.MkdirAll(tempBackupDir, os.ModePerm); err != nil {
+			return fmt.Errorf("failed to create temp backup dir: %w", err)
+		}
+		defer os.RemoveAll(tempBackupDir)
+
+		// Create database dumps and copy files within a transaction
 		createErr := e.App.RunInTransaction(func(txApp App) error {
 			return txApp.AuxRunInTransaction(func(txApp App) error {
-				// run manual checkpoint and truncate the WAL files
-				// (errors are ignored because it is not that important and the PRAGMA may not be supported by the used driver)
-				txApp.DB().NewQuery("PRAGMA wal_checkpoint(TRUNCATE)").Execute()
-				txApp.AuxDB().NewQuery("PRAGMA wal_checkpoint(TRUNCATE)").Execute()
+				// Create PostgreSQL dumps
+				dataDbDumpPath := filepath.Join(tempBackupDir, "data.pg-dump.sql")
+				auxDbDumpPath := filepath.Join(tempBackupDir, "auxiliary.pg-dump.sql")
 
-				return archive.Create(txApp.DataDir(), tempPath, e.Exclude...)
+				// Get database names using the proper App interface methods
+				dataDbName := txApp.PostgresDataDB()
+				auxDbName := txApp.PostgresAuxDB()
+
+				app.Logger().Info("Creating PostgreSQL dump for data database", "database", dataDbName)
+				if err := createPostgresDump(connInfo, dataDbName, dataDbDumpPath); err != nil {
+					return fmt.Errorf("failed to create data database dump: %w", err)
+				}
+
+				app.Logger().Info("Creating PostgreSQL dump for auxiliary database", "database", auxDbName)
+				if err := createPostgresDump(connInfo, auxDbName, auxDbDumpPath); err != nil {
+					return fmt.Errorf("failed to create auxiliary database dump: %w", err)
+				}
+
+				// Copy storage directory if it exists
+				storageDir := filepath.Join(txApp.DataDir(), LocalStorageDirName)
+				if _, err := os.Stat(storageDir); err == nil {
+					destStorageDir := filepath.Join(tempBackupDir, LocalStorageDirName)
+					if err := copyDir(storageDir, destStorageDir); err != nil {
+						return fmt.Errorf("failed to copy storage directory: %w", err)
+					}
+				}
+
+				// Copy any other necessary files (exclude databases, backups, temp dirs)
+				entries, err := os.ReadDir(txApp.DataDir())
+				if err != nil {
+					return fmt.Errorf("failed to read data directory: %w", err)
+				}
+
+				for _, entry := range entries {
+					name := entry.Name()
+
+					// Skip excluded directories and database files
+					skip := false
+					for _, exclude := range e.Exclude {
+						if name == exclude {
+							skip = true
+							break
+						}
+					}
+
+					// Skip database files and storage directory (already handled above)
+					if skip || name == LocalStorageDirName ||
+					   name == "data.db" || name == "auxiliary.db" ||
+					   name == "data.db-wal" || name == "data.db-shm" ||
+					   name == "auxiliary.db-wal" || name == "auxiliary.db-shm" {
+						continue
+					}
+
+					srcPath := filepath.Join(txApp.DataDir(), name)
+					destPath := filepath.Join(tempBackupDir, name)
+
+					if entry.IsDir() {
+						if err := copyDir(srcPath, destPath); err != nil {
+							return fmt.Errorf("failed to copy directory %s: %w", name, err)
+						}
+					} else {
+						if err := copyFile(srcPath, destPath); err != nil {
+							return fmt.Errorf("failed to copy file %s: %w", name, err)
+						}
+					}
+				}
+
+				return nil
 			})
 		})
 		if createErr != nil {
 			return createErr
+		}
+
+		// Create zip archive from the temp backup directory
+		tempPath := filepath.Join(localTempDir, "pb_backup_"+security.PseudorandomString(6)+".zip")
+		if err := archive.Create(tempBackupDir, tempPath); err != nil {
+			return fmt.Errorf("failed to create backup archive: %w", err)
 		}
 		defer os.Remove(tempPath)
 
@@ -130,17 +570,19 @@ func (app *BaseApp) CreateBackup(ctx context.Context, name string) error {
 //  2. Extract the backup in a temp directory inside the app "pb_data"
 //     (eg. "pb_data/.pb_temp_to_delete/pb_restore").
 //
-//  3. Move the current app "pb_data" content (excluding the local backups and the special temp dir)
+//  3. Restore PostgreSQL databases from the extracted SQL dumps.
+//
+//  4. Move the current app "pb_data" content (excluding the local backups and the special temp dir)
 //     under another temp sub dir that will be deleted on the next app start up
 //     (eg. "pb_data/.pb_temp_to_delete/old_pb_data").
 //     This is because on some environments it may not be allowed
 //     to delete the currently open "pb_data" files.
 //
-//  4. Move the extracted dir content to the app "pb_data".
+//  5. Move the extracted dir content to the app "pb_data".
 //
-//  5. Restart the app (on successful app bootstap it will also remove the old pb_data).
+//  6. Restart the app (on successful app bootstrap it will also remove the old pb_data).
 //
-// If a failure occure during the restore process the dir changes are reverted.
+// If a failure occurs during the restore process the dir changes are reverted.
 // If for whatever reason the revert is not possible, it panics.
 //
 // Note that if your pb_data has custom network mounts as subdirectories, then
@@ -236,13 +678,50 @@ func (app *BaseApp) RestoreBackup(ctx context.Context, name string) error {
 			}
 		}
 
-		// ensure that at least a database file exists
-		extractedDB := filepath.Join(extractedDataDir, "data.db")
-		if _, err := os.Stat(extractedDB); err != nil {
-			return fmt.Errorf("data.db file is missing or invalid: %w", err)
+		// Parse PostgreSQL connection info
+		postgresURL, err := getPostgresURL(e.App)
+		if err != nil {
+			return fmt.Errorf("failed to get PostgreSQL URL: %w", err)
+		}
+
+		connInfo, err := parsePostgresURL(postgresURL)
+		if err != nil {
+			return fmt.Errorf("failed to parse PostgreSQL connection URL: %w", err)
+		}
+
+		// Restore PostgreSQL databases from dumps
+		dataDbDumpPath := filepath.Join(extractedDataDir, "data.pg-dump.sql")
+		auxDbDumpPath := filepath.Join(extractedDataDir, "auxiliary.pg-dump.sql")
+
+		// Check if the required dump files exist
+		if _, err := os.Stat(dataDbDumpPath); err != nil {
+			return fmt.Errorf("data.pg-dump.sql file is missing or invalid: %w", err)
+		}
+		if _, err := os.Stat(auxDbDumpPath); err != nil {
+			return fmt.Errorf("auxiliary.pg-dump.sql file is missing or invalid: %w", err)
+		}
+
+		// Get database names
+		dataDbName := e.App.PostgresDataDB()
+		auxDbName := e.App.PostgresAuxDB()
+
+		// Restore PostgreSQL databases from dumps
+		e.App.Logger().Info("Restoring PostgreSQL dump for data database", "database", dataDbName)
+		if err := restorePostgresDump(connInfo, dataDbName, dataDbDumpPath); err != nil {
+			return fmt.Errorf("failed to restore data database: %w", err)
+		}
+
+		e.App.Logger().Info("Restoring PostgreSQL dump for auxiliary database", "database", auxDbName)
+		if err := restorePostgresDump(connInfo, auxDbName, auxDbDumpPath); err != nil {
+			return fmt.Errorf("failed to restore auxiliary database: %w", err)
 		}
 
 		oldTempDataDir := filepath.Join(localTempDir, "old_pb_data_"+security.PseudorandomString(8))
+
+		// Ensure the temp directory exists before trying to move files
+		if err := os.MkdirAll(oldTempDataDir, os.ModePerm); err != nil {
+			return fmt.Errorf("failed to create temp directory for old data: %w", err)
+		}
 
 		replaceErr := e.App.RunInTransaction(func(txApp App) error {
 			return txApp.AuxRunInTransaction(func(txApp App) error {
@@ -253,9 +732,32 @@ func (app *BaseApp) RestoreBackup(ctx context.Context, name string) error {
 					return fmt.Errorf("failed to move the current pb_data content to a temp location: %w", err)
 				}
 
-				// move the extracted archive content to the app's pb_data
-				if err := osutils.MoveDirContent(extractedDataDir, txApp.DataDir(), e.Exclude...); err != nil {
-					return fmt.Errorf("failed to move the extracted archive content to pb_data: %w", err)
+				// move the extracted archive content to the app's pb_data (excluding SQL dumps)
+				entries, err := os.ReadDir(extractedDataDir)
+				if err != nil {
+					return fmt.Errorf("failed to read extracted directory: %w", err)
+				}
+
+				for _, entry := range entries {
+					name := entry.Name()
+
+					// Skip SQL dump files as they've already been restored to PostgreSQL
+					if name == "data.pg-dump.sql" || name == "auxiliary.pg-dump.sql" {
+						continue
+					}
+
+					srcPath := filepath.Join(extractedDataDir, name)
+					destPath := filepath.Join(txApp.DataDir(), name)
+
+					if entry.IsDir() {
+						if err := copyDir(srcPath, destPath); err != nil {
+							return fmt.Errorf("failed to copy directory %s: %w", name, err)
+						}
+					} else {
+						if err := copyFile(srcPath, destPath); err != nil {
+							return fmt.Errorf("failed to copy file %s: %w", name, err)
+						}
+					}
 				}
 
 				return nil

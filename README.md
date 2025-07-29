@@ -80,12 +80,16 @@ See: [pocketbase/pocketbase](https://github.com/pocketbase/pocketbase)
 | `PB_ALLOWED_ORIGINS` | Comma separated list of allowed CORS origins | `*` (all origins) |
 | `PB_LEADER` | Enable/Disable the leader instance. Only leader instance can execute cron jobs (thinking of other leader-only features). | `false` |
 
+**Experimental Features**
+
+- ✅ PostgresSQL Backup feature is supported.
+  > Relies on `pg_dump` for data dump and `psql` for data restore.
+  > The built-in SQLite Backup feature is not supported.
+
 **Limitations**
 
 - Local file system is not synced across multiple instances.
   > You need to add a S3 storage account if you are deploying multiple instances and need the file upload feature.
-- The built-in SQLite Backup feature is not supported
-  > PostgresSQL have many mature and stable backup solutions. Eg: `pg_dump`, `docker-pg-backup`, `postgres-backup-s3`.
 
 **Leader Instance**
 

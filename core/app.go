@@ -64,6 +64,12 @@ type App interface {
 	// DataDir returns the app data directory path.
 	DataDir() string
 
+	// PostgresDataDB returns the name of the main data db used by the app.
+	PostgresDataDB() string
+
+	// PostgresAuxDB returns the name of the auxiliary db used by the app.
+	PostgresAuxDB() string
+
 	// EncryptionEnv returns the name of the app secret env key
 	// (currently used primarily for optional settings encryption but this may change in the future).
 	EncryptionEnv() string
