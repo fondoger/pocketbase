@@ -3,6 +3,23 @@
 - Support for PostgreSQL and horizontal scaling with pg_notify
 - Add leader/follower replication for cron operations
 
+## v0.29.0
+
+- Enabled calling the `/auth-refresh` endpoint with nonrenewable tokens.
+  _When used with nonrenewable tokens (e.g. impersonate) the endpoint will simply return the same token with the up-to-date user data associated with it._
+
+- Added the triggered rate rimit rule in the error log `details`.
+
+- Added optional `ServeEvent.Listener` field to initialize a custom network listener (e.g. `unix`) instead of the default `tcp` ([#3233](https://github.com/pocketbase/pocketbase/discussions/3233)).
+
+- Added `toBytes` JSVM helper ([#6935](https://github.com/pocketbase/pocketbase/issues/6935)).
+
+- Fixed request data unmarshalization for the `DynamicModel` array/object fields ([#7022](https://github.com/pocketbase/pocketbase/discussions/7022)).
+
+- Fixed Dashboard page title `-` escaping ([#6982](https://github.com/pocketbase/pocketbase/issues/6982)).
+
+- Other minor improvements (updated first superuser console text when running with `go run`, clarified trusted IP proxy header label, wrapped the backup restore in a transaction as an extra precaution, updated deps, etc.).
+
 ## v0.28.4
 
 - Added global JSVM `toBytes()` helper to return the bytes slice representation of a value such as io.Reader or string (_other types are first serialized to Go string_).
@@ -466,7 +483,7 @@ There are a lot of changes but to highlight some of the most notable ones:
 - Admins are now system `_superusers` auth records.
 - Builtin rate limiter (_supports tags, wildcards and exact routes matching_).
 - Batch/transactional Web API endpoint.
-- Impersonate Web API endpoint (_it could be also used for generating fixed/non-refreshable superuser tokens, aka. "API keys"_).
+- Impersonate Web API endpoint (_it could be also used for generating fixed/nonrenewable superuser tokens, aka. "API keys"_).
 - Support for custom user request activity log attributes.
 - One-Time Password (OTP) auth method (_via email code_).
 - Multi-Factor Authentication (MFA) support (_currently requires any 2 different auth methods to be used_).
