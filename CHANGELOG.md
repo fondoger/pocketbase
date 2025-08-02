@@ -1,7 +1,10 @@
-## v0.28.4 - Pockgres
+## v0.29.0-pg
 
-- Support for PostgreSQL and horizontal scaling with pg_notify
-- Add leader/follower replication for cron operations
+- Added support for PostgreSQL and horizontal scaling with pg_notify.
+
+- Added leader/follower replication for cron operations.
+
+- Migration and backup support for PostgreSQL using `pg_dump` and `psql`.
 
 ## v0.29.0
 
@@ -19,6 +22,11 @@
 - Fixed Dashboard page title `-` escaping ([#6982](https://github.com/pocketbase/pocketbase/issues/6982)).
 
 - Other minor improvements (updated first superuser console text when running with `go run`, clarified trusted IP proxy header label, wrapped the backup restore in a transaction as an extra precaution, updated deps, etc.).
+
+## v0.28.4 - Pockgres
+
+- Support for PostgreSQL and horizontal scaling with pg_notify
+- Add leader/follower replication for cron operations
 
 ## v0.28.4
 
