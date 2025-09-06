@@ -27,6 +27,20 @@ var Providers = map[string]ProviderFactoryFunc{}
 // 2. The providerId (AuthUser.Id) are the same in different providers.
 var EquivalentProviders = map[string][]string{}
 
+// ProgrammaticEnabledProviders allows developers add oauth2 providers via Golang SDK.
+// ```example.go
+//
+//	auth.Providers["provider_name"] = func() Provider {
+//		provider := &CustomProvider{}
+//		provider.SetClientId("client-id")   		// Optional
+//		provider.SetClientSecret("client-secret")	// Optional
+//		return provider
+//	}
+//	auth.ProgrammaticEnabledProviders["users"] = []string{"provider_name"}
+//
+// ```
+var ProgrammaticEnabledProviders = map[string][]string{}
+
 // NewProviderByName returns a new preconfigured provider instance by its name identifier.
 func NewProviderByName(name string) (Provider, error) {
 	factory, ok := Providers[name]
