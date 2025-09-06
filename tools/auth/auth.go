@@ -19,7 +19,7 @@ type ProviderFactoryFunc func() Provider
 var Providers = map[string]ProviderFactoryFunc{}
 
 // Some platforms use two different ClientID/ClientSecret pairs for native sign-in and Web sign-in flows.
-// Known platforms are: Apple, Wechat
+// Known platforms are: Apple
 // See: https://github.com/pocketbase/pocketbase/issues/6151
 //
 // Two providers are equivalent only if:
