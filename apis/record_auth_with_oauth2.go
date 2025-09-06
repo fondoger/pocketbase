@@ -233,6 +233,10 @@ func (form *recordOAuth2LoginForm) validate() error {
 func (form *recordOAuth2LoginForm) checkProviderName(value any) error {
 	name, _ := value.(string)
 
+	if slices.Contains(auth.ProgrammaticEnabledProviders[form.collection.Name], name) {
+		return nil
+	}
+
 	_, ok := form.collection.OAuth2.GetProviderConfig(name)
 	if !ok {
 		return validation.NewError("validation_invalid_provider", "Provider with name {{.name}} is missing or is not enabled.").
