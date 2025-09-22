@@ -21,7 +21,7 @@
 
     $: indexParts = CommonHelper.parseIndex(index);
 
-    $: indexColumns = indexParts.columns?.map((c) => c.name) || [];
+    $: lowerCasedIndexColumns = indexParts.columns?.map((c) => c.name.toLowerCase()) || [];
 
     export function show(showIndex, showKey) {
         key = !CommonHelper.isEmpty(showKey) ? showKey : "";
@@ -49,7 +49,7 @@
     }
 
     function submit() {
-        if (!indexColumns.length) {
+        if (!lowerCasedIndexColumns.length) {
             return;
         }
 
@@ -63,10 +63,11 @@
 
     function toggleColumn(column) {
         const clone = CommonHelper.clone(indexParts);
+        const normalizedColumn = column.toLowerCase();
 
-        const col = clone.columns.find((c) => c.name == column);
-        if (col) {
-            CommonHelper.removeByValue(clone.columns, col);
+        const i = clone.columns.findIndex((c) => c.name.toLowerCase() == normalizedColumn);
+        if (i >= 0) {
+            clone.columns.splice(i, 1);
         } else {
             CommonHelper.pushUnique(clone.columns, { name: column });
         }
@@ -128,7 +129,7 @@
                 <button
                     type="button"
                     class="label link-primary"
-                    class:label-info={indexColumns.includes(column)}
+                    class:label-info={lowerCasedIndexColumns.includes(column.toLowerCase())}
                     on:click={() => toggleColumn(column)}
                 >
                     {column}
@@ -154,7 +155,7 @@
         <button
             type="button"
             class="btn"
-            class:btn-disabled={indexColumns.length <= 0}
+            class:btn-disabled={lowerCasedIndexColumns.length <= 0}
             on:click={() => submit()}
         >
             <span class="txt">Set index</span>

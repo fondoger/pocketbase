@@ -1136,7 +1136,7 @@ func (c *Collection) fieldIndexName(field string) string {
 	} else if c.Name != "" {
 		name += c.Name
 	} else {
-		name += security.PseudorandomString(10)
+		name += security.PseudorandomStringWithAlphabet(10, DefaultIdAlphabet)
 	}
 
 	if len(name) > 64 {
