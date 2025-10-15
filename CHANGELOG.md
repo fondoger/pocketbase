@@ -1,3 +1,13 @@
+## v0.30.3 (WIP)
+
+- Fixed legacy identitity field priority check when a username is a valid email address ([#7256](https://github.com/pocketbase/pocketbase/issues/7256)).
+
+
+## v0.30.2
+
+- Bumped min Go GitHub action version to 1.24.8 since it comes with some [minor security fixes](https://github.com/golang/go/issues?q=milestone%3AGo1.24.8+label%3ACherryPickApproved).
+
+
 ## v0.30.1
 
 - ⚠️ Excluded the `lost+found` directory from the backups ([#7208](https://github.com/pocketbase/pocketbase/pull/7208); thanks @lbndev).
