@@ -1369,6 +1369,14 @@ func supportFiles(m Model) bool {
 	return false
 }
 
+func (app *BaseApp) UsesSQLite() bool {
+	return strings.TrimSpace(app.config.PostgresURL) == ""
+}
+
+func (app *BaseApp) usesSQLite() bool {
+	return app.UsesSQLite()
+}
+
 func (app *BaseApp) registerBaseHooks() {
 	deletePrefix := func(prefix string) error {
 		fs, err := app.NewFilesystem()
@@ -1441,19 +1449,21 @@ func (app *BaseApp) registerBaseHooks() {
 	})
 
 	app.Cron().Add("__pbDBOptimize__", "0 0 * * *", func() {
-		_, execErr := app.NonconcurrentDB().NewQuery("PRAGMA wal_checkpoint(TRUNCATE)").Execute()
-		if execErr != nil {
-			app.Logger().Warn("Failed to run periodic PRAGMA wal_checkpoint for the main DB", slog.String("error", execErr.Error()))
-		}
+		if app.usesSQLite() {
+			if _, execErr := app.NonconcurrentDB().NewQuery("PRAGMA wal_checkpoint(TRUNCATE)").Execute(); execErr != nil {
+				app.Logger().Warn("Failed to run periodic PRAGMA wal_checkpoint for the main DB", slog.String("error", execErr.Error()))
+			}
 
-		_, execErr = app.AuxNonconcurrentDB().NewQuery("PRAGMA wal_checkpoint(TRUNCATE)").Execute()
-		if execErr != nil {
-			app.Logger().Warn("Failed to run periodic PRAGMA wal_checkpoint for the auxiliary DB", slog.String("error", execErr.Error()))
-		}
+			if _, execErr := app.NonconcurrentDB().NewQuery("PRAGMA optimize").Execute(); execErr != nil {
+				app.Logger().Warn("Failed to run periodic PRAGMA optimize for the main DB", slog.String("error", execErr.Error()))
+			}
+			if _, execErr := app.AuxNonconcurrentDB().NewQuery("PRAGMA wal_checkpoint(TRUNCATE)").Execute(); execErr != nil {
+				app.Logger().Warn("Failed to run periodic PRAGMA wal_checkpoint for the auxiliary DB", slog.String("error", execErr.Error()))
+			}
 
-		_, execErr = app.NonconcurrentDB().NewQuery("PRAGMA optimize").Execute()
-		if execErr != nil {
-			app.Logger().Warn("Failed to run periodic PRAGMA optimize", slog.String("error", execErr.Error()))
+			if _, execErr := app.AuxNonconcurrentDB().NewQuery("PRAGMA optimize").Execute(); execErr != nil {
+				app.Logger().Warn("Failed to run periodic PRAGMA optimize for the auxiliary DB", slog.String("error", execErr.Error()))
+			}
 		}
 	})
 

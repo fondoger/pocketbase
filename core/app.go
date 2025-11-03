@@ -64,6 +64,9 @@ type App interface {
 	// DataDir returns the app data directory path.
 	DataDir() string
 
+	// UsesSQLite indicates whether the application is running on SQLite.
+	UsesSQLite() bool
+
 	// EncryptionEnv returns the name of the app secret env key
 	// (currently used primarily for optional settings encryption but this may change in the future).
 	EncryptionEnv() string
