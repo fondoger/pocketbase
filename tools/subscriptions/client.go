@@ -295,8 +295,8 @@ func (c *DefaultClient) Send(m Message) {
 }
 
 func (c *DefaultClient) RawSubscriptions() []string {
-	c.mux.RLock()
-	defer c.mux.RUnlock()
+	c.mu.RLock()
+	defer c.mu.RUnlock()
 
 	subs := make([]string, 0, len(c.subscriptions))
 	for key := range c.subscriptions {
