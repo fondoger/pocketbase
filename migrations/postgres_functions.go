@@ -3,9 +3,10 @@ package migrations
 import "github.com/pocketbase/dbx"
 
 func createSQLiteEquivalentFunctions(db dbx.Builder) error {
-	//PostgreSQL:
-	// 1. Check existance
-	sql := `SELECT EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'uuid_generate_v7');`
+	// PostgreSQL:
+	// 1. Check existence of the helper JSON function to determine if provisioning is needed
+	//    (helper JSON function determines if provisioning is needed)
+	sql := `SELECT EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'json_query_or_null');`
 	var exists bool
 	if err := db.NewQuery(sql).Row(&exists); err != nil {
 		return err
