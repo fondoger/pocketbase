@@ -660,12 +660,14 @@ func numericJoin(l *ResolverResult, op string, r *ResolverResult) string {
 	left := l.Identifier
 	right := r.Identifier
 
-	// Note: Polyphormic literal such as "2" can be automatic casted to numeric type by PostgreSQL.
-	// Eg: SELECT "2" > 1  -- works fine.
-	if inferDeterministicType(l) != "numeric" && inferPolymorphicLiteral(l) == "" {
+	leftDetType := inferDeterministicType(l)
+	rightDetType := inferDeterministicType(r)
+
+	// only force numeric casting when the operand type is known numeric or literal numeric without explicit type
+	if leftDetType == "numeric" || (leftDetType == "" && inferPolymorphicLiteral(l) == "numeric") {
 		left = withNonJsonbType(left, "numeric")
 	}
-	if inferDeterministicType(r) != "numeric" && inferPolymorphicLiteral(r) == "" {
+	if rightDetType == "numeric" || (rightDetType == "" && inferPolymorphicLiteral(r) == "numeric") {
 		right = withNonJsonbType(right, "numeric")
 	}
 
