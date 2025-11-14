@@ -180,18 +180,22 @@ func buildResolversExpr(
 	case fexpr.SignNeq, fexpr.SignAnyNeq:
 		expr = resolveEqualExpr(false, left, right)
 	case fexpr.SignLike, fexpr.SignAnyLike:
+		leftIdentifier := withNonJsonbType(left.Identifier, "text")
+		rightIdentifier := withNonJsonbType(right.Identifier, "text")
 		// the right side is a column and therefor wrap it with "%" for contains like behavior
 		if len(right.Params) == 0 {
-			expr = dbx.NewExp(fmt.Sprintf("%s LIKE ('%%' || %s || '%%') ESCAPE '\\'", left.Identifier, right.Identifier), left.Params)
+			expr = dbx.NewExp(fmt.Sprintf("%s LIKE ('%%' || %s || '%%') ESCAPE '\\'", leftIdentifier, rightIdentifier), left.Params)
 		} else {
-			expr = dbx.NewExp(fmt.Sprintf("%s LIKE %s ESCAPE '\\'", left.Identifier, right.Identifier), mergeParams(left.Params, wrapLikeParams(right.Params)))
+			expr = dbx.NewExp(fmt.Sprintf("%s LIKE %s ESCAPE '\\'", leftIdentifier, rightIdentifier), mergeParams(left.Params, wrapLikeParams(right.Params)))
 		}
 	case fexpr.SignNlike, fexpr.SignAnyNlike:
+		leftIdentifier := withNonJsonbType(left.Identifier, "text")
+		rightIdentifier := withNonJsonbType(right.Identifier, "text")
 		// the right side is a column and therefor wrap it with "%" for not-contains like behavior
 		if len(right.Params) == 0 {
-			expr = dbx.NewExp(fmt.Sprintf("%s NOT LIKE ('%%' || %s || '%%') ESCAPE '\\'", left.Identifier, right.Identifier), left.Params)
+			expr = dbx.NewExp(fmt.Sprintf("%s NOT LIKE ('%%' || %s || '%%') ESCAPE '\\'", leftIdentifier, rightIdentifier), left.Params)
 		} else {
-			expr = dbx.NewExp(fmt.Sprintf("%s NOT LIKE %s ESCAPE '\\'", left.Identifier, right.Identifier), mergeParams(left.Params, wrapLikeParams(right.Params)))
+			expr = dbx.NewExp(fmt.Sprintf("%s NOT LIKE %s ESCAPE '\\'", leftIdentifier, rightIdentifier), mergeParams(left.Params, wrapLikeParams(right.Params)))
 		}
 	case fexpr.SignLt, fexpr.SignAnyLt:
 		/* SQLite:
@@ -427,7 +431,8 @@ func resolveEqualExpr(equal bool, left, right *ResolverResult) dbx.Expression {
 
 	// direct compare since at least one of the operands is known to be non-empty
 	// eg. a = 'example'
-	if isKnownNonEmptyIdentifier(left) || isKnownNonEmptyIdentifier(right) {
+	if left.MultiMatchSubQuery == nil && right.MultiMatchSubQuery == nil &&
+		(isKnownNonEmptyIdentifier(left) || isKnownNonEmptyIdentifier(right)) {
 		/* SQLite:
 
 		leftIdentifier := left.Identifier
