@@ -55,7 +55,7 @@ func TestFilterDataBuildExpr(t *testing.T) {
 			"[[test1]] > {:TEST}",
 			*/
 			// PostgreSQL:
-			"[[test1]]::numeric > 1",
+			"[[test1]] > 1",
 		},
 		{
 			"empty string vs null",
@@ -137,7 +137,7 @@ func TestFilterDataBuildExpr(t *testing.T) {
 			"([[test4_1]] > {:TEST} AND [[test4_2]] > {:TEST} AND [[test4_3]] > {:TEST} AND [[test4_4]] > {:TEST} AND [[test4_5]] > {:TEST} AND [[test4_6]] > {:TEST} AND [[test4_7]] > {:TEST} AND [[test4_9]] > {:TEST} AND [[test4_9]] > {:TEST} AND [[test4_10]] > {:TEST} AND [[test4_11]] > {:TEST} AND [[test4_12]] > {:TEST} AND [[test4_13]] > {:TEST} AND [[test4_14]] > {:TEST})",
 			*/
 			// PostgreSQL:
-			`([[test4_1]]::numeric > {:TEST} AND [[test4_2]]::numeric > {:TEST} AND [[test4_3]]::numeric > {:TEST} AND [[test4_4]]::numeric > {:TEST} AND [[test4_5]]::numeric > {:TEST} AND [[test4_6]]::numeric > {:TEST} AND [[test4_7]]::numeric > {:TEST} AND [[test4_9]]::numeric > {:TEST} AND [[test4_9]]::numeric > {:TEST} AND [[test4_10]]::numeric > {:TEST} AND [[test4_11]]::numeric > {:TEST} AND [[test4_12]]::numeric > {:TEST} AND [[test4_13]]::numeric > {:TEST} AND [[test4_14]]::numeric > {:TEST})`,
+			`([[test4_1]] > {:TEST} AND [[test4_2]] > {:TEST} AND [[test4_3]] > {:TEST} AND [[test4_4]] > {:TEST} AND [[test4_5]] > {:TEST} AND [[test4_6]] > {:TEST} AND [[test4_7]] > {:TEST} AND [[test4_9]] > {:TEST} AND [[test4_9]] > {:TEST} AND [[test4_10]] > {:TEST} AND [[test4_11]] > {:TEST} AND [[test4_12]] > {:TEST} AND [[test4_13]] > {:TEST} AND [[test4_14]] > {:TEST})`,
 		},
 		{
 			"complex expression",
@@ -147,7 +147,7 @@ func TestFilterDataBuildExpr(t *testing.T) {
 			"(([[test1]] > {:TEST} OR [[test2]] IS NOT {:TEST}) AND [[test3]] LIKE {:TEST} ESCAPE '\\' AND ([[test4_sub]] = '' OR [[test4_sub]] IS NULL))",
 			*/
 			// PostgreSQL:
-			`(([[test1]]::numeric > 1 OR [[test2]] IS DISTINCT FROM 2) AND [[test3]] LIKE {:TEST} ESCAPE '\' AND ([[test4_sub]]::text = '' OR [[test4_sub]] IS NULL))`,
+			`(([[test1]] > 1 OR [[test2]] IS DISTINCT FROM 2) AND [[test3]] LIKE {:TEST} ESCAPE '\' AND ([[test4_sub]]::text = '' OR [[test4_sub]] IS NULL))`,
 		},
 		{
 			"combination of special literals (null, true, false)",
@@ -167,7 +167,7 @@ func TestFilterDataBuildExpr(t *testing.T) {
 			"((COALESCE([[test1]], '') = COALESCE([[test2]], '') OR COALESCE([[test2]], '') IS NOT COALESCE([[test3]], '')) AND ([[test2]] LIKE {:TEST} ESCAPE '\\' OR [[test2]] NOT LIKE {:TEST} ESCAPE '\\') AND {:TEST} LIKE ('%' || [[test1]] || '%') ESCAPE '\\' AND {:TEST} NOT LIKE ('%' || [[test2]] || '%') ESCAPE '\\' AND [[test3]] > {:TEST} AND [[test3]] >= {:TEST} AND [[test3]] <= {:TEST} AND {:TEST} < {:TEST})",
 			*/
 			// PostgreSQL:
-			`((to_jsonb([[test1]]) IS NOT DISTINCT FROM to_jsonb([[test2]]) OR to_jsonb([[test2]]) IS DISTINCT FROM to_jsonb([[test3]])) AND ([[test2]] LIKE {:TEST} ESCAPE '\' OR [[test2]] NOT LIKE {:TEST} ESCAPE '\') AND {:TEST} LIKE ('%' || [[test1]] || '%') ESCAPE '\' AND {:TEST} NOT LIKE ('%' || [[test2]] || '%') ESCAPE '\' AND [[test3]]::numeric > 1 AND [[test3]]::numeric >= 0 AND [[test3]]::numeric <= 4 AND 2 < 5)`,
+			`((to_jsonb([[test1]]) IS NOT DISTINCT FROM to_jsonb([[test2]]) OR to_jsonb([[test2]]) IS DISTINCT FROM to_jsonb([[test3]])) AND ([[test2]] LIKE {:TEST} ESCAPE '\' OR [[test2]] NOT LIKE {:TEST} ESCAPE '\') AND {:TEST} LIKE ('%' || [[test1]] || '%') ESCAPE '\' AND {:TEST} NOT LIKE ('%' || [[test2]] || '%') ESCAPE '\' AND [[test3]] > 1 AND [[test3]] >= 0 AND [[test3]] <= 4 AND 2 < 5)`,
 		},
 		{
 			"geoDistance function",
@@ -177,7 +177,7 @@ func TestFilterDataBuildExpr(t *testing.T) {
 			"(6371 * acos(cos(radians({:TEST})) * cos(radians({:TEST})) * cos(radians({:TEST}) - radians({:TEST})) + sin(radians({:TEST})) * sin(radians({:TEST})))) < {:TEST}",
 			*/
 			// PostgreSQL:
-			`(6371 * acos(cos(radians(2)) * cos(radians(4)) * cos(radians(3) - radians(1)) + sin(radians(2)) * sin(radians(4))))::numeric < 567`,
+			`(6371 * acos(cos(radians(2)) * cos(radians(4)) * cos(radians(3) - radians(1)) + sin(radians(2)) * sin(radians(4)))) < 567`,
 		},
 	}
 
