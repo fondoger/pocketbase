@@ -2,7 +2,7 @@
 
 **Features**
 
-- ✅ PostgresSQL support
+- ✅ PostgresSQL (v17+) support
 - ✅ Support horizontal scaling
 - ✅ Realtime events works normally with horizontal scaling
 - ✅ 100% test case pass rate across total 4701 unit tests
