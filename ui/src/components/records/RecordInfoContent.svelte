@@ -50,15 +50,27 @@
 {/each}
 
 {#each nonFileDisplayFields as field, i}
-    {#if i > 0},{/if}
-
+    {#if i > 0}
+        <span class="delimiter">•</span>
+    {/if}
     {#if field.type == "relation" && record.expand?.[field.name]}
-        <RecordInfoContent bind:record={record.expand[field.name]} />
+        {@const isMultiple = Array.isArray(record.expand?.[field.name])}
+        {@const expanded = CommonHelper.toArray(record.expand?.[field.name])}
+        {#if isMultiple}<span class="expand-start">{"["}</span>{/if}
+        {#each expanded.slice(0, 2) as expandRecord, j}
+            {#if j > 0}<span class="delimiter">|</span>{/if}
+            <RecordInfoContent record={expandRecord} />
+        {/each}
+        {#if expanded.length > 2}
+            <span class="delimiter">|</span>
+            <small class="delimiter txt-hint">({expanded.length - 2} more)</small>
+        {/if}
+        {#if isMultiple}<span class="expand-end">{"]"}</span>{/if}
     {:else if field.type == "geoPoint"}
         <GeoPointValue value={record[field.name]} />
     {:else}
-        {CommonHelper.truncate(CommonHelper.displayValue(record, [field.name]), 70)}
+        <span class="txt">{CommonHelper.truncate(CommonHelper.displayValue(record, [field.name]), 70)}</span>
     {/if}
 {:else}
-    {CommonHelper.truncate(CommonHelper.displayValue(record, []), 70)}
+    <span class="txt">{CommonHelper.truncate(CommonHelper.displayValue(record, []), 70)}</span>
 {/each}

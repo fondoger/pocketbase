@@ -1,3 +1,125 @@
+## v0.34.2
+
+- Bumped JS SDK to v0.26.5 to fix Safari AbortError detection introduced with the previous release ([#7369](https://github.com/pocketbase/pocketbase/issues/7369)).
+
+
+## v0.34.1
+
+- Added missing `:` char to the autocomplete regex ([#7353](https://github.com/pocketbase/pocketbase/pull/7353); thanks @ouvreboite).
+
+- Added "Copy raw JSON" collection dropdown option ([#7357](https://github.com/pocketbase/pocketbase/issues/7357)).
+
+- Updated Go deps and JS SDK.
+
+- Bumped min Go GitHub action version to 1.25.5 because it comes with some [minor security fixes](https://github.com/golang/go/issues?q=milestone%3AGo1.25.5).
+    _The runner action was also updated to `actions/setup-go@v6` since the previous v5 Go source seems [no longer accessible](https://github.com/actions/setup-go/pull/665#issuecomment-3416693714)._
+
+
+## v0.34.0
+
+- Added `@request.body.someField:changed` modifier.
+    It could be used when you want to ensure that a body field either wasn't submitted or was submitted with the same value.
+    Or in other words, if you want to disallow a field change the below 2 expressions would be equivalent:
+    ```js
+    // (old)
+    (@request.body.someField:isset = false || @request.body.someField = someField)
+
+    // (new)
+    @request.body.someField:changed = false
+    ```
+
+- Added `MailerRecordEvent.Meta["info"]` property for the `OnMailerRecordAuthAlertSend` hook.
+
+- Updated the backup restore popup with a short info about the performed restore steps.
+
+- Updated Go deps.
+
+
+## v0.33.0
+
+- Added extra `id` characters validation in addition to the user specified regex pattern ([#7312](https://github.com/pocketbase/pocketbase/issues/7312)).
+    _The following special characters are always forbidden: `./\|"'``<>:?*%$\n\r\t\0 `. Common reserved Windows file names such as `aux`, `prn`, `con`, `nul`, `com1-9`, `lpt1-9` are also not allowed._
+    _The list is not exhaustive but it should help minimizing eventual filesystem compatibility issues in case of wildcards or other loose regex patterns._
+
+- Added `{ALERT_INFO}` placeholder to the auth alert mail template ([#7314](https://github.com/pocketbase/pocketbase/issues/7314)).
+    _⚠️ `mails.SendRecordAuthAlert(app, authRecord, info)` also now accepts a 3rd `info` string argument._
+
+- Updated Go deps.
+
+
+## v0.32.0
+
+- ⚠️ Added extra List/Search API rules checks for the client-side `filter`/`sort` relations.
+
+    This is continuation of the effort to eliminate the risk of information disclosure _(and eventually the side-channel attacks that may originate from that)_.
+
+    So far this was accepted tradeoff between performance, usability and correctness since the solutions at the time weren't really practical _(especially with the back-relations as mentioned in ["Security and performance" section in #4417](https://github.com/pocketbase/pocketbase/discussions/4417))_, but with v0.23+ changes we can implement the extra checks without littering the code too much, with very little impact on the performance and at the same time ensuring better out of the box security _(especially for the cases where users operate with sensitive fields like "code", "token", "secret", etc.)_.
+
+    Similar to the previous release, probably for most users with already configured API rules this change won't be breaking, but if you have an _intermediate/junction collection_ that is "locked" (superusers-only) we no longer will allow the client-side relation filter to pass through it and you'll have to set its List/Search API rule to enable the current user to search in it.
+
+    For example, if you have a client-side filter that targets `rel1.rel2.token`, the client must have not only List/Search API rule access to the main collection BUT also to the collections referenced by "rel1" and "rel2" relation fields.
+
+    Note that this change is only for the **client-side** `filter`/`sort` and doesn't affect the execution of superuser requests, API rules and `expand` - they continue to work the same as it is.
+
+    An optional environment variable to toggle this behavior was considered but for now I think having 2 ways of resolving client-side filters would introduce maintenance burden and can even cause confusion (this change should actually make things more intuitive and clear because we can simply say something like _"you can search by a collection X field only if you have List/Search API rule access to it"_ no matter whether the targeted collection is the request's main collection, the first or last relation from the filter chain, etc.).
+
+    If you stumble on an error or extreme query performance degradation as a result of the extra checks, please open a Q&A discussion with the failing request and export of your collections configuration as JSON (_Settings > Export collections_) and I'll try to investigate it.
+
+- Increased the default SQLite `PRAGMA cache_size` to ~32MB.
+
+- Fixed deadlock when manually triggering the `OnTerminate` hook ([#7305](https://github.com/pocketbase/pocketbase/pull/7305); thanks @yerTools).
+
+- Fixed some code comment typos, regenerated the JSVM types and updated npm dependencies.
+
+- Updated `modernc.org/sqlite` to 1.40.0.
+
+
+## v0.31.0
+
+- Visualize presentable multiple `relation` fields ([#7260](https://github.com/pocketbase/pocketbase/issues/7260)).
+
+- Support Ed25519 in the optional OIDC `id_token` signature validation ([#7252](https://github.com/pocketbase/pocketbase/issues/7252); thanks @shynome).
+
+- Added `ApiScenario.DisableTestAppCleanup` optional field to skip the auto test app cleanup and leave it up to the developers to do the cleanup manually ([#7267](https://github.com/pocketbase/pocketbase/discussions/7267)).
+
+- Added `FileDownloadRequestEvent.ThumbError` field that is populated in case of a thumb generation failure (e.g. unsupported format, timing out, etc.), allowing developers to reject the thumb fallback and/or supply their own custom thumb generation ([#7268](https://github.com/pocketbase/pocketbase/discussions/7268)).
+
+- ⚠️ Disallow client-side filtering and sorting of relations where the collection of the last targeted relation field has superusers-only List/Search API rule to further minimize the risk of eventual side-channel attack.
+    _This should be a non-breaking change for most users, but if you want the old behavior, please open a new Q&A discussion with details about your use case to evaluate making it configurable._
+    _Note also that as mentioned in the "Security and performance" section of [#4417](https://github.com/pocketbase/pocketbase/discussions/4417) and [#5863](https://github.com/pocketbase/pocketbase/discussions/5863), the easiest and recommended solution to protect security sensitive fields (tokens, codes, passwords, etc.) is to mark them as "Hidden" (aka. make them non-API filterable)._
+
+- Regenerated JSVM types and updated npm and Go deps.
+
+
+## v0.30.4
+
+- Fixed `json` field CSS regression introduced with the overflow workaround in v0.30.3 ([#7259](https://github.com/pocketbase/pocketbase/issues/7259)).
+
+
+## v0.30.3
+
+- Fixed legacy identitity field priority check when a username is a valid email address ([#7256](https://github.com/pocketbase/pocketbase/issues/7256)).
+
+- Workaround autocomplete overflow issue with Firefox 144 ([#7223](https://github.com/pocketbase/pocketbase/issues/7223)).
+
+- Updated `modernc.org/sqlite` to 1.39.1 (SQLite 3.50.4).
+
+
+## v0.30.2
+
+- Bumped min Go GitHub action version to 1.24.8 since it comes with some [minor security fixes](https://github.com/golang/go/issues?q=milestone%3AGo1.24.8+label%3ACherryPickApproved).
+
+
+## v0.30.1
+
+- ⚠️ Excluded the `lost+found` directory from the backups ([#7208](https://github.com/pocketbase/pocketbase/pull/7208); thanks @lbndev).
+    _If for some reason you want to keep it, you can restore it by editing the `e.Exclude` list of the `OnBackupCreate` and `OnBackupRestore` hooks._
+
+- Minor tests improvements (disabled initial superuser creation for the test app to avoid cluttering the std output, added more tests for the `s3.Uploader.MaxConcurrency`, etc.).
+
+- Updated `modernc.org/sqlite` and other Go dependencies.
+
+
 ## v0.30.0
 
 - Eagerly escape the S3 request path following the same rules as in the S3 signing header ([#7153](https://github.com/pocketbase/pocketbase/issues/7153)).
@@ -157,7 +279,7 @@
     If you are having difficulties adjusting your code, feel free to open a [Q&A discussion](https://github.com/pocketbase/pocketbase/discussions) with the failing/problematic code sample.
 
 - Added [new `geoPoint` field](https://pocketbase.io/docs/collections/#geopoint) for storing `{"lon":x,"lat":y}` geographic coordinates.
-    In addition, a new [`geoDistance(lonA, lotA, lonB, lotB)` function](htts://pocketbase.io/docs/api-rules-and-filters/#geodistancelona-lata-lonb-latb) was also implemented that could be used to apply an API rule or filter constraint based on the distance (in km) between 2 geo points.
+    In addition, a new [`geoDistance(lonA, lotA, lonB, lotB)` function](https://pocketbase.io/docs/api-rules-and-filters/#geodistancelona-lata-lonb-latb) was also implemented that could be used to apply an API rule or filter constraint based on the distance (in km) between 2 geo points.
 
 - Updated the `select` field UI to accommodate better larger lists and RTL languages ([#4674](https://github.com/pocketbase/pocketbase/issues/4674)).
 

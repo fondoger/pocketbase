@@ -15,6 +15,7 @@ import (
 	"github.com/pocketbase/pocketbase/tools/routine"
 	"github.com/pocketbase/pocketbase/tools/search"
 	"github.com/pocketbase/pocketbase/tools/security"
+	"github.com/pocketbase/pocketbase/tools/types"
 )
 
 const (
@@ -160,7 +161,11 @@ func wantsMFA(e *core.RequestEvent, record *core.Record) (bool, error) {
 	if err != nil {
 		return true, err
 	}
-	resolver.UpdateQuery(query)
+
+	err = resolver.UpdateQuery(query)
+	if err != nil {
+		return true, err
+	}
 
 	err = query.AndWhere(expr).Limit(1).Row(&exists)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
@@ -379,12 +384,18 @@ func expandFetch(app core.App, originalRequestInfo *core.RequestInfo) core.Expan
 
 			if *relCollection.ViewRule != "" {
 				resolver := core.NewRecordFieldResolver(app, relCollection, requestInfoPtr, true)
+
 				expr, err := search.FilterData(*(relCollection.ViewRule)).BuildExpr(resolver)
 				if err != nil {
 					return err
 				}
-				resolver.UpdateQuery(q)
+
 				q.AndWhere(expr)
+
+				err = resolver.UpdateQuery(q)
+				if err != nil {
+					return err
+				}
 			}
 
 			return nil
@@ -465,10 +476,16 @@ func autoResolveRecordsFlags(app core.App, records []*core.Record, requestInfo *
 	if err != nil {
 		return err
 	}
-	resolver.UpdateQuery(query)
+
 	query.AndWhere(expr)
 
-	if err := query.Column(&managedIds); err != nil {
+	err = resolver.UpdateQuery(query)
+	if err != nil {
+		return err
+	}
+
+	err = query.Column(&managedIds)
+	if err != nil {
 		return err
 	}
 	// ---
@@ -563,13 +580,17 @@ func execAfterSuccessTx(checkTx bool, app core.App, fn func() error) error {
 const maxAuthOrigins = 5
 
 func authAlert(e *core.RequestEvent, authRecord *core.Record) error {
-	// generating fingerprint
+	// generate fingerprint
 	// ---
+	ip := e.RealIP()
+
 	userAgent := e.Request.UserAgent()
-	if len(userAgent) > 300 {
-		userAgent = userAgent[:300]
+	if len(userAgent) > 200 {
+		userAgent = userAgent[:200] + "..."
 	}
-	fingerprint := security.MD5(e.RealIP() + userAgent)
+
+	fingerprint := security.MD5(ip + userAgent)
+	alertInfo := fmt.Sprintf("%s - %s %s", types.NowDateTime().String(), ip, userAgent)
 	// ---
 
 	origins, err := e.App.FindAllAuthOriginsByRecord(authRecord)
@@ -609,7 +630,7 @@ func authAlert(e *core.RequestEvent, authRecord *core.Record) error {
 		})
 
 		routine.FireAndForget(func() {
-			err := mails.SendRecordAuthAlert(e.App, authRecord)
+			err := mails.SendRecordAuthAlert(e.App, authRecord, alertInfo)
 			timer.Stop()
 			mailSent <- err
 		})

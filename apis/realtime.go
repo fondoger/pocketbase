@@ -791,7 +791,11 @@ func realtimeCanAccessRecord(
 	}
 
 	q.AndWhere(expr)
-	resolver.UpdateQuery(q)
+
+	err = resolver.UpdateQuery(q)
+	if err != nil {
+		return false
+	}
 
 	err = q.Limit(1).Row(&exists)
 

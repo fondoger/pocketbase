@@ -14,13 +14,15 @@
     }
 </script>
 
-<div class="record-info">
-    <RecordInfoContent {record} />
+<div class="record-info-excerpt">
+    <div class="info-content">
+        <RecordInfoContent {record} />
+    </div>
 
     <a
         href="#/collections?collection={record.collectionId}&recordId={record.id}"
         target="_blank"
-        class="inline-flex link-hint"
+        class="record-link link-hint"
         rel="noopener noreferrer"
         use:tooltip={{
             text:
@@ -39,16 +41,3 @@
         <i class="ri-external-link-line txt-sm"></i>
     </a>
 </div>
-
-<style lang="scss">
-    .record-info {
-        display: inline-flex;
-        vertical-align: top;
-        align-items: center;
-        justify-content: center;
-        max-width: 100%;
-        min-width: 0;
-        gap: 5px;
-        padding-left: 1px; // for visual alignment with the new tab icon
-    }
-</style>

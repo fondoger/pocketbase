@@ -17,10 +17,11 @@ import (
 
 // filter modifiers
 const (
-	eachModifier   string = "each"
-	issetModifier  string = "isset"
-	lengthModifier string = "length"
-	lowerModifier  string = "lower"
+	eachModifier    string = "each"
+	issetModifier   string = "isset"
+	lengthModifier  string = "length"
+	lowerModifier   string = "lower"
+	changedModifier string = "changed"
 )
 
 // ensure that `search.FieldResolver` interface is implemented
@@ -48,6 +49,10 @@ type RecordFieldResolver struct {
 	allowedFields     []string
 	joins             []*join
 	allowHiddenFields bool
+	// ---
+	listRuleJoins       map[string]*Collection // tableAlias->collection
+	joinAliasSuffix     string                 // used for uniqueness in the flatten collection list rule join
+	baseCollectionAlias string
 }
 
 // AllowedFields returns a copy of the resolver's allowed fields.
@@ -115,6 +120,8 @@ func NewRecordFieldResolver(
 	return r
 }
 
+// @todo think of a better a way how to call it automatically after BuildExpr
+//
 // UpdateQuery implements `search.FieldResolver` interface.
 //
 // Conditionally updates the provided search query based on the
@@ -127,6 +134,49 @@ func (r *RecordFieldResolver) UpdateQuery(query *dbx.SelectQuery) error {
 			query.LeftJoin(
 				(join.tableName + " " + join.tableAlias),
 				join.on,
+			)
+		}
+	}
+
+	// note: for now the joins are not applied for multi-match conditions to avoid excessive checks
+	if len(r.listRuleJoins) > 0 {
+		for alias, c := range r.listRuleJoins {
+			err := r.updateQueryWithCollectionListRule(c, alias, query)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func (r *RecordFieldResolver) updateQueryWithCollectionListRule(c *Collection, tableAlias string, query *dbx.SelectQuery) error {
+	if r.allowHiddenFields || c == nil || c.ListRule == nil || *c.ListRule == "" {
+		return nil
+	}
+
+	cloneR := *r
+	cloneR.joins = []*join{}
+	cloneR.baseCollection = c
+	cloneR.baseCollectionAlias = tableAlias
+	cloneR.allowHiddenFields = true
+	cloneR.joinAliasSuffix = security.PseudorandomString(6)
+
+	expr, err := search.FilterData(*c.ListRule).BuildExpr(&cloneR)
+	if err != nil {
+		return fmt.Errorf("to buld %q list rule join subquery filter expression: %w", c.Name, err)
+	}
+
+	query.AndWhere(expr)
+
+	if len(cloneR.joins) > 0 {
+		query.Distinct(true)
+
+		for _, j := range cloneR.joins {
+			query.LeftJoin(
+				(j.tableName + " " + j.tableAlias),
+				j.on,
 			)
 		}
 	}
@@ -186,7 +236,7 @@ func (r *RecordFieldResolver) resolveStaticRequestField(path ...string) (*search
 
 	switch v := resultVal.(type) {
 	case nil:
-		return &search.ResolverResult{Identifier: "NULL"}, nil
+		// no further processing is needed...
 	case string:
 		// check if it is a number field and explicitly try to cast to
 		// float in case of a numeric string value was used
@@ -216,6 +266,18 @@ func (r *RecordFieldResolver) resolveStaticRequestField(path ...string) (*search
 		resultVal = val
 	}
 
+	// unsupported modifier
+	// @todo consider deprecating with the introduction of filter functions
+	if modifier != "" && modifier != lowerModifier {
+		return nil, fmt.Errorf("invalid modifier sequence %s:%s", lastProp, modifier)
+	}
+
+	// no need to wrap as placeholder if we already know that it is null
+	if resultVal == nil {
+		return &search.ResolverResult{Identifier: "NULL"}, nil
+	}
+
+	// PostgreSQL Only:
 	// Expanded special empty string filter in advance
 	if resultVal == "" && (modifier == "" || modifier == lowerModifier) {
 		// note: LOWER('') is still ''
@@ -224,6 +286,7 @@ func (r *RecordFieldResolver) resolveStaticRequestField(path ...string) (*search
 
 	placeholder := "f" + security.PseudorandomString(8)
 
+	// @todo consider deprecating with the introduction of filter functions
 	if modifier == lowerModifier {
 		return &search.ResolverResult{
 			Identifier: "LOWER({:" + placeholder + "})",
@@ -251,7 +314,7 @@ func (r *RecordFieldResolver) loadCollection(collectionNameOrId string) (*Collec
 	return getCollectionByModelOrIdentifier(r.app, collectionNameOrId)
 }
 
-func (r *RecordFieldResolver) registerJoin(tableName string, tableAlias string, on dbx.Expression) {
+func (r *RecordFieldResolver) registerJoin(tableName string, tableAlias string, on dbx.Expression) error {
 	// PostgreSQL only:
 	if on == nil {
 		// Note: SQLite allows join without `on` clause but PostgreSQL does not.
@@ -259,22 +322,41 @@ func (r *RecordFieldResolver) registerJoin(tableName string, tableAlias string, 
 		on = dbx.NewExp("1=1")
 	}
 
-	join := &join{
+	newJoin := &join{
 		tableName:  tableName,
 		tableAlias: tableAlias,
 		on:         on,
 	}
 
+	// (see updateQueryWithCollectionListRule)
+	if !r.allowHiddenFields {
+		c, _ := r.loadCollection(tableName)
+
+		// ignore non-collections since the table name could be an expression (e.g. json) or some other subquery
+		if c != nil {
+			// treat all fields as if they are hidden
+			if c.ListRule == nil {
+				return fmt.Errorf("%q fields can be accessed only when allowHiddenFields is enabled or by superusers", c.Name)
+			}
+
+			if r.listRuleJoins == nil {
+				r.listRuleJoins = map[string]*Collection{}
+			}
+			r.listRuleJoins[newJoin.tableAlias] = c
+		}
+	}
+
 	// replace existing join
 	for i, j := range r.joins {
-		if j.tableAlias == join.tableAlias {
-			r.joins[i] = join
-			return
+		if j.tableAlias == newJoin.tableAlias {
+			r.joins[i] = newJoin
+			return nil
 		}
 	}
 
 	// register new join
-	r.joins = append(r.joins, join)
+	r.joins = append(r.joins, newJoin)
+	return nil
 }
 
 type mapExtractor interface {
@@ -414,7 +496,8 @@ func splitModifier(combined string) (string, string, error) {
 	case issetModifier,
 		eachModifier,
 		lengthModifier,
-		lowerModifier:
+		lowerModifier,
+		changedModifier:
 		return parts[0], parts[1], nil
 	}
 

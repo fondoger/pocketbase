@@ -2,8 +2,8 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 17.4
--- Dumped by pg_dump version 17.4
+-- Dumped from database version 17.6
+-- Dumped by pg_dump version 17.6
 
 -- Enable built-in pgcrypto extension to use gen_random_bytes function
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";

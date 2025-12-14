@@ -572,7 +572,7 @@ func resolveOrderingExpr(op string, l, r *ResolverResult) dbx.Expression {
 //
 // Only used with `to_jsonb`
 func castToJsonb(identifier *ResolverResult) string {
-	if strings.ToLower(identifier.Identifier) == "null" {
+	if isNullIdentifier(identifier) {
 		return "to_jsonb(NULL::text)"
 	}
 	if tp := inferPolymorphicLiteral(identifier); tp != "" {
@@ -586,11 +586,13 @@ func castToJsonb(identifier *ResolverResult) string {
 // 2. text    -> Undetermine Polymorphic Type, can be Date, TimeStamp, text, etc.
 // 3. numbers -> Deterministic type, always numeric, no type cast needed
 // 4. bool    -> Deterministic type, always boolean, no type cast needed
+//
+// Only NULL and text types are considered polymorphic types.
 func inferPolymorphicLiteral(result *ResolverResult) string {
 	// Note: result cannot be "NULL" identifier when called in [inferPolymorphicLiteral],
 	// because we already handled "NULL" seperately before calling this function.
 	// See [resolveEqualExpr] for details.
-	if strings.ToLower(result.Identifier) == "null" {
+	if isNullIdentifier(result) {
 		return "null"
 	}
 
@@ -671,6 +673,13 @@ func typeAwareJoinNoCoalesce(l *ResolverResult, op string, r *ResolverResult) st
 	}
 	// If none of the identifiers have type cast
 	if len(leftType) == 0 && len(rightType) == 0 {
+		// Handle special cases:
+		// `PREPARE statement AS SELECT null IS DISTINCT FROM $1` will throw error: "could not determine data type of parameter $1"
+		if isNullIdentifier(l) && inferPolymorphicLiteral(r) == "text" {
+			right = withNonJsonbType(right, "text")
+		} else if isNullIdentifier(r) && inferPolymorphicLiteral(l) == "text" {
+			left = withNonJsonbType(left, "text")
+		}
 		return fmt.Sprintf("%s %s %s", left, op, right)
 	}
 	if len(leftType) > 0 {
@@ -732,6 +741,10 @@ func isKnownNonEmptyIdentifier(result *ResolverResult) bool {
 	}
 
 	return len(result.Params) > 0 && !hasEmptyParamValue(result) && !isEmptyIdentifier(result)
+}
+
+func isNullIdentifier(result *ResolverResult) bool {
+	return strings.EqualFold(result.Identifier, "null")
 }
 
 func isEmptyIdentifier(result *ResolverResult) bool {

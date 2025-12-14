@@ -61,7 +61,7 @@
                         {#if field.primaryKey}
                             <i
                                 class="ri-information-line link-hint"
-                                use:tooltip={"All record ids have unique case-insensitive (ASCII) validation applied in addition to the user defined validation pattern."}
+                                use:tooltip={"All record ids have forbidden characters and unique case-insensitive (ASCII) validations in addition to the user defined regex pattern."}
                             />
                         {/if}
                     </label>

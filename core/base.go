@@ -49,6 +49,9 @@ const (
 	LocalBackupsDirName       string = "backups"
 	LocalTempDirName          string = ".pb_temp_to_delete" // temp pb_data sub directory that will be deleted on each app.Bootstrap()
 	LocalAutocertCacheDirName string = ".autocert_cache"
+
+	// @todo consider removing after backups refactoring
+	lostFoundDirName string = "lost+found"
 )
 
 // FilesManager defines an interface with common methods that files manager models should implement.
@@ -1489,7 +1492,7 @@ func getLoggerMinLevel(app App) slog.Level {
 func (app *BaseApp) initLogger() error {
 	duration := 3 * time.Second
 	ticker := time.NewTicker(duration)
-	done := make(chan bool)
+	done := make(chan bool, 1)
 
 	handler := logger.NewBatchHandler(logger.BatchOptions{
 		Level:     getLoggerMinLevel(app),
@@ -1560,7 +1563,11 @@ func (app *BaseApp) initLogger() error {
 
 			ticker.Stop()
 
-			done <- true
+			// don't block in case OnTerminate is triggered more than once
+			select {
+			case done <- true:
+			default:
+			}
 
 			return e.Next()
 		},

@@ -129,7 +129,7 @@ func TestTextFieldValidateValue(t *testing.T) {
 			&core.TextField{Name: "test", PrimaryKey: false},
 			func() *core.Record {
 				record := core.NewRecord(collection)
-				record.SetRaw("test", "/")
+				record.SetRaw("test", "abc/")
 				return record
 			},
 			false,
@@ -139,7 +139,37 @@ func TestTextFieldValidateValue(t *testing.T) {
 			&core.TextField{Name: "test", PrimaryKey: false},
 			func() *core.Record {
 				record := core.NewRecord(collection)
-				record.SetRaw("test", "\\")
+				record.SetRaw("test", "abc\\")
+				return record
+			},
+			false,
+		},
+		{
+			"special forbidden character . (non-primaryKey)",
+			&core.TextField{Name: "test", PrimaryKey: false},
+			func() *core.Record {
+				record := core.NewRecord(collection)
+				record.SetRaw("test", "abc.")
+				return record
+			},
+			false,
+		},
+		{
+			"special forbidden character ' ' (non-primaryKey)",
+			&core.TextField{Name: "test", PrimaryKey: false},
+			func() *core.Record {
+				record := core.NewRecord(collection)
+				record.SetRaw("test", "ab c")
+				return record
+			},
+			false,
+		},
+		{
+			"special forbidden character * (non-primaryKey)",
+			&core.TextField{Name: "test", PrimaryKey: false},
+			func() *core.Record {
+				record := core.NewRecord(collection)
+				record.SetRaw("test", "abc*")
 				return record
 			},
 			false,
@@ -149,7 +179,7 @@ func TestTextFieldValidateValue(t *testing.T) {
 			&core.TextField{Name: "test", PrimaryKey: true},
 			func() *core.Record {
 				record := core.NewRecord(collection)
-				record.SetRaw("test", "/")
+				record.SetRaw("test", "abc/")
 				return record
 			},
 			true,
@@ -159,10 +189,70 @@ func TestTextFieldValidateValue(t *testing.T) {
 			&core.TextField{Name: "test", PrimaryKey: true},
 			func() *core.Record {
 				record := core.NewRecord(collection)
-				record.SetRaw("test", "\\")
+				record.SetRaw("test", "abc\\")
 				return record
 			},
 			true,
+		},
+		{
+			"special forbidden character . (primaryKey)",
+			&core.TextField{Name: "test", PrimaryKey: true},
+			func() *core.Record {
+				record := core.NewRecord(collection)
+				record.SetRaw("test", "abc.")
+				return record
+			},
+			true,
+		},
+		{
+			"special forbidden character ' ' (primaryKey)",
+			&core.TextField{Name: "test", PrimaryKey: true},
+			func() *core.Record {
+				record := core.NewRecord(collection)
+				record.SetRaw("test", "ab c")
+				return record
+			},
+			true,
+		},
+		{
+			"special forbidden character * (primaryKey; used in the realtime events too)",
+			&core.TextField{Name: "test", PrimaryKey: true},
+			func() *core.Record {
+				record := core.NewRecord(collection)
+				record.SetRaw("test", "abc*")
+				return record
+			},
+			true,
+		},
+		{
+			"reserved pk literal (non-primaryKey)",
+			&core.TextField{Name: "test", PrimaryKey: false},
+			func() *core.Record {
+				record := core.NewRecord(collection)
+				record.SetRaw("test", "aUx")
+				return record
+			},
+			false,
+		},
+		{
+			"reserved pk literal (primaryKey)",
+			&core.TextField{Name: "test", PrimaryKey: true},
+			func() *core.Record {
+				record := core.NewRecord(collection)
+				record.SetRaw("test", "aUx")
+				return record
+			},
+			true,
+		},
+		{
+			"reserved pk literal (non-exact match, primaryKey)",
+			&core.TextField{Name: "test", PrimaryKey: true},
+			func() *core.Record {
+				record := core.NewRecord(collection)
+				record.SetRaw("test", "aUx-")
+				return record
+			},
+			false,
 		},
 		{
 			"zero field value (primaryKey)",
