@@ -17,9 +17,6 @@ To demonstrate the horizontal scaling and realtime capabilities, I have deployed
 
 ![Realtime Chat Demo](./.github/chat-page-demo.png)
 
-> [!TIP]
-> The above demo app is free hosted on ClawCloud Run and Neon DB, see [Free Hosting Guide](https://github.com/fondoger/pocketbase/tree/realtime-demo) for more details.
-
 **Get Started**
 
 Everything is the same as the original PocketBase, except that an additional environment variable `POSTGRES_URL` is required.
