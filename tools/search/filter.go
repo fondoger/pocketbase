@@ -194,29 +194,13 @@ func buildResolversExpr(
 			expr = dbx.NewExp(fmt.Sprintf("%s NOT LIKE %s ESCAPE '\\'", left.Identifier, right.Identifier), mergeParams(left.Params, wrapLikeParams(right.Params)))
 		}
 	case fexpr.SignLt, fexpr.SignAnyLt:
-		/* SQLite:
 		expr = dbx.NewExp(fmt.Sprintf("%s < %s", left.Identifier, right.Identifier), mergeParams(left.Params, right.Params))
-		*/
-		// PostgreSQL:
-		expr = dbx.NewExp(numericJoin(left, "<", right), mergeParams(left.Params, right.Params))
 	case fexpr.SignLte, fexpr.SignAnyLte:
-		/* SQLite:
 		expr = dbx.NewExp(fmt.Sprintf("%s <= %s", left.Identifier, right.Identifier), mergeParams(left.Params, right.Params))
-		*/
-		// PostgreSQL:
-		expr = dbx.NewExp(numericJoin(left, "<=", right), mergeParams(left.Params, right.Params))
 	case fexpr.SignGt, fexpr.SignAnyGt:
-		/* SQLite:
 		expr = dbx.NewExp(fmt.Sprintf("%s > %s", left.Identifier, right.Identifier), mergeParams(left.Params, right.Params))
-		*/
-		// PostgreSQL:
-		expr = dbx.NewExp(numericJoin(left, ">", right), mergeParams(left.Params, right.Params))
 	case fexpr.SignGte, fexpr.SignAnyGte:
-		/* SQLite:
 		expr = dbx.NewExp(fmt.Sprintf("%s >= %s", left.Identifier, right.Identifier), mergeParams(left.Params, right.Params))
-		*/
-		// PostgreSQL:
-		expr = dbx.NewExp(numericJoin(left, ">=", right), mergeParams(left.Params, right.Params))
 	}
 
 	if expr == nil {
@@ -647,24 +631,6 @@ func typeAwareJoinNoCoalesce(l *ResolverResult, op string, r *ResolverResult) st
 		return fmt.Sprintf("%s %s %s", left, op, right)
 	}
 	panic("should not reach here")
-}
-
-// PostgreSQL only:
-// Force cast both identifiers to numeric type.
-func numericJoin(l *ResolverResult, op string, r *ResolverResult) string {
-	left := l.Identifier
-	right := r.Identifier
-
-	// Note: Polyphormic literal such as "2" can be automatic casted to numeric type by PostgreSQL.
-	// Eg: SELECT "2" > 1  -- works fine.
-	if inferDeterministicType(l) != "numeric" && inferPolymorphicLiteral(l) == "" {
-		left = withNonJsonbType(left, "numeric")
-	}
-	if inferDeterministicType(r) != "numeric" && inferPolymorphicLiteral(r) == "" {
-		right = withNonJsonbType(right, "numeric")
-	}
-
-	return fmt.Sprintf("%s %s %s", left, op, right)
 }
 
 // PostgreSQL only:
