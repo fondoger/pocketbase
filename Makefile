@@ -1,6 +1,9 @@
 lint:
 	golangci-lint run -c ./golangci.yml ./...
 
+build-frontend:
+	npm --prefix=./ui ci && npm --prefix=./ui run build
+
 test:
 	go test ./... -v --cover
 

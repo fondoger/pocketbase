@@ -193,22 +193,32 @@ var extInvalidCharsRegex = regexp.MustCompile(`[^\w\.\*\-\+\=\#]+`)
 const randomAlphabet = "abcdefghijklmnopqrstuvwxyz0123456789"
 
 func normalizeName(fr FileReader, name string) string {
+	// cut the name even if it is not multibyte safe to avoid operating on too large strings
+	// ---
+	originalLength := len(name)
+	if originalLength > 300 {
+		name = name[originalLength-300:]
+	}
+
 	// extension
 	// ---
 	originalExt := extractExtension(name)
-	cleanExt := extInvalidCharsRegex.ReplaceAllString(originalExt, "")
-	if cleanExt == "" {
+	cleanExt := "." + strings.Trim(extInvalidCharsRegex.ReplaceAllString(originalExt, ""), ".")
+	if cleanExt == "." {
 		// try to detect the extension from the file content
 		cleanExt, _ = detectExtension(fr)
 	}
 	if extLength := len(cleanExt); extLength > 20 {
 		// keep only the last 20 characters (it is multibyte safe after the regex replace)
-		cleanExt = "." + cleanExt[extLength-20:]
+		cleanExt = "." + strings.Trim(cleanExt[extLength-20:], ".")
 	}
 
 	// name
+	//
+	// note: leading dot is trimmed to prevent various subtle issues with files
+	// sync programs as they sometimes have special handling for "invisible" files
 	// ---
-	cleanName := inflector.Snakecase(strings.TrimSuffix(name, originalExt))
+	cleanName := inflector.Snakecase(strings.Trim(strings.TrimSuffix(name, originalExt), "."))
 	if length := len(cleanName); length < 3 {
 		// the name is too short so we concatenate an additional random part
 		cleanName += security.RandomStringWithAlphabet(10, randomAlphabet)
