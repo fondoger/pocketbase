@@ -182,16 +182,30 @@ func buildResolversExpr(
 	case fexpr.SignLike, fexpr.SignAnyLike:
 		// the right side is a column and therefor wrap it with "%" for contains like behavior
 		if len(right.Params) == 0 {
+			/* SQLite:
 			expr = dbx.NewExp(fmt.Sprintf("%s LIKE ('%%' || %s || '%%') ESCAPE '\\'", left.Identifier, right.Identifier), left.Params)
+			*/
+			// PostgreSQL:
+			expr = dbx.NewExp(fmt.Sprintf("%s LIKE ('%%' || %s || '%%') ESCAPE '\\'", castToText(left), castToText(right)), left.Params)
 		} else {
+			/* SQLite:
 			expr = dbx.NewExp(fmt.Sprintf("%s LIKE %s ESCAPE '\\'", left.Identifier, right.Identifier), mergeParams(left.Params, wrapLikeParams(right.Params)))
+			*/
+			expr = dbx.NewExp(fmt.Sprintf("%s LIKE %s ESCAPE '\\'", castToText(left), castToText(right)), mergeParams(left.Params, wrapLikeParams(right.Params)))
 		}
 	case fexpr.SignNlike, fexpr.SignAnyNlike:
 		// the right side is a column and therefor wrap it with "%" for not-contains like behavior
 		if len(right.Params) == 0 {
+			/* SQLite:
 			expr = dbx.NewExp(fmt.Sprintf("%s NOT LIKE ('%%' || %s || '%%') ESCAPE '\\'", left.Identifier, right.Identifier), left.Params)
+			*/
+			// PostgreSQL:
+			expr = dbx.NewExp(fmt.Sprintf("%s NOT LIKE ('%%' || %s || '%%') ESCAPE '\\'", castToText(left), castToText(right)), left.Params)
 		} else {
+			/* SQLite:
 			expr = dbx.NewExp(fmt.Sprintf("%s NOT LIKE %s ESCAPE '\\'", left.Identifier, right.Identifier), mergeParams(left.Params, wrapLikeParams(right.Params)))
+			*/
+			expr = dbx.NewExp(fmt.Sprintf("%s NOT LIKE %s ESCAPE '\\'", castToText(left), castToText(right)), mergeParams(left.Params, wrapLikeParams(right.Params)))
 		}
 	case fexpr.SignLt, fexpr.SignAnyLt:
 		/* SQLite:
@@ -581,6 +595,13 @@ func castToJsonb(identifier *ResolverResult) string {
 	return fmt.Sprintf("to_jsonb(%s)", identifier.Identifier)
 }
 
+func castToText(identifier *ResolverResult) string {
+	if inferPolymorphicLiteral(identifier) == "text" {
+		return identifier.Identifier
+	}
+	return withNonJsonbType(identifier.Identifier, "text")
+}
+
 // There are some json types:
 // 1. null    -> Undetermine Polymorphic Type, can be any PostgreSQL types
 // 2. text    -> Undetermine Polymorphic Type, can be Date, TimeStamp, text, etc.
@@ -611,6 +632,21 @@ func inferPolymorphicLiteral(result *ResolverResult) string {
 		}
 	}
 	return ""
+}
+
+// PostgreSQL only:
+// Only placeholders for text are sent as prepared statement **params**.
+// Other types (numbers, bool) are sent as literal values directly.
+func isPlaceholderForTextType(result *ResolverResult) bool {
+	if len(result.Params) == 1 {
+		for _, p := range result.Params {
+			switch p.(type) {
+			case string:
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // There are some json types:
@@ -675,9 +711,10 @@ func typeAwareJoinNoCoalesce(l *ResolverResult, op string, r *ResolverResult) st
 	if len(leftType) == 0 && len(rightType) == 0 {
 		// Handle special cases:
 		// `PREPARE statement AS SELECT null IS DISTINCT FROM $1` will throw error: "could not determine data type of parameter $1"
-		if isNullIdentifier(l) && inferPolymorphicLiteral(r) == "text" {
+		// Note: `SELECT NULL IS DISTINCT FROM 'abc'` works fine because PostgreSQL can infer both sides to be text type.
+		if isNullIdentifier(l) && isPlaceholderForTextType(r) {
 			right = withNonJsonbType(right, "text")
-		} else if isNullIdentifier(r) && inferPolymorphicLiteral(l) == "text" {
+		} else if isNullIdentifier(r) && isPlaceholderForTextType(l) {
 			left = withNonJsonbType(left, "text")
 		}
 		return fmt.Sprintf("%s %s %s", left, op, right)
@@ -702,6 +739,7 @@ func typeAwareJoinNoCoalesce(l *ResolverResult, op string, r *ResolverResult) st
 }
 
 // PostgreSQL only:
+// Use [castToJsonb] if targetType is jsonb instead.
 func withNonJsonbType(identifier string, targetType string) string {
 	// Note:
 	// DO NOT drop existing type cast before adding a new cast.
