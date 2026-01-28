@@ -71,37 +71,61 @@ func TestFilterDataBuildExpr(t *testing.T) {
 			"like with 2 columns",
 			"test1 ~ test2",
 			false,
+			/* SQLite:
 			"[[test1]] LIKE ('%' || [[test2]] || '%') ESCAPE '\\'",
+			*/
+			// PostgreSQL:
+			`[[test1]]::text LIKE ('%' || [[test2]]::text || '%') ESCAPE '\'`,
 		},
 		{
 			"like with right column operand",
 			"'lorem' ~ test1",
 			false,
+			/* SQLite:
 			"{:TEST} LIKE ('%' || [[test1]] || '%') ESCAPE '\\'",
+			*/
+			// PostgreSQL:
+			`{:TEST} LIKE ('%' || [[test1]]::text || '%') ESCAPE '\'`,
 		},
 		{
 			"like with left column operand and text as right operand",
 			"test1 ~ 'lorem'",
 			false,
+			/* SQLite:
 			"[[test1]] LIKE {:TEST} ESCAPE '\\'",
+			*/
+			// PostgreSQL:
+			`[[test1]]::text LIKE {:TEST} ESCAPE '\'`,
 		},
 		{
 			"not like with 2 columns",
 			"test1 !~ test2",
 			false,
+			/* SQLite:
 			"[[test1]] NOT LIKE ('%' || [[test2]] || '%') ESCAPE '\\'",
+			*/
+			// PostgreSQL:
+			`[[test1]]::text NOT LIKE ('%' || [[test2]]::text || '%') ESCAPE '\'`,
 		},
 		{
 			"not like with right column operand",
 			"'lorem' !~ test1",
 			false,
+			/* SQLite:
 			"{:TEST} NOT LIKE ('%' || [[test1]] || '%') ESCAPE '\\'",
+			*/
+			// PostgreSQL:
+			`{:TEST} NOT LIKE ('%' || [[test1]]::text || '%') ESCAPE '\'`,
 		},
 		{
 			"like with left column operand and text as right operand",
 			"test1 !~ 'lorem'",
 			false,
+			/* SQLite:
 			"[[test1]] NOT LIKE {:TEST} ESCAPE '\\'",
+			*/
+			// PostgreSQL:
+			`[[test1]]::text NOT LIKE {:TEST} ESCAPE '\'`,
 		},
 		{
 			"nested json no coalesce",
@@ -147,7 +171,7 @@ func TestFilterDataBuildExpr(t *testing.T) {
 			"(([[test1]] > {:TEST} OR [[test2]] IS NOT {:TEST}) AND [[test3]] LIKE {:TEST} ESCAPE '\\' AND ([[test4_sub]] = '' OR [[test4_sub]] IS NULL))",
 			*/
 			// PostgreSQL:
-			`(([[test1]] > 1 OR [[test2]] IS DISTINCT FROM 2) AND [[test3]] LIKE {:TEST} ESCAPE '\' AND ([[test4_sub]]::text = '' OR [[test4_sub]] IS NULL))`,
+			`(([[test1]] > 1 OR [[test2]] IS DISTINCT FROM 2) AND [[test3]]::text LIKE {:TEST} ESCAPE '\' AND ([[test4_sub]]::text = '' OR [[test4_sub]] IS NULL))`,
 		},
 		{
 			"combination of special literals (null, true, false)",
@@ -167,7 +191,7 @@ func TestFilterDataBuildExpr(t *testing.T) {
 			"((COALESCE([[test1]], '') = COALESCE([[test2]], '') OR COALESCE([[test2]], '') IS NOT COALESCE([[test3]], '')) AND ([[test2]] LIKE {:TEST} ESCAPE '\\' OR [[test2]] NOT LIKE {:TEST} ESCAPE '\\') AND {:TEST} LIKE ('%' || [[test1]] || '%') ESCAPE '\\' AND {:TEST} NOT LIKE ('%' || [[test2]] || '%') ESCAPE '\\' AND [[test3]] > {:TEST} AND [[test3]] >= {:TEST} AND [[test3]] <= {:TEST} AND {:TEST} < {:TEST})",
 			*/
 			// PostgreSQL:
-			`((to_jsonb([[test1]]) IS NOT DISTINCT FROM to_jsonb([[test2]]) OR to_jsonb([[test2]]) IS DISTINCT FROM to_jsonb([[test3]])) AND ([[test2]] LIKE {:TEST} ESCAPE '\' OR [[test2]] NOT LIKE {:TEST} ESCAPE '\') AND {:TEST} LIKE ('%' || [[test1]] || '%') ESCAPE '\' AND {:TEST} NOT LIKE ('%' || [[test2]] || '%') ESCAPE '\' AND [[test3]] > 1 AND [[test3]] >= 0 AND [[test3]] <= 4 AND 2 < 5)`,
+			`((to_jsonb([[test1]]) IS NOT DISTINCT FROM to_jsonb([[test2]]) OR to_jsonb([[test2]]) IS DISTINCT FROM to_jsonb([[test3]])) AND ([[test2]]::text LIKE {:TEST} ESCAPE '\' OR [[test2]]::text NOT LIKE {:TEST} ESCAPE '\') AND {:TEST} LIKE ('%' || [[test1]]::text || '%') ESCAPE '\' AND {:TEST} NOT LIKE ('%' || [[test2]]::text || '%') ESCAPE '\' AND [[test3]] > 1 AND [[test3]] >= 0 AND [[test3]] <= 4 AND 2 < 5)`,
 		},
 		{
 			"geoDistance function",
@@ -382,7 +406,11 @@ func TestLikeParamsWrapping(t *testing.T) {
 		t.Fatalf("Expected 1 query, got %d", len(calledQueries))
 	}
 
+	/* SQLite:
 	expectedQuery := `SELECT * WHERE ([[test1]] LIKE '%abc%' ESCAPE '\' OR [[test2]] LIKE 'ab%c' ESCAPE '\' OR [[test3]] LIKE 'ab\\%c' ESCAPE '\' OR [[test4]] LIKE '%ab\\%c' ESCAPE '\' OR [[test5]] LIKE 'ab\\\\%c' ESCAPE '\' OR [[test6]] LIKE 'ab\\\\\\%c' ESCAPE '\' OR [[test7]] LIKE '%ab\_c%' ESCAPE '\' OR [[test8]] LIKE '%ab\\\_c%' ESCAPE '\' OR [[test9]] LIKE '%ab_c' ESCAPE '\' OR [[test10]] LIKE '%ab\\c%' ESCAPE '\' OR [[test11]] LIKE '%\_ab\\c\_%' ESCAPE '\' OR [[test12]] LIKE 'ab\\c%' ESCAPE '\')`
+	*/
+	// PostgreSQL:
+	expectedQuery := `SELECT * WHERE ([[test1]]::text LIKE '%abc%' ESCAPE '\' OR [[test2]]::text LIKE 'ab%c' ESCAPE '\' OR [[test3]]::text LIKE 'ab\\%c' ESCAPE '\' OR [[test4]]::text LIKE '%ab\\%c' ESCAPE '\' OR [[test5]]::text LIKE 'ab\\\\%c' ESCAPE '\' OR [[test6]]::text LIKE 'ab\\\\\\%c' ESCAPE '\' OR [[test7]]::text LIKE '%ab\_c%' ESCAPE '\' OR [[test8]]::text LIKE '%ab\\\_c%' ESCAPE '\' OR [[test9]]::text LIKE '%ab_c' ESCAPE '\' OR [[test10]]::text LIKE '%ab\\c%' ESCAPE '\' OR [[test11]]::text LIKE '%\_ab\\c\_%' ESCAPE '\' OR [[test12]]::text LIKE 'ab\\c%' ESCAPE '\')`
 	if expectedQuery != calledQueries[0] {
 		t.Fatalf("Expected query \n%s, \ngot \n%s", expectedQuery, calledQueries[0])
 	}
