@@ -54,3 +54,5 @@ require (
 )
 
 replace github.com/pocketbase/dbx v1.11.0 => github.com/fondoger/dbx v0.0.0-20250428115856-688aa3631781
+
+replace github.com/jackc/pgx/v5 v5.7.6 => github.com/jackc/pgx/v5 v5.8.1-0.20260101035209-228c905e00e7
