@@ -94,7 +94,7 @@ func (idx Index) Build() string {
 
 		if strings.Contains(col.Name, "(") || strings.Contains(col.Name, " ") {
 			// most likely an expression
-			str.WriteString(trimmedColName)
+			str.WriteString(normalizeMySQLIdentifierQuotes(trimmedColName))
 		} else {
 			// regular identifier
 			// str.WriteString("`") // SQLite
@@ -125,10 +125,96 @@ func (idx Index) Build() string {
 
 	if idx.Where != "" {
 		str.WriteString(" WHERE ")
-		str.WriteString(idx.Where)
+		str.WriteString(normalizeMySQLIdentifierQuotes(idx.Where))
 	}
 
 	return str.String()
+}
+
+// normalizeMySQLIdentifierQuotes converts MySQL-style backtick-quoted
+// identifiers to PostgreSQL-compatible double-quoted identifiers.
+// It keeps string literals untouched.
+func normalizeMySQLIdentifierQuotes(expr string) string {
+	if !strings.Contains(expr, "`") {
+		return expr
+	}
+
+	var b strings.Builder
+	b.Grow(len(expr))
+
+	inSingle := false
+	inDouble := false
+	inBacktick := false
+
+	for i := 0; i < len(expr); i++ {
+		ch := expr[i]
+
+		if inSingle {
+			b.WriteByte(ch)
+			if ch == '\'' {
+				// Escaped single quote (SQL style): ''
+				if i+1 < len(expr) && expr[i+1] == '\'' {
+					b.WriteByte(expr[i+1])
+					i++
+				} else {
+					inSingle = false
+				}
+			}
+			continue
+		}
+
+		if inDouble {
+			b.WriteByte(ch)
+			if ch == '"' {
+				inDouble = false
+			}
+			continue
+		}
+
+		if inBacktick {
+			if ch == '`' {
+				// Escaped backtick inside identifier (MySQL style): ``
+				if i+1 < len(expr) && expr[i+1] == '`' {
+					b.WriteByte('`')
+					i++
+					continue
+				}
+
+				b.WriteByte('"')
+				inBacktick = false
+				continue
+			}
+
+			if ch == '"' {
+				b.WriteString(`""`)
+				continue
+			}
+
+			b.WriteByte(ch)
+			continue
+		}
+
+		switch ch {
+		case '\'':
+			inSingle = true
+			b.WriteByte(ch)
+		case '"':
+			inDouble = true
+			b.WriteByte(ch)
+		case '`':
+			inBacktick = true
+			b.WriteByte('"')
+		default:
+			b.WriteByte(ch)
+		}
+	}
+
+	// Keep the original expression if there is an unclosed backtick quote.
+	if inBacktick {
+		return expr
+	}
+
+	return b.String()
 }
 
 // ParseIndex parses the provided "CREATE INDEX" SQL string into Index struct.

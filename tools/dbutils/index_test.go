@@ -228,6 +228,27 @@ func TestIndexBuild(t *testing.T) {
 			// PostgreSQL:
 			strings.ReplaceAll(`CREATE UNIQUE INDEX IF NOT EXISTS "schema"."index" ON "table" (\n  "col1" COLLATE NOCASE ASC,\n  "col2" DESC,\n  `+`json_extract("col3", "$.a")`+` COLLATE NOCASE\n) WHERE test = 1 OR test = 2`, `\n`, "\n"),
 		},
+		{
+			"mysql quoted identifiers in where",
+			dbutils.Index{
+				IndexName: "index",
+				TableName: "table",
+				Columns:   []dbutils.IndexColumn{{Name: "col"}},
+				Where:     "`col` != ''",
+			},
+			`CREATE INDEX "index" ON "table" ("col") WHERE "col" != ''`,
+		},
+		{
+			"mysql quoted identifiers in expression column",
+			dbutils.Index{
+				IndexName: "index",
+				TableName: "table",
+				Columns: []dbutils.IndexColumn{
+					{Name: "lower(`col`)"},
+				},
+			},
+			`CREATE INDEX "index" ON "table" (lower("col"))`,
+		},
 	}
 
 	for _, s := range scenarios {
