@@ -528,6 +528,58 @@ func sqlite_TestBackupsDownload(t *testing.T) {
 			},
 			ExpectedEvents: map[string]int{"*": 0},
 		},
+		{
+			Name:    "with valid superuser file token AND whitelisted IP",
+			Method:  http.MethodGet,
+			URL:     "/api/backups/test1.zip?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6InN5d2JoZWNuaDQ2cmhtMCIsImV4cCI6MjUyNDYwNDQ2MSwidHlwZSI6ImZpbGUiLCJjb2xsZWN0aW9uSWQiOiJwYmNfMzE0MjYzNTgyMyJ9.Lupz541xRvrktwkrl55p5pPCF77T69ZRsohsIcb2dxc",
+			Headers: map[string]string{"x-test-ip": "127.0.0.1"},
+			BeforeTestFunc: func(t testing.TB, app *tests.TestApp, e *core.ServeEvent) {
+				if err := createTestBackups(app); err != nil {
+					t.Fatal(err)
+				}
+
+				app.Settings().TrustedProxy = core.TrustedProxyConfig{
+					Headers: []string{"x-test-ip"},
+				}
+
+				app.Settings().SuperuserIPs = []string{"127.0.0.1"}
+
+				if err := app.Save(app.Settings()); err != nil {
+					t.Fatal(err)
+				}
+			},
+			ExpectedStatus: 200,
+			ExpectedContent: []string{
+				"storage/",
+				"data.db",
+				"auxiliary.db",
+			},
+			ExpectedEvents: map[string]int{"*": 0},
+		},
+		{
+			Name:    "with valid superuser file token BUT non-whitelisted IP",
+			Method:  http.MethodGet,
+			URL:     "/api/backups/test1.zip?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6InN5d2JoZWNuaDQ2cmhtMCIsImV4cCI6MjUyNDYwNDQ2MSwidHlwZSI6ImZpbGUiLCJjb2xsZWN0aW9uSWQiOiJwYmNfMzE0MjYzNTgyMyJ9.Lupz541xRvrktwkrl55p5pPCF77T69ZRsohsIcb2dxc",
+			Headers: map[string]string{"x-test-ip": "127.0.0.1"},
+			BeforeTestFunc: func(t testing.TB, app *tests.TestApp, e *core.ServeEvent) {
+				if err := createTestBackups(app); err != nil {
+					t.Fatal(err)
+				}
+
+				app.Settings().TrustedProxy = core.TrustedProxyConfig{
+					Headers: []string{"x-test-ip"},
+				}
+
+				app.Settings().SuperuserIPs = []string{"0.0.0.0"}
+
+				if err := app.Save(app.Settings()); err != nil {
+					t.Fatal(err)
+				}
+			},
+			ExpectedStatus:  403,
+			ExpectedContent: []string{`"data":{}`},
+			ExpectedEvents:  map[string]int{"*": 0},
+		},
 	}
 
 	for _, scenario := range scenarios {

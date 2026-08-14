@@ -214,6 +214,7 @@ func TestNumberFieldValidateValue(t *testing.T) {
 func TestNumberFieldValidateSettings(t *testing.T) {
 	testDefaultFieldIdValidation(t, core.FieldTypeNumber)
 	testDefaultFieldNameValidation(t, core.FieldTypeNumber)
+	testDefaultFieldHelpValidation[core.NumberField](t)
 
 	app, _ := tests.NewTestApp()
 	defer app.Cleanup()
@@ -236,7 +237,7 @@ func TestNumberFieldValidateSettings(t *testing.T) {
 			[]string{},
 		},
 		{
-			"decumal min",
+			"decimal min",
 			func() *core.NumberField {
 				return &core.NumberField{
 					Id:   "test",
@@ -247,7 +248,7 @@ func TestNumberFieldValidateSettings(t *testing.T) {
 			[]string{},
 		},
 		{
-			"decumal min (onlyInt)",
+			"decimal min (onlyInt)",
 			func() *core.NumberField {
 				return &core.NumberField{
 					Id:      "test",
@@ -271,7 +272,7 @@ func TestNumberFieldValidateSettings(t *testing.T) {
 			[]string{},
 		},
 		{
-			"decumal max",
+			"decimal max",
 			func() *core.NumberField {
 				return &core.NumberField{
 					Id:   "test",
@@ -282,7 +283,7 @@ func TestNumberFieldValidateSettings(t *testing.T) {
 			[]string{},
 		},
 		{
-			"decumal max (onlyInt)",
+			"decimal max (onlyInt)",
 			func() *core.NumberField {
 				return &core.NumberField{
 					Id:      "test",
@@ -306,25 +307,49 @@ func TestNumberFieldValidateSettings(t *testing.T) {
 			[]string{},
 		},
 		{
-			"min > max",
+			"min > max (0)",
 			func() *core.NumberField {
 				return &core.NumberField{
 					Id:   "test",
 					Name: "test",
 					Min:  types.Pointer(2.0),
-					Max:  types.Pointer(1.0),
+					Max:  types.Pointer(0.0),
 				}
 			},
 			[]string{"max"},
 		},
 		{
-			"min <= max",
+			"min (0) > max",
+			func() *core.NumberField {
+				return &core.NumberField{
+					Id:   "test",
+					Name: "test",
+					Min:  types.Pointer(0.0),
+					Max:  types.Pointer(-1.0),
+				}
+			},
+			[]string{"max"},
+		},
+		{
+			"min == max",
 			func() *core.NumberField {
 				return &core.NumberField{
 					Id:   "test",
 					Name: "test",
 					Min:  types.Pointer(2.0),
 					Max:  types.Pointer(2.0),
+				}
+			},
+			[]string{},
+		},
+		{
+			"min < max",
+			func() *core.NumberField {
+				return &core.NumberField{
+					Id:   "test",
+					Name: "test",
+					Min:  types.Pointer(2.0),
+					Max:  types.Pointer(3.0),
 				}
 			},
 			[]string{},

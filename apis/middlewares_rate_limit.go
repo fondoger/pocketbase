@@ -2,6 +2,7 @@ package apis
 
 import (
 	"errors"
+	"net/netip"
 	"sync"
 	"time"
 
@@ -106,29 +107,42 @@ func checkCollectionRateLimit(e *core.RequestEvent, collection *core.Collection,
 	return nil
 }
 
-// -------------------------------------------------------------------
-
-// @todo consider exporting as helper?
-//
-//nolint:unused
-func isClientRateLimited(e *core.RequestEvent, rtId string) bool {
-	rateLimiters, ok := e.App.Store().Get(rateLimitersStoreKey).(*store.Store[string, *rateLimiter])
-	if !ok || rateLimiters == nil {
+// isIPInList checks if the specified IP is in a list of other individual IPs or subnets.
+func isIPInList(ipsOrSubnets []string, ip string) bool {
+	if len(ipsOrSubnets) == 0 || ip == "" {
 		return false
 	}
 
-	rt, ok := rateLimiters.GetOk(rtId)
-	if !ok || rt == nil {
+	// normalize
+	searchAddr, err := netip.ParseAddr(ip)
+	if err != nil {
 		return false
 	}
 
-	client, ok := rt.getClient(e.RealIP())
-	if !ok || client == nil {
-		return false
+	for _, item := range ipsOrSubnets {
+		// subnet?
+		prefix, err := netip.ParsePrefix(item)
+		if err == nil {
+			if prefix.Contains(searchAddr) {
+				return true
+			}
+			continue
+		}
+
+		// individual ip?
+		addr, err := netip.ParseAddr(item)
+		if err == nil {
+			if addr == searchAddr {
+				return true
+			}
+			continue
+		}
 	}
 
-	return client.available <= 0 && time.Now().Unix()-client.lastConsume < client.interval
+	return false
 }
+
+// -------------------------------------------------------------------
 
 // @todo consider exporting as helper?
 func checkRateLimit(e *core.RequestEvent, rtId string, rule core.RateLimitRule) error {
@@ -154,7 +168,7 @@ func checkRateLimit(e *core.RequestEvent, rtId string, rule core.RateLimitRule) 
 	}
 
 	rt := rateLimiters.GetOrSet(rtId, func() *rateLimiter {
-		return newRateLimiter(rule.MaxRequests, rule.Duration, rule.Duration+1800)
+		return newRateLimiter(rule.MaxRequests, rule.Duration, 1800)
 	})
 	if rt == nil {
 		e.App.Logger().Warn("Failed to retrieve app rate limiter", "id", rtId)
@@ -175,7 +189,9 @@ func checkRateLimit(e *core.RequestEvent, rtId string, rule core.RateLimitRule) 
 }
 
 func skipRateLimit(e *core.RequestEvent) bool {
-	return !e.App.Settings().RateLimits.Enabled || e.HasSuperuserAuth()
+	return !e.App.Settings().RateLimits.Enabled ||
+		e.HasSuperuserAuth() ||
+		isIPInList(e.App.Settings().RateLimits.ExcludedIPs, e.RealIP())
 }
 
 var defaultAuthAudience = []string{core.RateLimitRuleAudienceAll, core.RateLimitRuleAudienceAuth}
@@ -311,30 +327,27 @@ func newRateClient(maxAllowed int, intervalInSec int64) *rateClient {
 	}
 }
 
-// @todo evaluate swiching to a more traditional fixed window or sliding window counter
-// implementations since some users complained that it is not intuitive (see #7329).
+// @todo evaluate swiching to sliding window with approximation counter similar to Cloudflare.
 //
-// rateClient is a mixture of token bucket and fixed window rate limit strategies
-// that refills the allowance only after at least "interval" seconds
-// has elapsed since the last request.
+// rateClient implements fixed window rate limit strategy.
 type rateClient struct {
 	// use plain Mutex instead of RWMutex since the operations are expected
 	// to be mostly writes (e.g. consume()) and it should perform better
 	sync.Mutex
 
-	maxAllowed  int   // the max allowed tokens per interval
-	available   int   // the total available tokens
-	interval    int64 // in seconds
-	lastConsume int64 // the time of the last consume
+	maxAllowed int   // the max allowed tokens per interval
+	available  int   // the total available tokens
+	start      int64 // the start time of the current window
+	interval   int64 // in seconds
 }
 
-// hasExpired checks whether it has been at least minElapsed seconds since the lastConsume time.
+// hasExpired checks whether it has been at least minElapsed seconds after the last active window.
 // (usually used to perform periodic cleanup of staled instances).
 func (l *rateClient) hasExpired(relativeNow int64, minElapsed int64) bool {
 	l.Lock()
 	defer l.Unlock()
 
-	return relativeNow-l.lastConsume > minElapsed
+	return relativeNow-(l.start+l.interval) > minElapsed
 }
 
 // consume decreases the current allowance with 1 (if not exhausted already).
@@ -347,15 +360,14 @@ func (l *rateClient) consume() bool {
 
 	nowUnix := time.Now().Unix()
 
-	// reset consumed counter
-	if nowUnix-l.lastConsume >= l.interval {
+	// reset
+	if nowUnix-l.start >= l.interval {
 		l.available = l.maxAllowed
+		l.start = nowUnix
 	}
 
 	if l.available > 0 {
 		l.available--
-		l.lastConsume = nowUnix
-
 		return true
 	}
 

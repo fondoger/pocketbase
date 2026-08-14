@@ -12,8 +12,8 @@ import (
 	"sort"
 	"strings"
 
-	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/pocketbase/dbx"
+	validation "github.com/pocketbase/ozzo-validation/v4"
 	"github.com/pocketbase/pocketbase/core/validators"
 	"github.com/pocketbase/pocketbase/tools/dbutils"
 	"github.com/pocketbase/pocketbase/tools/filesystem"
@@ -983,7 +983,7 @@ func (m *Record) GetStringSlice(key string) []string {
 }
 
 // GetUnsavedFiles returns the uploaded files for the provided "file" field key,
-// (aka. the current [*filesytem.File] values) so that you can apply further
+// (aka. the current [*filesystem.File] values) so that you can apply further
 // validations or modifications (including changing the file name or content before persisting).
 //
 // Example:
@@ -1428,13 +1428,13 @@ func onRecordValidate(e *RecordEvent) error {
 
 func onRecordSaveExecute(e *RecordEvent) error {
 	if e.Record.Collection().IsAuth() {
-		// ensure that the token key is regenerated on password change or email change
 		if !e.Record.IsNew() {
 			lastSavedRecord, err := e.App.FindRecordById(e.Record.Collection(), e.Record.Id)
 			if err != nil {
 				return err
 			}
 
+			// ensure that the token key is regenerated on password change or email change
 			if lastSavedRecord.TokenKey() == e.Record.TokenKey() &&
 				(lastSavedRecord.Get(FieldNamePassword) != e.Record.Get(FieldNamePassword) ||
 					lastSavedRecord.Email() != e.Record.Email()) {
@@ -1442,7 +1442,8 @@ func onRecordSaveExecute(e *RecordEvent) error {
 			}
 		}
 
-		// cross-check that the auth record id is unique across all auth collections.
+		// loosely cross-check that the auth record id is unique across all auth collections
+		// to minimize impact of mistakes in API rules when multiple auth collections are used
 		authCollections, err := e.App.FindAllCollections(CollectionTypeAuth)
 		if err != nil {
 			return fmt.Errorf("unable to fetch the auth collections for cross-id unique check: %w", err)

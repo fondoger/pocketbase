@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/fatih/color"
-	"github.com/go-ozzo/ozzo-validation/v4/is"
+	"github.com/pocketbase/ozzo-validation/v4/is"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tools/security"
 	"github.com/spf13/cobra"
@@ -24,6 +24,7 @@ func NewSuperuserCommand(app core.App) *cobra.Command {
 	command.AddCommand(superuserUpdateCommand(app))
 	command.AddCommand(superuserDeleteCommand(app))
 	command.AddCommand(superuserOTPCommand(app))
+	command.AddCommand(superuserIPsCommand(app))
 
 	return command
 }
@@ -203,6 +204,41 @@ func superuserOTPCommand(app core.App) *cobra.Command {
 			color.Green("\n├─ Id:    %s", otp.Id)
 			color.Green("├─ Pass:  %s", pass)
 			color.Green("└─ Valid: %ds\n\n", superuser.Collection().OTP.Duration)
+			return nil
+		},
+	}
+
+	return command
+}
+
+func superuserIPsCommand(app core.App) *cobra.Command {
+	command := &cobra.Command{
+		Use:          "ips",
+		Example:      "superuser ips 127.0.0.1 10.0.0.0/24",
+		Short:        "Updates the superuser IPs whitelist setting (the IPs/subnets arguments must be space separated; leave empty to clear the whitelist restriction)",
+		SilenceUsage: true,
+		RunE: func(command *cobra.Command, args []string) error {
+			settings := app.Settings()
+			settings.SuperuserIPs = args
+
+			if err := app.Save(settings); err != nil {
+				return err
+			}
+
+			if len(args) == 0 {
+				color.Green("Successfully cleared SuperuserIPs setting!")
+			} else {
+				color.New(color.BgGreen, color.FgBlack).Println("Successfully updated SuperuserIPs setting:")
+				superuserIPs := app.Settings().SuperuserIPs
+				for i, ip := range superuserIPs {
+					if i == len(superuserIPs)-1 {
+						color.Green("└─ %s", ip)
+					} else {
+						color.Green("├─ %s", ip)
+					}
+				}
+			}
+
 			return nil
 		},
 	}

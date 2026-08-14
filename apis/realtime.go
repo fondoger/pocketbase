@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	validation "github.com/go-ozzo/ozzo-validation/v4"
+	validation "github.com/pocketbase/ozzo-validation/v4"
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tools/hook"
@@ -27,6 +27,9 @@ const clientsChunkSize = 150
 
 // RealtimeClientAuthKey is the name of the realtime client store key that holds its auth state.
 const RealtimeClientAuthKey = "auth"
+
+// RealtimeClientIPKey is the name of the realtime client store key that holds the IP of the connected client.
+const RealtimeClientIPKey = "pbRealtimeClientIP"
 
 // bindRealtimeApi registers the realtime api endpoints.
 func bindRealtimeApi(app core.App, rg *router.RouterGroup[*core.RequestEvent]) {
@@ -74,6 +77,8 @@ func realtimeConnect(e *core.RequestEvent) error {
 		connectEvent.Client = subscriptions.NewDefaultClient()
 	}
 	connectEvent.IdleTimeout = 5 * time.Minute
+	connectEvent.MaxTimeout = 30 * time.Minute
+	connectEvent.Client.Set(RealtimeClientIPKey, e.RealIP())
 
 	return e.App.OnRealtimeConnectRequest().Trigger(connectEvent, func(ce *core.RealtimeConnectRequestEvent) error {
 		// register new subscription client

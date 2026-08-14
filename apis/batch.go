@@ -14,10 +14,11 @@ import (
 	"strings"
 	"time"
 
-	validation "github.com/go-ozzo/ozzo-validation/v4"
+	validation "github.com/pocketbase/ozzo-validation/v4"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tools/filesystem"
 	"github.com/pocketbase/pocketbase/tools/router"
+	"github.com/pocketbase/pocketbase/tools/routine"
 	"github.com/pocketbase/pocketbase/tools/types"
 	"github.com/spf13/cast"
 )
@@ -88,7 +89,7 @@ func (brs batchRequestsForm) validate() error {
 }
 
 // NB! When the request is submitted as multipart/form-data,
-// the regular fields data is expected to be submitted as serailized
+// the regular fields data is expected to be submitted as serialized
 // json under the @jsonPayload field and file keys need to follow the
 // pattern "requests.N.fileField" or  requests[N].fileField.
 func batchTransaction(e *core.RequestEvent) error {
@@ -195,7 +196,7 @@ func (p *batchProcessor) Process(batch []*core.InternalRequest, timeout time.Dur
 			p.stopCh <- struct{}{}
 		}()
 
-		go func() {
+		routine.FireAndForget(func() {
 			err := p.process(txApp, batch, 0)
 
 			if err != nil {
@@ -216,7 +217,7 @@ func (p *batchProcessor) Process(batch []*core.InternalRequest, timeout time.Dur
 			}
 
 			p.errCh <- err
-		}()
+		})
 
 		select {
 		case responseErr := <-p.errCh:
@@ -364,6 +365,7 @@ func processInternalRequest(
 	// assign request
 	event.Request = r
 	event.Request.Body = &router.RereadableReadCloser{ReadCloser: r.Body} // enables multiple reads
+	defer event.Request.Body.Close()
 
 	// assign response
 	rec := httptest.NewRecorder()

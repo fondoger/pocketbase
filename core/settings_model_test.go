@@ -3,6 +3,7 @@ package core_test
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -10,6 +11,7 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tests"
 	"github.com/pocketbase/pocketbase/tools/mailer"
+	"github.com/pocketbase/pocketbase/tools/security"
 )
 
 func TestSettingsDelete(t *testing.T) {
@@ -24,7 +26,75 @@ func TestSettingsDelete(t *testing.T) {
 	}
 }
 
+func TestSettings_DBExport(t *testing.T) {
+	scenarios := []struct {
+		name       string
+		encryption bool
+	}{
+		{"no encryption", false},
+		{"with encryption", true},
+	}
+
+	encryptionKey := strings.Repeat("a", 32)
+
+	for _, s := range scenarios {
+		t.Run(s.name, func(t *testing.T) {
+			app, _ := tests.NewTestApp()
+			defer app.Cleanup()
+
+			originalEnv := os.Getenv(app.EncryptionEnv())
+			defer func() {
+				os.Setenv(app.EncryptionEnv(), originalEnv)
+			}()
+
+			settings := &core.Settings{}
+			settings.Meta.AppName = "test_app_name"
+			settings.Logs.MaxDays = 123
+			settings.SMTP.Host = "smtp_host"
+			settings.SMTP.Username = "smtp_username"
+			settings.SMTP.Password = "" // ensures that empty password is exported
+			settings.S3.Endpoint = "s3_endpoint"
+			settings.S3.Secret = "s3_secret"
+			settings.Backups.Cron = "* * * * *"
+			settings.Backups.S3.Enabled = true
+			settings.Backups.S3.Secret = ""
+			settings.Batch.Timeout = 15
+			settings.RateLimits.Enabled = true
+			settings.TrustedProxy.UseLeftmostIP = true
+
+			if s.encryption {
+				os.Setenv(app.EncryptionEnv(), encryptionKey)
+			}
+
+			export, err := settings.DBExport(app)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			var valueStr string
+
+			if s.encryption {
+				decrypted, err := security.Decrypt(export["value"].(string), encryptionKey)
+				if err != nil {
+					t.Fatalf("failed to decrypt test value: %v", err)
+				}
+
+				valueStr = string(decrypted)
+			} else {
+				valueStr = string(export["value"].([]byte))
+			}
+
+			expected := `{"superuserIPs":[],"smtp":{"enabled":false,"port":0,"host":"smtp_host","username":"smtp_username","password":"","authMethod":"","tls":false,"localName":""},"backups":{"cron":"* * * * *","cronMaxKeep":0,"s3":{"enabled":true,"bucket":"","region":"","endpoint":"","accessKey":"","forcePathStyle":false}},"s3":{"enabled":false,"bucket":"","region":"","endpoint":"s3_endpoint","accessKey":"","secret":"s3_secret","forcePathStyle":false},"meta":{"accentColor":"","appName":"test_app_name","appURL":"","senderName":"","senderAddress":"","hideControls":false},"rateLimits":{"rules":[],"excludedIPs":[],"enabled":true},"trustedProxy":{"headers":[],"useLeftmostIP":true},"batch":{"enabled":false,"maxRequests":0,"timeout":15,"maxBodySize":0},"logs":{"maxDays":123,"minLevel":0,"logIP":false,"logAuthId":false}}`
+			if valueStr != expected {
+				t.Fatalf("Expected exported settings\n%s\ngot\n%s", expected, valueStr)
+			}
+		})
+	}
+}
+
 func TestSettingsMerge(t *testing.T) {
+	t.Parallel()
+
 	s1 := &core.Settings{}
 	s1.Meta.AppURL = "app_url" // should be unset
 
@@ -58,6 +128,8 @@ func TestSettingsMerge(t *testing.T) {
 }
 
 func TestSettingsClone(t *testing.T) {
+	t.Parallel()
+
 	s1 := &core.Settings{}
 	s1.Meta.AppName = "test_name"
 
@@ -88,6 +160,8 @@ func TestSettingsClone(t *testing.T) {
 }
 
 func TestSettingsMarshalJSON(t *testing.T) {
+	t.Parallel()
+
 	settings := &core.Settings{}
 
 	// control fields
@@ -106,7 +180,7 @@ func TestSettingsMarshalJSON(t *testing.T) {
 	}
 	rawStr := string(raw)
 
-	expected := `{"smtp":{"enabled":false,"port":0,"host":"","username":"abc","authMethod":"","tls":false,"localName":""},"backups":{"cron":"","cronMaxKeep":0,"s3":{"enabled":false,"bucket":"","region":"","endpoint":"","accessKey":"","forcePathStyle":false}},"s3":{"enabled":false,"bucket":"","region":"","endpoint":"","accessKey":"","forcePathStyle":false},"meta":{"appName":"test123","appURL":"","senderName":"","senderAddress":"","hideControls":false},"rateLimits":{"rules":[],"enabled":false},"trustedProxy":{"headers":[],"useLeftmostIP":false},"batch":{"enabled":false,"maxRequests":0,"timeout":0,"maxBodySize":0},"logs":{"maxDays":0,"minLevel":0,"logIP":false,"logAuthId":false}}`
+	expected := `{"superuserIPs":[],"smtp":{"enabled":false,"port":0,"host":"","username":"abc","authMethod":"","tls":false,"localName":""},"backups":{"cron":"","cronMaxKeep":0,"s3":{"enabled":false,"bucket":"","region":"","endpoint":"","accessKey":"","forcePathStyle":false}},"s3":{"enabled":false,"bucket":"","region":"","endpoint":"","accessKey":"","forcePathStyle":false},"meta":{"accentColor":"","appName":"test123","appURL":"","senderName":"","senderAddress":"","hideControls":false},"rateLimits":{"rules":[],"excludedIPs":[],"enabled":false},"trustedProxy":{"headers":[],"useLeftmostIP":false},"batch":{"enabled":false,"maxRequests":0,"timeout":0,"maxBodySize":0},"logs":{"maxDays":0,"minLevel":0,"logIP":false,"logAuthId":false}}`
 
 	if rawStr != expected {
 		t.Fatalf("Expected\n%v\ngot\n%v", expected, rawStr)
@@ -122,6 +196,7 @@ func TestSettingsValidate(t *testing.T) {
 	s := app.Settings()
 
 	// set invalid settings data
+	s.SuperuserIPs = []string{"127.0.0.1", ""}
 	s.Meta.AppName = ""
 	s.Logs.MaxDays = -10
 	s.SMTP.Enabled = true
@@ -143,6 +218,7 @@ func TestSettingsValidate(t *testing.T) {
 	}
 
 	expectations := []string{
+		`"superuserIPs":{`,
 		`"meta":{`,
 		`"logs":{`,
 		`"smtp":{`,
@@ -162,6 +238,8 @@ func TestSettingsValidate(t *testing.T) {
 }
 
 func TestMetaConfigValidate(t *testing.T) {
+	t.Parallel()
+
 	scenarios := []struct {
 		name           string
 		config         core.MetaConfig
@@ -180,12 +258,14 @@ func TestMetaConfigValidate(t *testing.T) {
 		{
 			"invalid data",
 			core.MetaConfig{
+				AccentColor:   "#fff",
 				AppName:       strings.Repeat("a", 300),
 				AppURL:        "test",
 				SenderName:    strings.Repeat("a", 300),
 				SenderAddress: "invalid_email",
 			},
 			[]string{
+				"accentColor",
 				"appName",
 				"appURL",
 				"senderName",
@@ -195,6 +275,7 @@ func TestMetaConfigValidate(t *testing.T) {
 		{
 			"valid data",
 			core.MetaConfig{
+				AccentColor:   "#ffffff",
 				AppName:       "test",
 				AppURL:        "https://example.com",
 				SenderName:    "test",
@@ -214,6 +295,8 @@ func TestMetaConfigValidate(t *testing.T) {
 }
 
 func TestLogsConfigValidate(t *testing.T) {
+	t.Parallel()
+
 	scenarios := []struct {
 		name           string
 		config         core.LogsConfig
@@ -246,6 +329,8 @@ func TestLogsConfigValidate(t *testing.T) {
 }
 
 func TestSMTPConfigValidate(t *testing.T) {
+	t.Parallel()
+
 	scenarios := []struct {
 		name           string
 		config         core.SMTPConfig
@@ -305,6 +390,8 @@ func TestSMTPConfigValidate(t *testing.T) {
 }
 
 func TestS3ConfigValidate(t *testing.T) {
+	t.Parallel()
+
 	scenarios := []struct {
 		name           string
 		config         core.S3Config
@@ -376,6 +463,8 @@ func TestS3ConfigValidate(t *testing.T) {
 }
 
 func TestBackupsConfigValidate(t *testing.T) {
+	t.Parallel()
+
 	scenarios := []struct {
 		name           string
 		config         core.BackupsConfig
@@ -431,6 +520,8 @@ func TestBackupsConfigValidate(t *testing.T) {
 }
 
 func TestBatchConfigValidate(t *testing.T) {
+	t.Parallel()
+
 	scenarios := []struct {
 		name           string
 		config         core.BatchConfig
@@ -486,6 +577,8 @@ func TestBatchConfigValidate(t *testing.T) {
 }
 
 func TestRateLimitsConfigValidate(t *testing.T) {
+	t.Parallel()
+
 	scenarios := []struct {
 		name           string
 		config         core.RateLimitsConfig
@@ -504,7 +597,8 @@ func TestRateLimitsConfigValidate(t *testing.T) {
 		{
 			"invalid data",
 			core.RateLimitsConfig{
-				Enabled: true,
+				Enabled:     true,
+				ExcludedIPs: []string{"", "127.0.0.1"},
 				Rules: []core.RateLimitRule{
 					{
 						Label:       "/123abc/",
@@ -518,12 +612,13 @@ func TestRateLimitsConfigValidate(t *testing.T) {
 					},
 				},
 			},
-			[]string{"rules"},
+			[]string{"rules", "excludedIPs"},
 		},
 		{
 			"valid data",
 			core.RateLimitsConfig{
-				Enabled: true,
+				Enabled:     true,
+				ExcludedIPs: []string{"127.0.0.1", "10.0.0.1/20"},
 				Rules: []core.RateLimitRule{
 					{
 						Label:       "123_abc",
@@ -631,6 +726,8 @@ func TestRateLimitsConfigValidate(t *testing.T) {
 }
 
 func TestRateLimitsFindRateLimitRule(t *testing.T) {
+	t.Parallel()
+
 	limits := core.RateLimitsConfig{
 		Rules: []core.RateLimitRule{
 			{Label: "abc"},
@@ -685,6 +782,8 @@ func TestRateLimitsFindRateLimitRule(t *testing.T) {
 }
 
 func TestRateLimitRuleValidate(t *testing.T) {
+	t.Parallel()
+
 	scenarios := []struct {
 		name           string
 		rule           core.RateLimitRule
@@ -792,6 +891,8 @@ func TestRateLimitRuleValidate(t *testing.T) {
 }
 
 func TestRateLimitRuleDurationTime(t *testing.T) {
+	t.Parallel()
+
 	scenarios := []struct {
 		rule     core.RateLimitRule
 		expected time.Duration
@@ -812,6 +913,8 @@ func TestRateLimitRuleDurationTime(t *testing.T) {
 }
 
 func TestRateLimitRuleString(t *testing.T) {
+	t.Parallel()
+
 	scenarios := []struct {
 		name     string
 		rule     core.RateLimitRule

@@ -45,12 +45,14 @@ func TestRecordAuthWithOAuth2(t *testing.T) {
 	t.Parallel()
 
 	// start a test server
-	server := httptest.NewServer(http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
+	localServer := httptest.NewServer(http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
 		buf := new(bytes.Buffer)
 		png.Encode(buf, image.Rect(0, 0, 1, 1)) // tiny 1x1 png
 		http.ServeContent(res, req, "test_avatar.png", time.Now(), bytes.NewReader(buf.Bytes()))
 	}))
-	defer server.Close()
+	defer localServer.Close()
+
+	externalImageURL := "https://pocketbase.io/images/logo.svg"
 
 	scenarios := []tests.ApiScenario{
 		{
@@ -88,10 +90,11 @@ func TestRecordAuthWithOAuth2(t *testing.T) {
 				`"data":{`,
 				`"provider":`,
 				`"code":`,
-				`"redirectURL":`,
 			},
 			NotExpectedContent: []string{
-				`"codeVerifier":`, // should be optional
+				// should be optional
+				`"codeVerifier":`,
+				`"redirectURL":`,
 			},
 			ExpectedEvents: map[string]int{"*": 0},
 		},
@@ -107,10 +110,11 @@ func TestRecordAuthWithOAuth2(t *testing.T) {
 				`"data":{`,
 				`"provider":`,
 				`"code":`,
-				`"redirectURL":`,
 			},
 			NotExpectedContent: []string{
-				`"codeVerifier":`, // should be optional
+				// should be optional
+				`"codeVerifier":`,
+				`"redirectURL":`,
 			},
 			ExpectedEvents: map[string]int{"*": 0},
 		},
@@ -176,6 +180,20 @@ func TestRecordAuthWithOAuth2(t *testing.T) {
 					t.Fatal(err)
 				}
 
+				// ensure that there is at least one other external auth different than test
+				// so that later we can verify that it was deleted
+				var hasAtLeastOneOtherEA = false
+				externalAuths, _ := app.FindAllExternalAuthsByRecord(user)
+				for _, rel := range externalAuths {
+					if rel.Id != ea.Id {
+						hasAtLeastOneOtherEA = true
+						break
+					}
+				}
+				if !hasAtLeastOneOtherEA {
+					t.Fatal("Expected at least one non-test external auth linked")
+				}
+
 				// test at least once that the correct request info context is properly loaded
 				app.OnRecordAuthRequest().BindFunc(func(e *core.RecordAuthRequestEvent) error {
 					info, err := e.RequestInfo()
@@ -211,12 +229,12 @@ func TestRecordAuthWithOAuth2(t *testing.T) {
 				"OnRecordAuthRequest":           1,
 				"OnRecordEnrich":                1,
 				// ---
-				"OnModelCreate":              1,
-				"OnModelCreateExecute":       1,
-				"OnModelAfterCreateSuccess":  1,
-				"OnRecordCreate":             1,
-				"OnRecordCreateExecute":      1,
-				"OnRecordAfterCreateSuccess": 1,
+				"OnModelCreate":              2, // user + recreated external auth
+				"OnModelCreateExecute":       2,
+				"OnModelAfterCreateSuccess":  2,
+				"OnRecordCreate":             2,
+				"OnRecordCreateExecute":      2,
+				"OnRecordAfterCreateSuccess": 2,
 				// ---
 				"OnModelUpdate":              1,
 				"OnModelUpdateExecute":       1,
@@ -225,8 +243,15 @@ func TestRecordAuthWithOAuth2(t *testing.T) {
 				"OnRecordUpdateExecute":      1,
 				"OnRecordAfterUpdateSuccess": 1,
 				// ---
-				"OnModelValidate":  2, // create + update
-				"OnRecordValidate": 2,
+				"OnModelDelete":              3, // pre-existing external auths
+				"OnModelDeleteExecute":       3,
+				"OnModelAfterDeleteSuccess":  3,
+				"OnRecordDelete":             3,
+				"OnRecordDeleteExecute":      3,
+				"OnRecordAfterDeleteSuccess": 3,
+				// ---
+				"OnModelValidate":  3, // user create/update + recreated external auth
+				"OnRecordValidate": 3,
 			},
 			AfterTestFunc: func(t testing.TB, app *tests.TestApp, res *http.Response) {
 				user, err := app.FindAuthRecordByEmail("users", "test@example.com")
@@ -245,6 +270,24 @@ func TestRecordAuthWithOAuth2(t *testing.T) {
 				devices, err := app.FindAllAuthOriginsByRecord(user)
 				if len(devices) != 1 {
 					t.Fatalf("Expected only 1 auth origin to be created, got %d (%v)", len(devices), err)
+				}
+
+				// ensure that other linked external auths have been deleted
+				externalAuths, _ := app.FindAllExternalAuthsByRecord(user)
+				if len(externalAuths) != 1 {
+					t.Fatalf("Expected only 1 external auth to remain, got %d", len(externalAuths))
+				}
+				if provider := externalAuths[0].Provider(); provider != "test" {
+					t.Fatalf("Expected %q external auth, got %q", "test", provider)
+				}
+				if providerId := externalAuths[0].ProviderId(); providerId != "test_id" {
+					t.Fatalf("Expected %q providerId, got %q", "test_id", providerId)
+				}
+				if recordRef := externalAuths[0].RecordRef(); recordRef != user.Id {
+					t.Fatalf("Expected %q recordRef, got %q", user.Id, recordRef)
+				}
+				if collectionRef := externalAuths[0].CollectionRef(); collectionRef != user.Collection().Id {
+					t.Fatalf("Expected %q collectionRef, got %q", user.Collection().Id, collectionRef)
 				}
 			},
 		},
@@ -341,7 +384,7 @@ func TestRecordAuthWithOAuth2(t *testing.T) {
 				}
 
 				if !user.ValidatePassword("1234567890") {
-					t.Fatalf("Expected old password %q to be valid", "1234567890")
+					t.Fatalf("Expected old password %q to remain valid", "1234567890")
 				}
 
 				devices, err := app.FindAllAuthOriginsByRecord(user)
@@ -351,7 +394,7 @@ func TestRecordAuthWithOAuth2(t *testing.T) {
 			},
 		},
 		{
-			Name:   "link by email",
+			Name:   "link by email (unverified user)",
 			Method: http.MethodPost,
 			URL:    "/api/collections/users/auth-with-oauth2",
 			Body: strings.NewReader(`{
@@ -372,6 +415,20 @@ func TestRecordAuthWithOAuth2(t *testing.T) {
 				// ensure that the old password works
 				if !user.ValidatePassword("1234567890") {
 					t.Fatalf("Expected password %q to be valid", "1234567890")
+				}
+
+				// ensure that there is at least one other external auth different than test
+				// so that later we can verify that it was deleted
+				var hasAtLeastOneOtherEA = false
+				externalAuths, _ := app.FindAllExternalAuthsByRecord(user)
+				for _, rel := range externalAuths {
+					if rel.Provider() != "test" {
+						hasAtLeastOneOtherEA = true
+						break
+					}
+				}
+				if !hasAtLeastOneOtherEA {
+					t.Fatal("Expected at least one non-test external auth linked")
 				}
 
 				// register the test provider
@@ -430,6 +487,13 @@ func TestRecordAuthWithOAuth2(t *testing.T) {
 				"OnRecordUpdateExecute":      1,
 				"OnRecordAfterUpdateSuccess": 1,
 				// ---
+				"OnModelDelete":              2, // pre-existing external auths
+				"OnModelDeleteExecute":       2,
+				"OnModelAfterDeleteSuccess":  2,
+				"OnRecordDelete":             2,
+				"OnRecordDeleteExecute":      2,
+				"OnRecordAfterDeleteSuccess": 2,
+				// ---
 				"OnModelValidate":  3, // record + authOrigins + externalAuths
 				"OnRecordValidate": 3,
 			},
@@ -446,6 +510,145 @@ func TestRecordAuthWithOAuth2(t *testing.T) {
 				devices, err := app.FindAllAuthOriginsByRecord(user)
 				if len(devices) != 1 {
 					t.Fatalf("Expected only 1 auth origin to be created, got %d (%v)", len(devices), err)
+				}
+
+				// ensure that other linked external auths have been deleted
+				externalAuths, _ := app.FindAllExternalAuthsByRecord(user)
+				if len(externalAuths) != 1 {
+					t.Fatalf("Expected only 1 external auth to remain, got %d", len(externalAuths))
+				}
+				if provider := externalAuths[0].Provider(); provider != "test" {
+					t.Fatalf("Expected %q external auth, got %q", "test", provider)
+				}
+				if providerId := externalAuths[0].ProviderId(); providerId != "test_id" {
+					t.Fatalf("Expected %q providerId, got %q", "test_id", providerId)
+				}
+				if recordRef := externalAuths[0].RecordRef(); recordRef != user.Id {
+					t.Fatalf("Expected %q recordRef, got %q", user.Id, recordRef)
+				}
+				if collectionRef := externalAuths[0].CollectionRef(); collectionRef != user.Collection().Id {
+					t.Fatalf("Expected %q collectionRef, got %q", user.Collection().Id, collectionRef)
+				}
+			},
+		},
+		{
+			Name:   "link by email (verified user)",
+			Method: http.MethodPost,
+			URL:    "/api/collections/users/auth-with-oauth2",
+			Body: strings.NewReader(`{
+				"provider": "test",
+				"code":"123",
+				"redirectURL": "https://example.com"
+			}`),
+			BeforeTestFunc: func(t testing.TB, app *tests.TestApp, e *core.ServeEvent) {
+				user, err := app.FindAuthRecordByEmail("users", "test3@example.com")
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				if !user.Verified() {
+					t.Fatalf("Expected user %q to be verified", user.Email())
+				}
+
+				// ensure that the old password works
+				if !user.ValidatePassword("1234567890") {
+					t.Fatalf("Expected password %q to be valid", "1234567890")
+				}
+
+				// register the test provider
+				auth.Providers["test"] = func() auth.Provider {
+					return &oauth2MockProvider{
+						AuthUser: &auth.AuthUser{Id: "test_id", Email: "test3@example.com"},
+						Token:    &oauth2.Token{AccessToken: "abc"},
+					}
+				}
+
+				// ensure that there is at least one other external auth different than test
+				// so that later we can verify that they are not deleted
+				var hasAtLeastOneOtherEA = false
+				externalAuths, _ := app.FindAllExternalAuthsByRecord(user)
+				for _, rel := range externalAuths {
+					if rel.Provider() != "test" {
+						hasAtLeastOneOtherEA = true
+						break
+					}
+				}
+				if !hasAtLeastOneOtherEA {
+					t.Fatal("Expected at least one non-test external auth linked")
+				}
+
+				// add the test provider in the collection
+				user.Collection().MFA.Enabled = false
+				user.Collection().OAuth2.Enabled = true
+				user.Collection().OAuth2.Providers = []core.OAuth2ProviderConfig{{
+					Name:         "test",
+					ClientId:     "123",
+					ClientSecret: "456",
+				}}
+				if err := app.Save(user.Collection()); err != nil {
+					t.Fatal(err)
+				}
+			},
+			ExpectedStatus: 200,
+			ExpectedContent: []string{
+				`"record":{`,
+				`"token":"`,
+				`"meta":{`,
+				`"isNew":false`,
+				`"email":"test3@example.com"`,
+				`"id":"bgs820n361vj1qd"`,
+				`"id":"test_id"`,
+				`"verified":true`,
+			},
+			NotExpectedContent: []string{
+				// hidden fields
+				`"tokenKey"`,
+				`"password"`,
+			},
+			ExpectedEvents: map[string]int{
+				"*":                             0,
+				"OnRecordAuthWithOAuth2Request": 1,
+				"OnRecordAuthRequest":           1,
+				"OnRecordEnrich":                1,
+				// ---
+				"OnModelCreate":              2, // authOrigins + externalAuths
+				"OnModelCreateExecute":       2,
+				"OnModelAfterCreateSuccess":  2,
+				"OnRecordCreate":             2,
+				"OnRecordCreateExecute":      2,
+				"OnRecordAfterCreateSuccess": 2,
+				// ---
+				"OnModelValidate":  2, // authOrigins + externalAuths
+				"OnRecordValidate": 2,
+			},
+			AfterTestFunc: func(t testing.TB, app *tests.TestApp, res *http.Response) {
+				user, err := app.FindAuthRecordByEmail("users", "test3@example.com")
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				if !user.ValidatePassword("1234567890") {
+					t.Fatalf("Expected old password %q to remain valid", "1234567890")
+				}
+
+				devices, err := app.FindAllAuthOriginsByRecord(user)
+				if len(devices) != 1 {
+					t.Fatalf("Expected only 1 auth origin to be created, got %d (%v)", len(devices), err)
+				}
+
+				var hasTestEA = false
+				externalAuths, err := app.FindAllExternalAuthsByRecord(user)
+				if len(externalAuths) <= 1 {
+					t.Fatalf("Expected to have 2+ ExternalAuth records, got %d (%v)", len(externalAuths), err)
+				}
+				for _, rel := range externalAuths {
+					if rel.Provider() == "test" {
+						hasTestEA = true
+						break
+					}
+				}
+				if !hasTestEA {
+					t.Fatal("Expected test external auth to be linked")
 				}
 			},
 		},
@@ -529,6 +732,13 @@ func TestRecordAuthWithOAuth2(t *testing.T) {
 				"OnRecordCreateExecute":      2,
 				"OnRecordAfterCreateSuccess": 2,
 				// ---
+				"OnModelDelete":              2, // pre-existing external auths
+				"OnModelDeleteExecute":       2,
+				"OnModelAfterDeleteSuccess":  2,
+				"OnRecordDelete":             2,
+				"OnRecordDeleteExecute":      2,
+				"OnRecordAfterDeleteSuccess": 2,
+				// ---
 				"OnModelValidate":  2,
 				"OnRecordValidate": 2,
 			},
@@ -539,7 +749,7 @@ func TestRecordAuthWithOAuth2(t *testing.T) {
 				}
 
 				if !user.ValidatePassword("1234567890") {
-					t.Fatalf("Expected password %q not to be changed", "1234567890")
+					t.Fatalf("Expected old password %q to remain valid", "1234567890")
 				}
 
 				devices, err := app.FindAllAuthOriginsByRecord(user)
@@ -650,6 +860,13 @@ func TestRecordAuthWithOAuth2(t *testing.T) {
 				"OnRecordUpdateExecute":      1,
 				"OnRecordAfterUpdateSuccess": 1,
 				// ---
+				"OnModelDelete":              2, // pre-existing external auths
+				"OnModelDeleteExecute":       2,
+				"OnModelAfterDeleteSuccess":  2,
+				"OnRecordDelete":             2,
+				"OnRecordDeleteExecute":      2,
+				"OnRecordAfterDeleteSuccess": 2,
+				// ---
 				"OnModelValidate":  3, // record + authOrigins + externalAuths
 				"OnRecordValidate": 3,
 			},
@@ -660,7 +877,7 @@ func TestRecordAuthWithOAuth2(t *testing.T) {
 				}
 
 				if !user.ValidatePassword("1234567890") {
-					t.Fatalf("Expected password %q not to be changed", "1234567890")
+					t.Fatalf("Expected old password %q to remain valid", "1234567890")
 				}
 
 				devices, err := app.FindAllAuthOriginsByRecord(user)
@@ -756,6 +973,13 @@ func TestRecordAuthWithOAuth2(t *testing.T) {
 				"OnRecordUpdateExecute":      1,
 				"OnRecordAfterUpdateSuccess": 1,
 				// ---
+				"OnModelDelete":              2, // pre-existing external auths
+				"OnModelDeleteExecute":       2,
+				"OnModelAfterDeleteSuccess":  2,
+				"OnRecordDelete":             2,
+				"OnRecordDeleteExecute":      2,
+				"OnRecordAfterDeleteSuccess": 2,
+				// ---
 				"OnModelValidate":  3, // record + authOrigins + externalAuths
 				"OnRecordValidate": 3,
 			},
@@ -766,7 +990,7 @@ func TestRecordAuthWithOAuth2(t *testing.T) {
 				}
 
 				if !user.ValidatePassword("1234567890") {
-					t.Fatalf("Expected password %q not to be changed", "1234567890")
+					t.Fatalf("Expected old password %q to remain valid", "1234567890")
 				}
 
 				devices, err := app.FindAllAuthOriginsByRecord(user)
@@ -1176,7 +1400,7 @@ func TestRecordAuthWithOAuth2(t *testing.T) {
 							Id:        "oauth2_id",
 							Email:     "oauth2@example.com",
 							Username:  "oauth2_username",
-							AvatarURL: server.URL + "/oauth2_avatar.png",
+							AvatarURL: externalImageURL,
 						},
 						Token: &oauth2.Token{AccessToken: "abc"},
 					}
@@ -1208,7 +1432,98 @@ func TestRecordAuthWithOAuth2(t *testing.T) {
 				`"username":"oauth2_username"`,
 				`"verified":true`,
 				`"rel":"0yxhwia2amd8gec"`,
-				`"avatar":"oauth2_avatar_`,
+				`"avatar":"logo_`,
+			},
+			NotExpectedContent: []string{
+				// hidden fields
+				`"tokenKey"`,
+				`"password"`,
+			},
+			ExpectedEvents: map[string]int{
+				"*":                             0,
+				"OnRecordAuthWithOAuth2Request": 1,
+				"OnRecordAuthRequest":           1,
+				"OnRecordCreateRequest":         1,
+				"OnRecordEnrich":                2, // the auth response and from the create request
+				// ---
+				"OnModelCreate":              3, // record + authOrigins + externalAuths
+				"OnModelCreateExecute":       3,
+				"OnModelAfterCreateSuccess":  3,
+				"OnRecordCreate":             3,
+				"OnRecordCreateExecute":      3,
+				"OnRecordAfterCreateSuccess": 3,
+				// ---
+				"OnModelUpdate":              1, // created record verified state change
+				"OnModelUpdateExecute":       1,
+				"OnModelAfterUpdateSuccess":  1,
+				"OnRecordUpdate":             1,
+				"OnRecordUpdateExecute":      1,
+				"OnRecordAfterUpdateSuccess": 1,
+				// ---
+				"OnModelValidate":  4,
+				"OnRecordValidate": 4,
+			},
+		},
+		{
+			Name:   "creating user (with mapped OAuth2 fields and local avatarURL->file field; ensures that safeHTTPClient is being used)",
+			Method: http.MethodPost,
+			URL:    "/api/collections/users/auth-with-oauth2",
+			Body: strings.NewReader(`{
+				"provider": "test",
+				"code":"123",
+				"redirectURL": "https://example.com",
+				"createData": {
+					"name": "test_name",
+					"emailVisibility": true,
+					"rel": "0yxhwia2amd8gec"
+				}
+			}`),
+			BeforeTestFunc: func(t testing.TB, app *tests.TestApp, e *core.ServeEvent) {
+				usersCol, err := app.FindCollectionByNameOrId("users")
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				// register the test provider
+				auth.Providers["test"] = func() auth.Provider {
+					return &oauth2MockProvider{
+						AuthUser: &auth.AuthUser{
+							Id:        "oauth2_id",
+							Email:     "oauth2@example.com",
+							Username:  "oauth2_username",
+							AvatarURL: localServer.URL + "/oauth2_avatar.png", // local/private file download is not allowed
+						},
+						Token: &oauth2.Token{AccessToken: "abc"},
+					}
+				}
+
+				// add the test provider in the collection
+				usersCol.MFA.Enabled = false
+				usersCol.OAuth2.Enabled = true
+				usersCol.OAuth2.Providers = []core.OAuth2ProviderConfig{{
+					Name:         "test",
+					ClientId:     "123",
+					ClientSecret: "456",
+				}}
+				usersCol.OAuth2.MappedFields = core.OAuth2KnownFields{
+					Username:  "name", // should be ignored because of the explicit submitted value
+					Id:        "username",
+					AvatarURL: "avatar",
+				}
+				if err := app.Save(usersCol); err != nil {
+					t.Fatal(err)
+				}
+			},
+			ExpectedStatus: 200,
+			ExpectedContent: []string{
+				`"isNew":true`,
+				`"email":"oauth2@example.com"`,
+				`"emailVisibility":true`,
+				`"name":"test_name"`,
+				`"username":"oauth2_username"`,
+				`"verified":true`,
+				`"rel":"0yxhwia2amd8gec"`,
+				`"avatar":"`,
 			},
 			NotExpectedContent: []string{
 				// hidden fields
@@ -1343,7 +1658,7 @@ func TestRecordAuthWithOAuth2(t *testing.T) {
 							Email:     "oauth2@example.com",
 							Username:  "tESt2_username", // wouldn't match with existing because the related field index is case-sensitive
 							Name:      "oauth2_name",
-							AvatarURL: server.URL + "/oauth2_avatar.png",
+							AvatarURL: localServer.URL + "/oauth2_avatar.png", // allowed because it is not being downloaded
 						},
 						Token: &oauth2.Token{AccessToken: "abc"},
 					}

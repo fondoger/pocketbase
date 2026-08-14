@@ -1,6 +1,9 @@
 // Package jsvm implements pluggable utilities for binding a JS goja runtime
 // to the PocketBase instance (loading migrations, attaching to app hooks, etc.).
 //
+// The package also exports several reusable bindings so that users
+// can utilize them as part of their own custom goja runtime setup.
+//
 // Example:
 //
 //	jsvm.MustRegister(app, jsvm.Config{
@@ -30,6 +33,7 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/plugins/jsvm/internal/types/generated"
+	"github.com/pocketbase/pocketbase/tools/routine"
 	"github.com/pocketbase/pocketbase/tools/template"
 )
 
@@ -200,15 +204,15 @@ func (p *plugin) registerMigrations() error {
 		process.Enable(vm)
 		buffer.Enable(vm)
 
-		baseBinds(vm)
-		dbxBinds(vm)
-		securityBinds(vm)
-		osBinds(vm)
-		filepathBinds(vm)
-		httpClientBinds(vm)
-		filesystemBinds(vm)
-		formsBinds(vm)
-		mailsBinds(vm)
+		BindCore(vm)
+		BindDbx(vm)
+		BindSecurity(vm)
+		BindOS(vm)
+		BindFilepath(vm)
+		BindHTTP(vm)
+		BindFilesystem(vm)
+		BindForms(vm)
+		BindMails(vm)
 
 		vm.Set("$template", templateRegistry)
 		vm.Set("__hooks", absHooksDir)
@@ -288,16 +292,16 @@ func (p *plugin) registerHooks() error {
 		process.Enable(vm)
 		buffer.Enable(vm)
 
-		baseBinds(vm)
-		dbxBinds(vm)
-		filesystemBinds(vm)
-		securityBinds(vm)
-		osBinds(vm)
-		filepathBinds(vm)
-		httpClientBinds(vm)
-		formsBinds(vm)
-		apisBinds(vm)
-		mailsBinds(vm)
+		BindCore(vm)
+		BindDbx(vm)
+		BindSecurity(vm)
+		BindOS(vm)
+		BindFilepath(vm)
+		BindHTTP(vm)
+		BindFilesystem(vm)
+		BindForms(vm)
+		BindMails(vm)
+		BindApis(vm)
 
 		vm.Set("$app", p.app)
 		vm.Set("$template", templateRegistry)
@@ -404,7 +408,7 @@ func (p *plugin) watchHooks() error {
 	})
 
 	// start listening for events.
-	go func() {
+	routine.FireAndForget(func() {
 		defer stopDebounceTimer()
 
 		for {
@@ -434,15 +438,20 @@ func (p *plugin) watchHooks() error {
 				color.Red("Watch error:", err)
 			}
 		}
-	}()
+	})
 
 	// add directories to watch
 	//
 	// @todo replace once recursive watcher is added (https://github.com/fsnotify/fsnotify/issues/18)
 	dirsErr := filepath.WalkDir(watchDir, func(path string, entry fs.DirEntry, err error) error {
-		// ignore hidden directories, node_modules, symlinks, sockets, etc.
-		if !entry.IsDir() || entry.Name() == "node_modules" || strings.HasPrefix(entry.Name(), ".") {
+		// ignore access failures and non-dir entries
+		if err != nil || !entry.IsDir() {
 			return nil
+		}
+
+		// skip traversing hidden directories and node_modules
+		if strings.HasPrefix(entry.Name(), ".") || entry.Name() == "node_modules" {
+			return filepath.SkipDir
 		}
 
 		return watcher.Add(path)

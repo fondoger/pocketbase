@@ -1,6 +1,7 @@
 package cmd_test
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/pocketbase/pocketbase/cmd"
@@ -397,6 +398,66 @@ func TestSuperuserOTPCommand(t *testing.T) {
 			otps, _ := app.FindAllOTPsByRecord(superuser)
 			if total := len(otps); total != 1 {
 				t.Fatalf("Expected 1 OTP, got %d", total)
+			}
+		})
+	}
+}
+
+func TestSuperuserIPsCommand(t *testing.T) {
+	app, _ := tests.NewTestApp()
+	defer app.Cleanup()
+
+	scenarios := []struct {
+		name        string
+		ips         []string
+		expectError bool
+	}{
+		{
+			"no ips",
+			nil,
+			false,
+		},
+		{
+			"invalid ips",
+			[]string{"127.0.0.1", "invalid"},
+			true,
+		},
+		{
+			"valid ips",
+			[]string{"127.0.0.1", "::1", "127.0.0.1/24"},
+			false,
+		},
+	}
+
+	for _, s := range scenarios {
+		t.Run(s.name, func(t *testing.T) {
+			args := []string{"ips"}
+			args = append(args, s.ips...)
+
+			command := cmd.NewSuperuserCommand(app)
+			command.SetArgs(args)
+
+			err := command.Execute()
+
+			hasErr := err != nil
+			if s.expectError != hasErr {
+				t.Fatalf("Expected hasErr %v, got %v (%v)", s.expectError, hasErr, err)
+			}
+
+			if hasErr {
+				return
+			}
+
+			settingIPs := app.Settings().SuperuserIPs
+
+			if len(settingIPs) != len(s.ips) {
+				t.Fatalf("Expected %d ips, got %d (%v)", len(s.ips), len(settingIPs), settingIPs)
+			}
+
+			for _, ip := range settingIPs {
+				if !slices.Contains(s.ips, ip) {
+					t.Fatalf("Missing expected ip %q (%v)", ip, settingIPs)
+				}
 			}
 		})
 	}

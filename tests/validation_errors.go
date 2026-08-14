@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	validation "github.com/go-ozzo/ozzo-validation/v4"
+	validation "github.com/pocketbase/ozzo-validation/v4"
 )
 
 // TestValidationErrors checks whether the provided rawErrors are

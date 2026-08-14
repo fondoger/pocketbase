@@ -169,6 +169,12 @@ func TestFetch(t *testing.T) {
 			nil,
 		},
 		{
+			"matching kid (no alg)",
+			"abc",
+			true,
+			nil,
+		},
+		{
 			"matching kid",
 			"def",
 			false,
@@ -276,7 +282,7 @@ func TestValidateTokenSignature(t *testing.T) {
 			true,
 		},
 		{
-			"invlaid token",
+			"invalid token",
 			"abc",
 			true,
 		},

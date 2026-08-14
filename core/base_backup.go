@@ -54,7 +54,13 @@ func (app *BaseApp) CreateBackup(ctx context.Context, name string) error {
 	event.Context = ctx
 	event.Name = name
 	// default root dir entries to exclude from the backup generation
-	event.Exclude = []string{LocalBackupsDirName, LocalTempDirName, LocalAutocertCacheDirName, lostFoundDirName}
+	event.Exclude = []string{
+		LocalBackupsDirName,
+		LocalTempDirName,
+		LocalNotifyDirName,
+		LocalAutocertCacheDirName,
+		lostFoundDirName,
+	}
 
 	return app.OnBackupCreate().Trigger(event, func(e *BackupEvent) error {
 		// generate a default name if missing
@@ -69,7 +75,7 @@ func (app *BaseApp) CreateBackup(ctx context.Context, name string) error {
 			return fmt.Errorf("failed to create a temp dir: %w", err)
 		}
 
-		// archive pb_data in a temp directory, exluding the "backups" and the temp dirs
+		// archive pb_data in a temp directory, excluding the "backups" and the temp dirs
 		//
 		// run in transaction to temporary block other writes (transactions uses the NonconcurrentDB connection)
 		// ---
@@ -138,9 +144,9 @@ func (app *BaseApp) CreateBackup(ctx context.Context, name string) error {
 //
 //  4. Move the extracted dir content to the app "pb_data".
 //
-//  5. Restart the app (on successful app bootstap it will also remove the old pb_data).
+//  5. Restart the app (on successful app bootstrap it will also remove the old pb_data).
 //
-// If a failure occure during the restore process the dir changes are reverted.
+// If a failure occur during the restore process the dir changes are reverted.
 // If for whatever reason the revert is not possible, it panics.
 //
 // Note that if your pb_data has custom network mounts as subdirectories, then
@@ -316,6 +322,19 @@ func (app *BaseApp) registerAutobackupHooks() {
 					slog.String("name", name),
 					slog.String("error", err.Error()),
 				)
+
+				alertError := sendSystemAlertToAllSuperusers(
+					app,
+					"Autobackup failure",
+					"Failed to create/upload automated backup. Raw error:\n"+err.Error(),
+				)
+				if alertError != nil {
+					app.Logger().Warn(
+						"[Backup cron] Failed to send backup error alerts",
+						slog.String("name", name),
+						slog.String("error", alertError.Error()),
+					)
+				}
 			}
 
 			maxKeep := app.Settings().Backups.CronMaxKeep

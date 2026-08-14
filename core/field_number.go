@@ -2,10 +2,9 @@ package core
 
 import (
 	"context"
-	"fmt"
 	"math"
 
-	validation "github.com/go-ozzo/ozzo-validation/v4"
+	validation "github.com/pocketbase/ozzo-validation/v4"
 	"github.com/pocketbase/pocketbase/core/validators"
 	"github.com/spf13/cast"
 )
@@ -21,6 +20,12 @@ const FieldTypeNumber = "number"
 var (
 	_ Field        = (*NumberField)(nil)
 	_ SetterFinder = (*NumberField)(nil)
+)
+
+var (
+	onlyIntValidationError   = validation.NewError("validation_only_int_constraint", "Decimal numbers are not allowed")
+	minNumberValidationError = validation.NewError("validation_min_number_constraint", "Must be greater or equal than {{.min}}")
+	maxNumberValidationError = validation.NewError("validation_max_number_constraint", "Must be less or equal than {{.max}}")
 )
 
 // NumberField defines "number" type field for storing numeric (float64) value.
@@ -48,11 +53,15 @@ type NumberField struct {
 	// Hidden hides the field from the API response.
 	Hidden bool `form:"hidden" json:"hidden"`
 
+	// ---
+
 	// Presentable hints the Dashboard UI to use the underlying
 	// field record value in the relation preview label.
 	Presentable bool `form:"presentable" json:"presentable"`
 
-	// ---
+	// Help is an extra text explaining what the field is about.
+	// It is usually shown in Dashboard UI under the field input.
+	Help string `form:"help" json:"help"`
 
 	// Min specifies the min allowed field value.
 	//
@@ -147,15 +156,15 @@ func (f *NumberField) ValidateValue(ctx context.Context, app App, record *Record
 	}
 
 	if f.OnlyInt && val != float64(int64(val)) {
-		return validation.NewError("validation_only_int_constraint", "Decimal numbers are not allowed")
+		return onlyIntValidationError
 	}
 
 	if f.Min != nil && val < *f.Min {
-		return validation.NewError("validation_min_number_constraint", fmt.Sprintf("Must be larger than %f", *f.Min))
+		return minNumberValidationError.SetParams(map[string]any{"min": *f.Min})
 	}
 
 	if f.Max != nil && val > *f.Max {
-		return validation.NewError("validation_max_number_constraint", fmt.Sprintf("Must be less than %f", *f.Max))
+		return maxNumberValidationError.SetParams(map[string]any{"max": *f.Max})
 	}
 
 	return nil
@@ -167,12 +176,20 @@ func (f *NumberField) ValidateSettings(ctx context.Context, app App, collection 
 		validation.By(f.checkOnlyInt),
 	}
 	if f.Min != nil && f.Max != nil {
-		maxRules = append(maxRules, validation.Min(*f.Min))
+		maxRules = append(maxRules, validation.By(func(value interface{}) error {
+			// similar to validation.Min but doesn't ignore zero values
+			v, _ := value.(*float64)
+			if v == nil || f.Min == nil || *v >= *f.Min {
+				return nil
+			}
+			return minNumberValidationError.SetParams(map[string]any{"min": *f.Min})
+		}))
 	}
 
 	return validation.ValidateStruct(f,
 		validation.Field(&f.Id, validation.By(DefaultFieldIdValidationRule)),
 		validation.Field(&f.Name, validation.By(DefaultFieldNameValidationRule)),
+		validation.Field(&f.Help, validation.By(DefaultFieldHelpValidationRule)),
 		validation.Field(&f.Min, validation.By(f.checkOnlyInt)),
 		validation.Field(&f.Max, maxRules...),
 	)
@@ -185,7 +202,7 @@ func (f *NumberField) checkOnlyInt(value any) error {
 	}
 
 	if *v != float64(int64(*v)) {
-		return validation.NewError("validation_only_int_constraint", "Decimal numbers are not allowed.")
+		return onlyIntValidationError
 	}
 
 	return nil

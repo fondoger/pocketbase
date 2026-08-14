@@ -11,7 +11,7 @@ import (
 
 var ErrRequestEntityTooLarge = router.NewApiError(http.StatusRequestEntityTooLarge, "Request entity too large", nil)
 
-const DefaultMaxBodySize int64 = 32 << 20
+const DefaultMaxBodySize int64 = 32 << 20 // @todo consider replacing with router.DefaultMaxMemory
 
 const (
 	DefaultBodyLimitMiddlewareId       = "pbBodyLimit"
@@ -112,9 +112,21 @@ func (r *limitedReader) Read(b []byte) (int, error) {
 	return n, nil
 }
 
+// explicit casts to ensure that the main struct methods will be invoked
+// (extra precautions in case of nested interface wrapping erasure)
+// ---
+
 func (r *limitedReader) Reread() {
-	rr, ok := r.ReadCloser.(router.Rereader)
+	rereader, ok := r.ReadCloser.(router.Rereader)
 	if ok {
-		rr.Reread()
+		rereader.Reread()
 	}
+}
+
+func (r *limitedReader) Close() error {
+	closer, ok := r.ReadCloser.(io.Closer)
+	if ok {
+		return closer.Close()
+	}
+	return nil
 }

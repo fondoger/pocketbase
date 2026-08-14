@@ -18,7 +18,7 @@ import (
 	"strings"
 	"testing"
 
-	validation "github.com/go-ozzo/ozzo-validation/v4"
+	validation "github.com/pocketbase/ozzo-validation/v4"
 	"github.com/pocketbase/pocketbase/tools/router"
 )
 
@@ -336,7 +336,7 @@ func TestEventSetAllGetAll(t *testing.T) {
 	event := router.Event{}
 	event.SetAll(data)
 
-	// modify the data to ensure that the map was shallow coppied
+	// modify the data to ensure that the map was shallow copied
 	data["c"] = 789
 
 	result := event.GetAll()
@@ -354,19 +354,19 @@ func TestEventString(t *testing.T) {
 	scenarios := []testResponseWriteScenario[string]{
 		{
 			name:            "no explicit content-type",
-			status:          123,
+			status:          234,
 			headers:         nil,
 			body:            "test",
-			expectedStatus:  123,
+			expectedStatus:  234,
 			expectedHeaders: map[string]string{"content-type": "text/plain; charset=utf-8"},
 			expectedBody:    "test",
 		},
 		{
 			name:            "with explicit content-type",
-			status:          123,
+			status:          234,
 			headers:         map[string]string{"content-type": "text/test"},
 			body:            "test",
-			expectedStatus:  123,
+			expectedStatus:  234,
 			expectedHeaders: map[string]string{"content-type": "text/test"},
 			expectedBody:    "test",
 		},
@@ -383,19 +383,19 @@ func TestEventHTML(t *testing.T) {
 	scenarios := []testResponseWriteScenario[string]{
 		{
 			name:            "no explicit content-type",
-			status:          123,
+			status:          234,
 			headers:         nil,
 			body:            "test",
-			expectedStatus:  123,
+			expectedStatus:  234,
 			expectedHeaders: map[string]string{"content-type": "text/html; charset=utf-8"},
 			expectedBody:    "test",
 		},
 		{
 			name:            "with explicit content-type",
-			status:          123,
+			status:          234,
 			headers:         map[string]string{"content-type": "text/test"},
 			body:            "test",
-			expectedStatus:  123,
+			expectedStatus:  234,
 			expectedHeaders: map[string]string{"content-type": "text/test"},
 			expectedBody:    "test",
 		},

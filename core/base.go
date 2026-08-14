@@ -47,8 +47,9 @@ const (
 
 	LocalStorageDirName       string = "storage"
 	LocalBackupsDirName       string = "backups"
-	LocalTempDirName          string = ".pb_temp_to_delete" // temp pb_data sub directory that will be deleted on each app.Bootstrap()
 	LocalAutocertCacheDirName string = ".autocert_cache"
+	LocalNotifyDirName        string = ".notify"            // optional watched directory that is used as a cross-platform workaround for synchronizing various runtime states between multiple PocketBase instances pointing to the same pb_data
+	LocalTempDirName          string = ".pb_temp_to_delete" // temp pb_data sub directory that will be deleted on each app.Bootstrap()
 
 	// @todo consider removing after backups refactoring
 	lostFoundDirName string = "lost+found"
@@ -1302,7 +1303,7 @@ var sqlLogReplacements = []struct {
 	{regexp.MustCompile(`<nil>`), "NULL"},
 }
 
-// normalizeSQLLog replaces common query builder charactes with their plain SQL version for easier debugging.
+// normalizeSQLLog replaces common query builder characters with their plain SQL version for easier debugging.
 // The query is still not suitable for execution and should be used only for log and debug purposes
 // (the normalization is done here to avoid breaking changes in dbx).
 func normalizeSQLLog(sql string) string {
@@ -1466,6 +1467,7 @@ func (app *BaseApp) registerBaseHooks() {
 	app.registerMFAHooks()
 	app.registerOTPHooks()
 	app.registerAuthOriginHooks()
+	app.registerNotifyWatcherHooks()
 }
 
 // getLoggerMinLevel returns the logger min level based on the
@@ -1540,7 +1542,7 @@ func (app *BaseApp) initLogger() error {
 		},
 	})
 
-	go func() {
+	routine.FireAndForget(func() {
 		ctx := context.Background()
 
 		for {
@@ -1551,7 +1553,7 @@ func (app *BaseApp) initLogger() error {
 				handler.WriteAll(ctx)
 			}
 		}
-	}()
+	})
 
 	app.logger = slog.New(handler)
 

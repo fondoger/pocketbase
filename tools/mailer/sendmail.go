@@ -49,6 +49,14 @@ func (c *Sendmail) send(m *Message) error {
 	headers.Set("Content-Type", "text/html; charset=UTF-8")
 	headers.Set("To", strings.Join(toAddresses, ","))
 
+	if len(m.Cc) > 0 {
+		headers.Set("Cc", strings.Join(addressesToStrings(m.Cc, false), ","))
+	}
+
+	if len(m.Bcc) > 0 {
+		headers.Set("Bcc", strings.Join(addressesToStrings(m.Bcc, false), ","))
+	}
+
 	cmdPath, err := findSendmailPath()
 	if err != nil {
 		return err
@@ -75,7 +83,7 @@ func (c *Sendmail) send(m *Message) error {
 	}
 	// ---
 
-	sendmail := exec.Command(cmdPath, strings.Join(toAddresses, ","))
+	sendmail := exec.Command(cmdPath, "-i", "-t")
 	sendmail.Stdin = &buffer
 
 	return sendmail.Run()

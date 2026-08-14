@@ -6,7 +6,7 @@ import (
 	"regexp"
 	"strings"
 
-	validation "github.com/go-ozzo/ozzo-validation/v4"
+	validation "github.com/pocketbase/ozzo-validation/v4"
 	"github.com/pocketbase/pocketbase/core/validators"
 	"github.com/pocketbase/pocketbase/tools/list"
 )
@@ -182,6 +182,26 @@ type RecordInterceptor interface {
 		actionName string,
 		actionFunc func() error,
 	) error
+}
+
+// DefaultFieldHelpValidationRule performs base validation on a field's "help" value.
+func DefaultFieldHelpValidationRule(value any) error {
+	v, ok := value.(string)
+	if !ok {
+		return validators.ErrUnsupportedValueType
+	}
+
+	rules := []validation.Rule{
+		validation.Length(1, 300),
+	}
+
+	for _, r := range rules {
+		if err := r.Validate(v); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // DefaultFieldIdValidationRule performs base validation on a field id value.

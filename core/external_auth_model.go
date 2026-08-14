@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	validation "github.com/go-ozzo/ozzo-validation/v4"
+	validation "github.com/pocketbase/ozzo-validation/v4"
 	"github.com/pocketbase/pocketbase/tools/auth"
 	"github.com/pocketbase/pocketbase/tools/hook"
 	"github.com/pocketbase/pocketbase/tools/types"
@@ -134,6 +134,44 @@ func (app *BaseApp) registerExternalAuthHooks() {
 			}
 
 			return e.Next()
+		},
+		Priority: 99,
+	})
+
+	// delete all pre-existing external auths on verified upgrade
+	app.OnRecordUpdateExecute().Bind(&hook.Handler[*RecordEvent]{
+		Func: func(e *RecordEvent) error {
+			if !e.Record.Collection().IsAuth() {
+				return e.Next()
+			}
+
+			hasUpgradedVerified := !e.Record.Original().IsNew() && !e.Record.Original().Verified() && e.Record.Verified()
+
+			if !hasUpgradedVerified {
+				return e.Next()
+			}
+
+			originalApp := e.App
+			return e.App.RunInTransaction(func(txApp App) error {
+				e.App = txApp
+				defer func() { e.App = originalApp }()
+
+				externalAuths, err := txApp.FindAllExternalAuthsByRecord(e.Record)
+				if err != nil {
+					return err
+				}
+				if len(externalAuths) > 0 {
+					// delete all pre-existing external auths
+					if err := txApp.DeleteAllExternalAuthsByRecord(e.Record); err != nil {
+						return err
+					}
+
+					// force refresh tokens reset (if not already)
+					e.Record.RefreshTokenKey()
+				}
+
+				return e.Next()
+			})
 		},
 		Priority: 99,
 	})

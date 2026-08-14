@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -761,6 +760,46 @@ func TestCollectionSerialize(t *testing.T) {
 	}
 }
 
+func TestCollectionSerializeNotModifyingCache(t *testing.T) {
+	t.Parallel()
+
+	app, _ := tests.NewTestApp()
+	defer app.Cleanup()
+
+	c, err := app.FindCachedCollectionByNameOrId("users")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = json.Marshal(c)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	redactedFields := map[string]string{
+		"AuthToken.Secret":          c.AuthToken.Secret,
+		"FileToken.Secret":          c.FileToken.Secret,
+		"PasswordResetToken.Secret": c.PasswordResetToken.Secret,
+		"EmailChangeToken.Secret":   c.EmailChangeToken.Secret,
+		"VerificationToken.Secret":  c.VerificationToken.Secret,
+	}
+
+	if len(c.OAuth2.Providers) == 0 {
+		t.Fatal("Expected at least one users OAuth2 provider, got 0")
+	}
+	for _, p := range c.OAuth2.Providers {
+		redactedFields[p.Name+".ClientSecret"] = p.ClientSecret
+	}
+
+	for k, v := range redactedFields {
+		t.Run(k, func(t *testing.T) {
+			if v == "" {
+				t.Fatalf("Expected the redacted field %q to remain unmodified after serialization, got empty value", k)
+			}
+		})
+	}
+}
+
 func TestCollectionDBExport(t *testing.T) {
 	t.Parallel()
 
@@ -778,19 +817,19 @@ func TestCollectionDBExport(t *testing.T) {
 	}{
 		{
 			"unknown",
-			`{"createRule":"1=3","created":"2024-07-01 01:02:03.456Z","deleteRule":"1=5","fields":[{"hidden":false,"id":"f1_id","name":"f1","presentable":false,"required":false,"system":true,"type":"bool"},{"hidden":false,"id":"f2_id","name":"f2","presentable":false,"required":true,"system":false,"type":"bool"}],"id":"test_id","indexes":["CREATE INDEX idx1 on test_name(id)","CREATE INDEX idx2 on test_name(id)"],"listRule":"1=1","name":"test_name","options":"{}","system":true,"type":"unknown","updateRule":"1=4","updated":"2024-07-01 01:02:03.456Z","viewRule":"1=7"}`,
+			`{"createRule":"1=3","created":"2024-07-01 01:02:03.456Z","deleteRule":"1=5","fields":[{"help":"","hidden":false,"id":"f1_id","name":"f1","presentable":false,"required":false,"system":true,"type":"bool"},{"help":"","hidden":false,"id":"f2_id","name":"f2","presentable":false,"required":true,"system":false,"type":"bool"}],"id":"test_id","indexes":["CREATE INDEX idx1 on test_name(id)","CREATE INDEX idx2 on test_name(id)"],"listRule":"1=1","name":"test_name","options":"{}","system":true,"type":"unknown","updateRule":"1=4","updated":"2024-07-01 01:02:03.456Z","viewRule":"1=7"}`,
 		},
 		{
 			core.CollectionTypeBase,
-			`{"createRule":"1=3","created":"2024-07-01 01:02:03.456Z","deleteRule":"1=5","fields":[{"hidden":false,"id":"f1_id","name":"f1","presentable":false,"required":false,"system":true,"type":"bool"},{"hidden":false,"id":"f2_id","name":"f2","presentable":false,"required":true,"system":false,"type":"bool"}],"id":"test_id","indexes":["CREATE INDEX idx1 on test_name(id)","CREATE INDEX idx2 on test_name(id)"],"listRule":"1=1","name":"test_name","options":"{}","system":true,"type":"base","updateRule":"1=4","updated":"2024-07-01 01:02:03.456Z","viewRule":"1=7"}`,
+			`{"createRule":"1=3","created":"2024-07-01 01:02:03.456Z","deleteRule":"1=5","fields":[{"help":"","hidden":false,"id":"f1_id","name":"f1","presentable":false,"required":false,"system":true,"type":"bool"},{"help":"","hidden":false,"id":"f2_id","name":"f2","presentable":false,"required":true,"system":false,"type":"bool"}],"id":"test_id","indexes":["CREATE INDEX idx1 on test_name(id)","CREATE INDEX idx2 on test_name(id)"],"listRule":"1=1","name":"test_name","options":"{}","system":true,"type":"base","updateRule":"1=4","updated":"2024-07-01 01:02:03.456Z","viewRule":"1=7"}`,
 		},
 		{
 			core.CollectionTypeView,
-			`{"createRule":"1=3","created":"2024-07-01 01:02:03.456Z","deleteRule":"1=5","fields":[{"hidden":false,"id":"f1_id","name":"f1","presentable":false,"required":false,"system":true,"type":"bool"},{"hidden":false,"id":"f2_id","name":"f2","presentable":false,"required":true,"system":false,"type":"bool"}],"id":"test_id","indexes":["CREATE INDEX idx1 on test_name(id)","CREATE INDEX idx2 on test_name(id)"],"listRule":"1=1","name":"test_name","options":{"viewQuery":"select 1"},"system":true,"type":"view","updateRule":"1=4","updated":"2024-07-01 01:02:03.456Z","viewRule":"1=7"}`,
+			`{"createRule":"1=3","created":"2024-07-01 01:02:03.456Z","deleteRule":"1=5","fields":[{"help":"","hidden":false,"id":"f1_id","name":"f1","presentable":false,"required":false,"system":true,"type":"bool"},{"help":"","hidden":false,"id":"f2_id","name":"f2","presentable":false,"required":true,"system":false,"type":"bool"}],"id":"test_id","indexes":["CREATE INDEX idx1 on test_name(id)","CREATE INDEX idx2 on test_name(id)"],"listRule":"1=1","name":"test_name","options":{"viewQuery":"select 1"},"system":true,"type":"view","updateRule":"1=4","updated":"2024-07-01 01:02:03.456Z","viewRule":"1=7"}`,
 		},
 		{
 			core.CollectionTypeAuth,
-			`{"createRule":"1=3","created":"2024-07-01 01:02:03.456Z","deleteRule":"1=5","fields":[{"hidden":false,"id":"f1_id","name":"f1","presentable":false,"required":false,"system":true,"type":"bool"},{"hidden":false,"id":"f2_id","name":"f2","presentable":false,"required":true,"system":false,"type":"bool"}],"id":"test_id","indexes":["CREATE INDEX idx1 on test_name(id)","CREATE INDEX idx2 on test_name(id)"],"listRule":"1=1","name":"test_name","options":{"authRule":null,"manageRule":"1=6","authAlert":{"enabled":false,"emailTemplate":{"subject":"","body":""}},"oauth2":{"providers":null,"mappedFields":{"id":"","name":"","username":"","avatarURL":""},"enabled":false},"passwordAuth":{"enabled":false,"identityFields":null},"mfa":{"enabled":false,"duration":0,"rule":""},"otp":{"enabled":false,"duration":0,"length":0,"emailTemplate":{"subject":"","body":""}},"authToken":{"duration":0},"passwordResetToken":{"duration":0},"emailChangeToken":{"duration":0},"verificationToken":{"duration":0},"fileToken":{"duration":0},"verificationTemplate":{"subject":"","body":""},"resetPasswordTemplate":{"subject":"","body":""},"confirmEmailChangeTemplate":{"subject":"","body":""}},"system":true,"type":"auth","updateRule":"1=4","updated":"2024-07-01 01:02:03.456Z","viewRule":"1=7"}`,
+			`{"createRule":"1=3","created":"2024-07-01 01:02:03.456Z","deleteRule":"1=5","fields":[{"help":"","hidden":false,"id":"f1_id","name":"f1","presentable":false,"required":false,"system":true,"type":"bool"},{"help":"","hidden":false,"id":"f2_id","name":"f2","presentable":false,"required":true,"system":false,"type":"bool"}],"id":"test_id","indexes":["CREATE INDEX idx1 on test_name(id)","CREATE INDEX idx2 on test_name(id)"],"listRule":"1=1","name":"test_name","options":{"authRule":null,"manageRule":"1=6","authAlert":{"enabled":false,"emailTemplate":{"subject":"","body":""}},"oauth2":{"providers":null,"mappedFields":{"id":"","name":"","username":"","avatarURL":""},"enabled":false},"passwordAuth":{"enabled":false,"identityFields":null},"mfa":{"enabled":false,"duration":0,"rule":""},"otp":{"enabled":false,"duration":0,"length":0,"emailTemplate":{"subject":"","body":""}},"authToken":{"duration":0},"passwordResetToken":{"duration":0},"emailChangeToken":{"duration":0},"verificationToken":{"duration":0},"fileToken":{"duration":0},"verificationTemplate":{"subject":"","body":""},"resetPasswordTemplate":{"subject":"","body":""},"confirmEmailChangeTemplate":{"subject":"","body":""}},"system":true,"type":"auth","updateRule":"1=4","updated":"2024-07-01 01:02:03.456Z","viewRule":"1=7"}`,
 		},
 	}
 
@@ -856,15 +895,9 @@ func TestCollectionIndexHelpers(t *testing.T) {
 	c.AddIndex("idx3", false, "colA", "")
 	c.AddIndex("idx3", false, "colB", "") // should overwrite the previous one
 
-	/* SQLite:
 	idx1 := "CREATE INDEX `idx1` ON `test` (colA,colB) WHERE colA != 1"
 	idx2 := "CREATE UNIQUE INDEX `idx2` ON `test` (colA)"
 	idx3 := "CREATE INDEX `idx3` ON `test` (colB)"
-	*/
-	// PostgreSQL:
-	idx1 := `CREATE INDEX "idx1" ON "test" (colA,colB) WHERE colA != 1`
-	idx2 := `CREATE UNIQUE INDEX "idx2" ON "test" (colA)`
-	idx3 := `CREATE INDEX "idx3" ON "test" (colB)`
 
 	checkIndexes(t, c.Indexes, []string{idx1, idx2, idx3})
 
@@ -1543,127 +1576,77 @@ func TestCollectionSaveViewWrapping(t *testing.T) {
 
 	viewName := "test_wrapping"
 
+	// note: some of the queries use "limit 0" because the tested field value could be empty
+	// which will trigger the extra sample records validation that are not important for this test
 	scenarios := []struct {
 		name     string
 		query    string
 		expected string
 	}{
 		{
-			"no wrapping - text field",
-			"select text as id, bool from demo1",
-			/* SQLite:
-			"CREATE VIEW `test_wrapping` AS SELECT * FROM (select text as id, bool from demo1)",
-			*/
-			// PostgreSQL:
-			`CREATE VIEW "test_wrapping" AS  SELECT id, bool FROM ( SELECT demo1.text AS id, demo1.bool FROM demo1) unnamed_subquery;`,
+			"no wrapping - id field",
+			"select id, bool from demo1",
+			"CREATE VIEW `test_wrapping` AS SELECT * FROM (select id, bool from demo1)",
 		},
 		{
-			"no wrapping - id field",
-			"select text as id, bool from demo1",
-			/* SQLite:
-			"CREATE VIEW `test_wrapping` AS SELECT * FROM (select text as id, bool from demo1)",
-			*/
-			// PostgreSQL:
-			`CREATE VIEW "test_wrapping" AS  SELECT id, bool FROM ( SELECT demo1.text AS id, demo1.bool FROM demo1) unnamed_subquery;`,
+			"no wrapping - text field",
+			"select text as id, bool from demo1 limit 0",
+			"CREATE VIEW `test_wrapping` AS SELECT * FROM (select text as id, bool from demo1 limit 0)",
 		},
 		{
 			"no wrapping - relation field",
-			"select rel_one as id, bool from demo1",
-			/* SQLite:
-			"CREATE VIEW `test_wrapping` AS SELECT * FROM (select rel_one as id, bool from demo1)",
-			*/
-			// PostgreSQL:
-			`CREATE VIEW "test_wrapping" AS  SELECT id, bool FROM ( SELECT demo1.rel_one AS id, demo1.bool FROM demo1) unnamed_subquery;`,
+			"select rel_one as id, bool from demo1 limit 0",
+			"CREATE VIEW `test_wrapping` AS SELECT * FROM (select rel_one as id, bool from demo1 limit 0)",
 		},
 		{
 			"no wrapping - select field",
-			"select select_many as id, bool from demo1",
-			/* SQLite:
-			"CREATE VIEW `test_wrapping` AS SELECT * FROM (select select_many as id, bool from demo1)",
-			*/
-			// PostgreSQL:
-			`CREATE VIEW "test_wrapping" AS  SELECT id, bool FROM ( SELECT demo1.select_many AS id, demo1.bool FROM demo1) unnamed_subquery;`,
+			"select select_many as id, bool from demo1 limit 0",
+			"CREATE VIEW `test_wrapping` AS SELECT * FROM (select select_many as id, bool from demo1 limit 0)",
 		},
 		{
 			"no wrapping - email field",
-			"select email as id, bool from demo1",
-			/* SQLite:
-			"CREATE VIEW `test_wrapping` AS SELECT * FROM (select email as id, bool from demo1)",
-			*/
-			// PostgreSQL:
-			`CREATE VIEW "test_wrapping" AS  SELECT id, bool FROM ( SELECT demo1.email AS id, demo1.bool FROM demo1) unnamed_subquery;`,
+			"select email as id, bool from demo1 limit 0",
+			"CREATE VIEW `test_wrapping` AS SELECT * FROM (select email as id, bool from demo1 limit 0)",
 		},
 		{
 			"no wrapping - datetime field",
-			"select datetime as id, bool from demo1",
-			/* SQLite:
-			"CREATE VIEW `test_wrapping` AS SELECT * FROM (select datetime as id, bool from demo1)",
-			*/
-			// PostgreSQL:
-			`CREATE VIEW "test_wrapping" AS  SELECT id, bool FROM ( SELECT demo1.datetime AS id, demo1.bool FROM demo1) unnamed_subquery;`,
+			"select datetime as id, bool from demo1 limit 0",
+			"CREATE VIEW `test_wrapping` AS SELECT * FROM (select datetime as id, bool from demo1 limit 0)",
 		},
 		{
 			"no wrapping - url field",
-			"select url as id, bool from demo1",
-			/* SQLite:
-			"CREATE VIEW `test_wrapping` AS SELECT * FROM (select url as id, bool from demo1)",
-			*/
-			// PostgreSQL:
-			`CREATE VIEW "test_wrapping" AS  SELECT id, bool FROM ( SELECT demo1.url AS id, demo1.bool FROM demo1) unnamed_subquery;`,
+			"select url as id, bool from demo1 limit 0",
+			"CREATE VIEW `test_wrapping` AS SELECT * FROM (select url as id, bool from demo1 limit 0)",
 		},
 		{
 			"wrapping - bool field",
-			"select bool as id, text as txt, url from demo1",
-			/* SQLite:
-			"CREATE VIEW `test_wrapping` AS SELECT * FROM (SELECT CAST(`id` as TEXT) `id`,`txt`,`url` FROM (select bool as id, text as txt, url from demo1))",
-			*/
-			// PostgreSQL:
-			`CREATE VIEW "test_wrapping" AS  SELECT id, txt, url FROM ( SELECT (unnamed_subquery_1.id)::text AS id, unnamed_subquery_1.txt, unnamed_subquery_1.url FROM ( SELECT demo1.bool AS id, demo1.text AS txt, demo1.url FROM demo1) unnamed_subquery_1) unnamed_subquery;`,
+			"select bool as id, text as txt, url from demo1 limit 0",
+			"CREATE VIEW `test_wrapping` AS SELECT * FROM (SELECT CAST(`id` as TEXT) `id`,`txt`,`url` FROM (select bool as id, text as txt, url from demo1 limit 0))",
 		},
 		{
 			"wrapping - bool field (different order)",
-			"select text as txt, url, bool as id from demo1",
-			/* SQLite:
-			"CREATE VIEW `test_wrapping` AS SELECT * FROM (SELECT `txt`,`url`,CAST(`id` as TEXT) `id` FROM (select text as txt, url, bool as id from demo1))",
-			*/
-			// PostgreSQL:
-			`CREATE VIEW "test_wrapping" AS  SELECT txt, url, id FROM ( SELECT unnamed_subquery_1.txt, unnamed_subquery_1.url, (unnamed_subquery_1.id)::text AS id FROM ( SELECT demo1.text AS txt, demo1.url, demo1.bool AS id FROM demo1) unnamed_subquery_1) unnamed_subquery;`,
+			"select text as txt, url, bool as id from demo1 limit 0",
+			"CREATE VIEW `test_wrapping` AS SELECT * FROM (SELECT `txt`,`url`,CAST(`id` as TEXT) `id` FROM (select text as txt, url, bool as id from demo1 limit 0))",
 		},
 		{
 			"wrapping - json field",
-			"select json as id, text, url from demo1",
-			/* SQLite:
-			"CREATE VIEW `test_wrapping` AS SELECT * FROM (SELECT CAST(`id` as TEXT) `id`,`text`,`url` FROM (select json as id, text, url from demo1))",
-			*/
-			// PostgreSQL:
-			`CREATE VIEW "test_wrapping" AS  SELECT id, text, url FROM ( SELECT (unnamed_subquery_1.id)::text AS id, unnamed_subquery_1.text, unnamed_subquery_1.url FROM ( SELECT demo1."json" AS id, demo1.text, demo1.url FROM demo1) unnamed_subquery_1) unnamed_subquery;`,
+			"select json as id, text, url from demo1 limit 0",
+			"CREATE VIEW `test_wrapping` AS SELECT * FROM (SELECT CAST(`id` as TEXT) `id`,`text`,`url` FROM (select json as id, text, url from demo1 limit 0))",
 		},
 		{
 			"wrapping - numeric id",
 			"select 1 as id",
-			/* SQLite:
 			"CREATE VIEW `test_wrapping` AS SELECT * FROM (SELECT CAST(`id` as TEXT) `id` FROM (select 1 as id))",
-			*/
-			// PostgreSQL:
-			`CREATE VIEW "test_wrapping" AS  SELECT id FROM ( SELECT (unnamed_subquery_1.id)::text AS id FROM ( SELECT 1 AS id) unnamed_subquery_1) unnamed_subquery;`,
 		},
 		{
 			"wrapping - expresion",
 			"select ('test') as id",
-			/* SQLite:
 			"CREATE VIEW `test_wrapping` AS SELECT * FROM (SELECT CAST(`id` as TEXT) `id` FROM (select ('test') as id))",
-			*/
-			// PostgreSQL:
-			`CREATE VIEW "test_wrapping" AS  SELECT id FROM ( SELECT 'test'::text AS id) unnamed_subquery;`,
 		},
 		{
 			"no wrapping - cast as text",
 			"select cast('test' as text) as id",
-			/* SQLite:
 			"CREATE VIEW `test_wrapping` AS SELECT * FROM (select cast('test' as text) as id)",
-			*/
-			// PostgreSQL:
-			`CREATE VIEW "test_wrapping" AS  SELECT id FROM ( SELECT 'test'::text AS id) unnamed_subquery;`,
 		},
 	}
 
@@ -1682,23 +1665,53 @@ func TestCollectionSaveViewWrapping(t *testing.T) {
 
 			var sql string
 
-			/* SQLite:
 			rowErr := app.ConcurrentDB().NewQuery("SELECT sql FROM sqlite_master WHERE type='view' AND name={:name}").
-				Bind(dbx.Params{"name": viewName}).
-				Row(&sql)
-			*/
-			// PostgreSQL:
-			rowErr := app.ConcurrentDB().NewQuery("SELECT definition AS sql FROM pg_views WHERE viewname={:name} and schemaname=current_schema()").
 				Bind(dbx.Params{"name": viewName}).
 				Row(&sql)
 			if rowErr != nil {
 				t.Fatalf("Failed to retrieve view sql: %v", rowErr)
 			}
-			sql = fmt.Sprintf(`CREATE VIEW "%s" AS %s`, viewName, regexp.MustCompile(`\s+`).ReplaceAllString(sql, " "))
 
 			if sql != s.expected {
 				t.Fatalf("Expected query \n%v, \ngot \n%v", s.expected, sql)
 			}
 		})
+	}
+}
+
+func TestCollectionSaveIndexesTableNameNormalization(t *testing.T) {
+	t.Parallel()
+
+	app, _ := tests.NewTestApp()
+	defer app.Cleanup()
+
+	dummyCollection := core.NewBaseCollection("new_test")
+	dummyCollection.Fields.Add(&core.TextField{Name: "test"})
+	dummyCollection.Indexes = []string{
+		"create index `new_test_idx1` on `` (`test`) where 1=1",
+		"create index `new_test_idx2` on `test` (`test`) where 1=2",
+		"create index `new_test_idx3` on `someting_else` (`test`) where 1=3",
+	}
+
+	err := app.Save(dummyCollection)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// refetch a clean state
+	dummyCollection, err = app.FindCollectionByNameOrId(dummyCollection.Name)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(dummyCollection.Indexes) != 3 {
+		t.Fatalf("Expected 3 indexes, got %v", dummyCollection.Indexes)
+	}
+
+	for _, raw := range dummyCollection.Indexes {
+		parsed := dbutils.ParseIndex(raw)
+		if parsed.TableName != dummyCollection.Name {
+			t.Fatalf("Expected all indexes to have tableName %q, found %q:\n%s", dummyCollection.Name, parsed.TableName, raw)
+		}
 	}
 }

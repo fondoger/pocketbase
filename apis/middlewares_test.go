@@ -224,6 +224,22 @@ func TestRequireAuth(t *testing.T) {
 			ExpectedStatus:  200,
 			ExpectedContent: []string{"test123"},
 		},
+		{
+			Name:   "valid record auth token with Bearer case-insensitive prefix",
+			Method: http.MethodGet,
+			URL:    "/my/test",
+			Headers: map[string]string{
+				// regular user
+				"Authorization": "BeArEr eyJhbGciOiJIUzI1NiJ9.eyJpZCI6IjRxMXhsY2xtZmxva3UzMyIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoiX3BiX3VzZXJzX2F1dGhfIiwiZXhwIjoyNTI0NjA0NDYxLCJyZWZyZXNoYWJsZSI6dHJ1ZX0.ZT3F0Z3iM-xbGgSG3LEKiEzHrPHr8t8IuHLZGGNuxLo",
+			},
+			BeforeTestFunc: func(t testing.TB, app *tests.TestApp, e *core.ServeEvent) {
+				e.Router.GET("/my/test", func(e *core.RequestEvent) error {
+					return e.String(200, "test123")
+				}).Bind(apis.RequireAuth())
+			},
+			ExpectedStatus:  200,
+			ExpectedContent: []string{"test123"},
+		},
 	}
 
 	for _, scenario := range scenarios {
@@ -529,6 +545,99 @@ func TestRequireSameCollectionContextAuth(t *testing.T) {
 			},
 			ExpectedStatus:  403,
 			ExpectedContent: []string{`"data":{}`},
+			ExpectedEvents:  map[string]int{"*": 0},
+		},
+	}
+
+	for _, scenario := range scenarios {
+		scenario.Test(t)
+	}
+}
+
+func TestSuperuserIPsWhitelist(t *testing.T) {
+	t.Parallel()
+
+	setupWhitelist := func(superuserIPs ...string) func(t testing.TB, app *tests.TestApp, e *core.ServeEvent) {
+		return func(t testing.TB, app *tests.TestApp, e *core.ServeEvent) {
+			// allow loading a mock IP from the test scenario
+			app.Settings().TrustedProxy = core.TrustedProxyConfig{
+				Headers: []string{"x-test-ip"},
+			}
+
+			app.Settings().SuperuserIPs = superuserIPs
+
+			err := app.Save(app.Settings())
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			e.Router.GET("/my/test", func(e *core.RequestEvent) error {
+				return e.String(200, "test123")
+			})
+		}
+	}
+
+	scenarios := []tests.ApiScenario{
+		{
+			Name:            "guest with non-matching IP",
+			Method:          http.MethodGet,
+			URL:             "/my/test",
+			Headers:         map[string]string{"x-test-ip": "127.0.0.1"},
+			BeforeTestFunc:  setupWhitelist("0.0.0.0"),
+			ExpectedStatus:  200,
+			ExpectedContent: []string{"test123"},
+			ExpectedEvents:  map[string]int{"*": 0},
+		},
+		{
+			Name:   "regular user with non-matching IP",
+			Method: http.MethodGet,
+			URL:    "/my/test",
+			Headers: map[string]string{
+				"x-test-ip":     "127.0.0.1",
+				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6IjRxMXhsY2xtZmxva3UzMyIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoiX3BiX3VzZXJzX2F1dGhfIiwiZXhwIjoyNTI0NjA0NDYxLCJyZWZyZXNoYWJsZSI6dHJ1ZX0.ZT3F0Z3iM-xbGgSG3LEKiEzHrPHr8t8IuHLZGGNuxLo",
+			},
+			BeforeTestFunc:  setupWhitelist("0.0.0.0"),
+			ExpectedStatus:  200,
+			ExpectedContent: []string{"test123"},
+			ExpectedEvents:  map[string]int{"*": 0},
+		},
+		{
+			Name:   "superuser with non-matching IP",
+			Method: http.MethodGet,
+			URL:    "/my/test",
+			Headers: map[string]string{
+				"x-test-ip":     "127.0.0.1",
+				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6InN5d2JoZWNuaDQ2cmhtMCIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoicGJjXzMxNDI2MzU4MjMiLCJleHAiOjI1MjQ2MDQ0NjEsInJlZnJlc2hhYmxlIjp0cnVlfQ.UXgO3j-0BumcugrFjbd7j0M4MQvbrLggLlcu_YNGjoY",
+			},
+			BeforeTestFunc:  setupWhitelist("0.0.0.0"),
+			ExpectedStatus:  403,
+			ExpectedContent: []string{`"data":{}`},
+			ExpectedEvents:  map[string]int{"*": 0},
+		},
+		{
+			Name:   "superuser with matching IP",
+			Method: http.MethodGet,
+			URL:    "/my/test",
+			Headers: map[string]string{
+				"x-test-ip":     "127.0.0.1",
+				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6InN5d2JoZWNuaDQ2cmhtMCIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoicGJjXzMxNDI2MzU4MjMiLCJleHAiOjI1MjQ2MDQ0NjEsInJlZnJlc2hhYmxlIjp0cnVlfQ.UXgO3j-0BumcugrFjbd7j0M4MQvbrLggLlcu_YNGjoY",
+			},
+			BeforeTestFunc:  setupWhitelist("0.0.0.0", "127.0.0.1"),
+			ExpectedStatus:  200,
+			ExpectedContent: []string{"test123"},
+			ExpectedEvents:  map[string]int{"*": 0},
+		},
+		{
+			Name:   "superuser with no whitelisted IPs",
+			Method: http.MethodGet,
+			URL:    "/my/test",
+			Headers: map[string]string{
+				"x-test-ip":     "127.0.0.1",
+				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6InN5d2JoZWNuaDQ2cmhtMCIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoicGJjXzMxNDI2MzU4MjMiLCJleHAiOjI1MjQ2MDQ0NjEsInJlZnJlc2hhYmxlIjp0cnVlfQ.UXgO3j-0BumcugrFjbd7j0M4MQvbrLggLlcu_YNGjoY",
+			},
+			BeforeTestFunc:  setupWhitelist(),
+			ExpectedStatus:  200,
+			ExpectedContent: []string{"test123"},
 			ExpectedEvents:  map[string]int{"*": 0},
 		},
 	}

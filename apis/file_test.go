@@ -354,6 +354,50 @@ func TestFileDownload(t *testing.T) {
 			},
 		},
 		{
+			Name:    "protected file - superuser with non-whitelisted IP",
+			Method:  http.MethodGet,
+			URL:     "/api/files/demo1/al1h9ijdeojtsjy/300_Jsjq7RdBgA.png?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6InN5d2JoZWNuaDQ2cmhtMCIsImV4cCI6MjUyNDYwNDQ2MSwidHlwZSI6ImZpbGUiLCJjb2xsZWN0aW9uSWQiOiJwYmNfMzE0MjYzNTgyMyJ9.Lupz541xRvrktwkrl55p5pPCF77T69ZRsohsIcb2dxc",
+			Headers: map[string]string{"x-test-ip": "127.0.0.1"},
+			BeforeTestFunc: func(t testing.TB, app *tests.TestApp, e *core.ServeEvent) {
+				app.Settings().TrustedProxy = core.TrustedProxyConfig{
+					Headers: []string{"x-test-ip"},
+				}
+
+				app.Settings().SuperuserIPs = []string{"0.0.0.0"}
+
+				err := app.Save(app.Settings())
+				if err != nil {
+					t.Fatal(err)
+				}
+			},
+			ExpectedStatus:  404,
+			ExpectedContent: []string{`"data":{}`},
+			ExpectedEvents:  map[string]int{"*": 0},
+		},
+		{
+			Name:    "protected file - superuser with whitelisted IP",
+			Method:  http.MethodGet,
+			URL:     "/api/files/demo1/al1h9ijdeojtsjy/300_Jsjq7RdBgA.png?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6InN5d2JoZWNuaDQ2cmhtMCIsImV4cCI6MjUyNDYwNDQ2MSwidHlwZSI6ImZpbGUiLCJjb2xsZWN0aW9uSWQiOiJwYmNfMzE0MjYzNTgyMyJ9.Lupz541xRvrktwkrl55p5pPCF77T69ZRsohsIcb2dxc",
+			Headers: map[string]string{"x-test-ip": "127.0.0.1"},
+			BeforeTestFunc: func(t testing.TB, app *tests.TestApp, e *core.ServeEvent) {
+				app.Settings().TrustedProxy = core.TrustedProxyConfig{
+					Headers: []string{"x-test-ip"},
+				}
+
+				app.Settings().SuperuserIPs = []string{"127.0.0.1"}
+
+				if err := app.Save(app.Settings()); err != nil {
+					t.Fatal(err)
+				}
+			},
+			ExpectedStatus:  200,
+			ExpectedContent: []string{"PNG"},
+			ExpectedEvents: map[string]int{
+				"*":                     0,
+				"OnFileDownloadRequest": 1,
+			},
+		},
+		{
 			Name:            "protected file - guest without view access",
 			Method:          http.MethodGet,
 			URL:             "/api/files/demo1/al1h9ijdeojtsjy/300_Jsjq7RdBgA.png",

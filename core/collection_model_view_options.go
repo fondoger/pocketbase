@@ -1,7 +1,7 @@
 package core
 
 import (
-	validation "github.com/go-ozzo/ozzo-validation/v4"
+	validation "github.com/pocketbase/ozzo-validation/v4"
 )
 
 var _ optionsValidator = (*collectionViewOptions)(nil)

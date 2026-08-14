@@ -9,7 +9,7 @@ import (
 	"regexp"
 	"strings"
 
-	validation "github.com/go-ozzo/ozzo-validation/v4"
+	validation "github.com/pocketbase/ozzo-validation/v4"
 	"github.com/pocketbase/pocketbase/core/validators"
 	"github.com/pocketbase/pocketbase/tools/filesystem"
 	"github.com/pocketbase/pocketbase/tools/list"
@@ -47,7 +47,7 @@ var (
 // FileField defines "file" type field for managing record file(s).
 //
 // Only the file name is stored as part of the record value.
-// New files (aka. files to upload) are expected to be of *filesytem.File.
+// New files (aka. files to upload) are expected to be of *filesystem.File.
 //
 // If MaxSelect is not set or <= 1, then the field value is expected to be a single record id.
 //
@@ -88,11 +88,15 @@ type FileField struct {
 	// Hidden hides the field from the API response.
 	Hidden bool `form:"hidden" json:"hidden"`
 
+	// ---
+
 	// Presentable hints the Dashboard UI to use the underlying
 	// field record value in the relation preview label.
 	Presentable bool `form:"presentable" json:"presentable"`
 
-	// ---
+	// Help is an extra text explaining what the field is about.
+	// It is usually shown in Dashboard UI under the field input.
+	Help string `form:"help" json:"help"`
 
 	// MaxSize specifies the maximum size of a single uploaded file (in bytes and up to 2^53-1).
 	//
@@ -223,6 +227,7 @@ func (f *FileField) ValidateSettings(ctx context.Context, app App, collection *C
 	return validation.ValidateStruct(f,
 		validation.Field(&f.Id, validation.By(DefaultFieldIdValidationRule)),
 		validation.Field(&f.Name, validation.By(DefaultFieldNameValidationRule)),
+		validation.Field(&f.Help, validation.By(DefaultFieldHelpValidationRule)),
 		validation.Field(&f.MaxSelect, validation.Min(0), validation.Max(maxSafeJSONInt)),
 		validation.Field(&f.MaxSize, validation.Min(0), validation.Max(maxSafeJSONInt)),
 		validation.Field(&f.Thumbs, validation.Each(
@@ -727,12 +732,16 @@ func (f *FileField) toSliceValue(raw any) []any {
 	case nil:
 		// nothing to cast
 	case *filesystem.File:
-		result = append(result, value)
+		if value != nil {
+			result = append(result, value)
+		}
 	case filesystem.File:
 		result = append(result, &value)
 	case []*filesystem.File:
 		for _, v := range value {
-			result = append(result, v)
+			if v != nil {
+				result = append(result, v)
+			}
 		}
 	case []filesystem.File:
 		for _, v := range value {

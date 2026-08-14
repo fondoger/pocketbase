@@ -114,16 +114,16 @@ func Fetch(ctx context.Context, jwksURL string, kid string) (*JWK, error) {
 	}
 
 	for _, key := range jwks.Keys {
-		if key.Kid == kid {
+		if key.Kid == kid && key.Alg != "" {
 			return key, nil
 		}
 	}
 
-	return nil, fmt.Errorf("JWK with kid %q was not found", kid)
+	return nil, fmt.Errorf("missing JWK with kid %q and non-empty alg", kid)
 }
 
 // ValidateTokenSignature validates the signature of a token with the
-// public key retrievied from a remote JWKS.
+// public key retrieved from a remote JWKS.
 func ValidateTokenSignature(ctx context.Context, token string, jwksURL string) error {
 	// extract the kid token header
 	// ---

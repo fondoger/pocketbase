@@ -22,6 +22,8 @@ import (
 	"golang.org/x/crypto/acme/autocert"
 )
 
+const defaultCSP = "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' http://127.0.0.1:* https://tile.openstreetmap.org data: blob:; connect-src 'self' http://127.0.0.1:* https://nominatim.openstreetmap.org; script-src 'self' http://127.0.0.1:*; frame-ancestors 'none'"
+
 // ServeConfig defines a configuration struct for apis.Serve().
 type ServeConfig struct {
 	// ShowStartBanner indicates whether to show or hide the server start console message.
@@ -33,7 +35,7 @@ type ServeConfig struct {
 	// HttpsAddr is the TCP address to listen for the HTTPS server (eg. "127.0.0.1:443").
 	HttpsAddr string
 
-	// PathPrefix is an optional prefix to use for the API and dashboard routes.
+	// PathPrefix is an optional prefix for the API and Dashboard routes.
 	PathPrefix string
 
 	// Optional domains list to use when issuing the TLS certificate.
@@ -80,21 +82,25 @@ func Serve(app core.App, config ServeConfig) error {
 		AllowMethods: []string{http.MethodGet, http.MethodHead, http.MethodPut, http.MethodPatch, http.MethodPost, http.MethodDelete},
 	}))
 
-	pbRouter.GET("/_/{path...}", Static(ui.DistDirFS, false)).
-		BindFunc(func(e *core.RequestEvent) error {
-			// ignore root path
-			if e.Request.PathValue(StaticWildcardParam) != "" {
-				e.Response.Header().Set("Cache-Control", "max-age=1209600, stale-while-revalidate=86400")
-			}
+	// @todo consider moving in base
+	if ui.DistDirFS != nil {
+		pbRouter.GET("/_/{path...}", Static(ui.DistDirFS, false)).
+			BindFunc(func(e *core.RequestEvent) error {
+				if !e.App.IsDev() &&
+					// exclude root path
+					e.Request.PathValue(StaticWildcardParam) != "" &&
+					e.Response.Header().Get("Cache-Control") == "" {
+					e.Response.Header().Set("Cache-Control", "max-age=1209600, stale-while-revalidate=86400")
+				}
 
-			// add a default CSP
-			if e.Response.Header().Get("Content-Security-Policy") == "" {
-				e.Response.Header().Set("Content-Security-Policy", "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' http://127.0.0.1:* https://tile.openstreetmap.org data: blob:; connect-src 'self' http://127.0.0.1:* https://nominatim.openstreetmap.org; script-src 'self' 'sha256-GRUzBA7PzKYug7pqxv5rJaec5bwDCw1Vo6/IXwvD3Tc='")
-			}
+				if e.Response.Header().Get("Content-Security-Policy") == "" {
+					e.Response.Header().Set("Content-Security-Policy", defaultCSP)
+				}
 
-			return e.Next()
-		}).
-		Bind(Gzip())
+				return e.Next()
+			}).
+			Bind(Gzip())
+	}
 
 	// start http server
 	// ---
@@ -212,7 +218,6 @@ func Serve(app core.App, config ServeConfig) error {
 
 	// trigger the OnServe hook and start the tcp listener
 	serveHookErr := app.OnServe().Trigger(serveEvent, func(e *core.ServeEvent) error {
-		// Support path prefix for the API and dashboard routes.
 		if config.PathPrefix != "" {
 			e.Router.Prefix = config.PathPrefix
 		}
@@ -287,8 +292,12 @@ func Serve(app core.App, config ServeConfig) error {
 		)
 
 		regular := color.New()
-		regular.Printf("├─ REST API:  %s\n", color.CyanString("%s/api/", strings.ReplaceAll(baseURL, "0.0.0.0", "127.0.0.1")+config.PathPrefix))
-		regular.Printf("└─ Dashboard: %s\n", color.CyanString("%s/_/", strings.ReplaceAll(baseURL, "0.0.0.0", "127.0.0.1")+config.PathPrefix))
+		if ui.DistDirFS == nil {
+			regular.Printf("└─ REST API:  %s\n", color.CyanString("%s%s/api/", baseURL, config.PathPrefix))
+		} else {
+			regular.Printf("├─ REST API:  %s\n", color.CyanString("%s%s/api/", baseURL, config.PathPrefix))
+			regular.Printf("└─ Dashboard: %s\n", color.CyanString("%s%s/_/", baseURL, config.PathPrefix))
+		}
 	}
 
 	var serveErr error

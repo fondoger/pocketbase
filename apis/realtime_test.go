@@ -26,6 +26,7 @@ func TestRealtimeConnect(t *testing.T) {
 			Method:         http.MethodGet,
 			URL:            "/api/realtime",
 			Timeout:        100 * time.Millisecond,
+			Headers:        map[string]string{"x-test-ip": "127.0.0.2"},
 			ExpectedStatus: 200,
 			ExpectedContent: []string{
 				`id:`,
@@ -36,6 +37,17 @@ func TestRealtimeConnect(t *testing.T) {
 				"*":                        0,
 				"OnRealtimeConnectRequest": 1,
 				"OnRealtimeMessageSend":    1,
+			},
+			BeforeTestFunc: func(t testing.TB, app *tests.TestApp, e *core.ServeEvent) {
+				app.Settings().TrustedProxy.Headers = []string{"x-test-ip"}
+
+				app.OnRealtimeConnectRequest().BindFunc(func(e *core.RealtimeConnectRequestEvent) error {
+					if ip, _ := e.Client.Get(apis.RealtimeClientIPKey).(string); ip != "127.0.0.2" {
+						t.Fatalf("Expected IP %q, got %q", "127.0.0.2", ip)
+					}
+
+					return e.Next()
+				})
 			},
 			AfterTestFunc: func(t testing.TB, app *tests.TestApp, res *http.Response) {
 				if len(app.SubscriptionsBroker().Clients()) != 0 {
@@ -102,7 +114,8 @@ func TestRealtimeSubscribe(t *testing.T) {
 
 	resetClient := func() {
 		client.Unsubscribe()
-		client.Set(apis.RealtimeClientAuthKey, nil)
+		client.Unset(apis.RealtimeClientAuthKey)
+		client.Unset(apis.RealtimeClientIPKey)
 	}
 
 	validSubscriptionsLimit := make([]string, 1000)
@@ -207,6 +220,26 @@ func TestRealtimeSubscribe(t *testing.T) {
 				`"subscriptions":{"1":{"code":"validation_length_too_long"`,
 			},
 			ExpectedEvents: map[string]int{"*": 0},
+		},
+		{
+			Name:            "existing client with different IP",
+			Method:          http.MethodPost,
+			URL:             "/api/realtime",
+			Body:            strings.NewReader(`{"clientId":"` + client.Id() + `","subscriptions":["test"]}`),
+			Headers:         map[string]string{"x-test-ip": "127.0.0.2"},
+			ExpectedStatus:  400,
+			ExpectedContent: []string{`"data":{}`},
+			ExpectedEvents:  map[string]int{"*": 0},
+			BeforeTestFunc: func(t testing.TB, app *tests.TestApp, e *core.ServeEvent) {
+				app.Settings().TrustedProxy.Headers = []string{"x-test-ip"}
+
+				client.Set(apis.RealtimeClientIPKey, "127.0.0.1")
+
+				app.SubscriptionsBroker().Register(client)
+			},
+			AfterTestFunc: func(t testing.TB, app *tests.TestApp, res *http.Response) {
+				resetClient()
+			},
 		},
 		{
 			Name:   "existing client with valid topic length",
@@ -429,7 +462,10 @@ func TestRealtimeAuthRecordDeleteEvent(t *testing.T) {
 	defer testApp.Cleanup()
 
 	// init realtime handlers
-	apis.NewRouter(testApp)
+	_, err := apis.NewRouter(testApp)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	authRecord1, err := testApp.FindAuthRecordByEmail("users", "test@example.com")
 	if err != nil {
@@ -460,7 +496,10 @@ func TestRealtimeAuthRecordDeleteEvent(t *testing.T) {
 	e.Context = context.Background()
 	e.Model = authRecord1
 
-	testApp.OnModelAfterDeleteSuccess().Trigger(e)
+	err = testApp.OnModelAfterDeleteSuccess().Trigger(e)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if total := len(testApp.SubscriptionsBroker().Clients()); total != 3 {
 		t.Fatalf("Expected %d subscription clients, found %d", 3, total)
@@ -484,7 +523,10 @@ func TestRealtimeAuthRecordUpdateEvent(t *testing.T) {
 	defer testApp.Cleanup()
 
 	// init realtime handlers
-	apis.NewRouter(testApp)
+	_, err := apis.NewRouter(testApp)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	authRecord1, err := testApp.FindAuthRecordByEmail("users", "test@example.com")
 	if err != nil {
@@ -495,25 +537,331 @@ func TestRealtimeAuthRecordUpdateEvent(t *testing.T) {
 	client.Set(apis.RealtimeClientAuthKey, authRecord1)
 	testApp.SubscriptionsBroker().Register(client)
 
-	// refetch the authRecord and change its email
+	// refetch the authRecord and change its name
 	authRecord2, err := testApp.FindAuthRecordByEmail("users", "test@example.com")
 	if err != nil {
 		t.Fatal(err)
 	}
-	authRecord2.SetEmail("new@example.com")
 
-	// mock update event
-	e := new(core.ModelEvent)
-	e.App = testApp
-	e.Type = core.ModelEventTypeUpdate
-	e.Context = context.Background()
-	e.Model = authRecord2
+	newName := "test_new_name"
+	authRecord2.Set("name", newName)
 
-	testApp.OnModelAfterUpdateSuccess().Trigger(e)
+	err = testApp.Save(authRecord2)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	clientAuthRecord, _ := client.Get(apis.RealtimeClientAuthKey).(*core.Record)
-	if clientAuthRecord.Email() != authRecord2.Email() {
-		t.Fatalf("Expected authRecord with email %q, got %q", authRecord2.Email(), clientAuthRecord.Email())
+	if clientAuthRecord.Get("name") != newName {
+		t.Fatalf("Expected authRecord with email %q, got %q", newName, clientAuthRecord.Email())
+	}
+}
+
+func TestRealtimeRecordHiddenFields(t *testing.T) {
+	t.Parallel()
+
+	testApp, _ := tests.NewTestApp()
+	defer testApp.Cleanup()
+
+	// init realtime handlers
+	_, err := apis.NewRouter(testApp)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// create temp collection with hidden fields
+	testCollection := core.NewBaseCollection("test_realtime")
+	testCollection.ListRule = types.Pointer("@request.auth.id != ''")
+	testCollection.Fields.Add(
+		&core.TextField{Name: "public"},
+		&core.TextField{Name: "hidden", Hidden: true},
+	)
+	if err := testApp.Save(testCollection); err != nil {
+		t.Fatal(err)
+	}
+
+	testSubscription := testCollection.Name + "/*"
+
+	// register guest subscriber
+	guestClient := subscriptions.NewDefaultClient()
+	guestClient.Subscribe(testSubscription)
+	testApp.SubscriptionsBroker().Register(guestClient)
+
+	// register regular user subscriber
+	regular, err := testApp.FindAuthRecordByEmail("users", "test@example.com")
+	if err != nil {
+		t.Fatal(err)
+	}
+	regularClient := subscriptions.NewDefaultClient()
+	regularClient.Set(apis.RealtimeClientAuthKey, regular)
+	regularClient.Subscribe(testSubscription)
+	testApp.SubscriptionsBroker().Register(regularClient)
+
+	// register superuser subscriber
+	superuser, err := testApp.FindAuthRecordByEmail(core.CollectionNameSuperusers, "test@example.com")
+	if err != nil {
+		t.Fatal(err)
+	}
+	superuserClient := subscriptions.NewDefaultClient()
+	superuserClient.Set(apis.RealtimeClientAuthKey, superuser)
+	superuserClient.Subscribe(testSubscription)
+	testApp.SubscriptionsBroker().Register(superuserClient)
+
+	enrichCalls := map[string]int{}
+	testApp.OnRecordEnrich(testCollection.Name).BindFunc(func(e *core.RecordEnrichEvent) error {
+		var id string
+		if e.RequestInfo.Auth != nil {
+			id = e.RequestInfo.Auth.Id
+		}
+		enrichCalls[id]++
+		return e.Next()
+	})
+
+	timeout := time.After(3 * time.Second)
+	done := make(chan struct{})
+
+	// collect first received messages
+	var regularMessageData, superuserMessageData string
+	go func() {
+		regularMessageData = string((<-regularClient.Channel()).Data)
+		superuserMessageData = string((<-superuserClient.Channel()).Data)
+		done <- struct{}{}
+	}()
+
+	// broadcast create message
+	testRecord := core.NewRecord(testCollection)
+	testRecord.Set("public", "test1")
+	testRecord.Set("hidden", "test2")
+	if err := testApp.Save(testRecord); err != nil {
+		t.Fatal(err)
+	}
+
+	// wait for the events
+	select {
+	case <-timeout:
+		t.Fatal("realtime test messages timeout")
+	case <-done:
+		// ready
+	}
+
+	if total := len(enrichCalls); total != 2 {
+		t.Fatalf("Expected %d enrich hook calls, got %d", 2, total)
+	}
+
+	if total := enrichCalls[regular.Id]; total != 1 {
+		t.Fatalf("Expected exactly 1 regular user enrich hook call, got %d", total)
+	}
+
+	if total := enrichCalls[superuser.Id]; total != 1 {
+		t.Fatalf("Expected exactly 1 superuser enrich hook call, got %d", total)
+	}
+
+	// validate messages content
+	scenarios := map[string]bool{
+		"regular message public field should exist":     strings.Contains(regularMessageData, `"public":`),
+		"regular message hidden field should NOT exist": !strings.Contains(regularMessageData, `"hidden":`),
+		"superuser message public field should exist":   strings.Contains(superuserMessageData, `"public":`),
+		"superuser message hidden field should exist":   strings.Contains(superuserMessageData, `"hidden":`),
+	}
+	for name, valid := range scenarios {
+		t.Run(name, func(t *testing.T) {
+			if !valid {
+				t.Fatal("Invalid realtime message expectation")
+			}
+		})
+	}
+}
+
+func TestRealtimeAuthRecordUnsetOnTokenKeyRefresh(t *testing.T) {
+	testApp, _ := tests.NewTestApp()
+	defer testApp.Cleanup()
+
+	// init realtime handlers
+	_, err := apis.NewRouter(testApp)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	authRecord1, err := testApp.FindAuthRecordByEmail("users", "test@example.com")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	client := subscriptions.NewDefaultClient()
+	client.Set(apis.RealtimeClientAuthKey, authRecord1)
+	testApp.SubscriptionsBroker().Register(client)
+
+	// refetch the authRecord and refresh its tokenKey
+	authRecord2, err := testApp.FindAuthRecordByEmail("users", "test@example.com")
+	if err != nil {
+		t.Fatal(err)
+	}
+	authRecord2.RefreshTokenKey()
+
+	err = testApp.Save(authRecord2)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	clientAuthRecord, _ := client.Get(apis.RealtimeClientAuthKey).(*core.Record)
+	if clientAuthRecord != nil {
+		t.Fatalf("Expected authRecord to be unset, got %q", clientAuthRecord.Email())
+	}
+}
+
+func TestRealtimeAuthRecordUnsetOnCollectionSecretChange(t *testing.T) {
+	testApp, _ := tests.NewTestApp()
+	defer testApp.Cleanup()
+
+	// init realtime handlers
+	_, err := apis.NewRouter(testApp)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	usersCollection, err := testApp.FindCollectionByNameOrId("users")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	clientsCollection, err := testApp.FindCollectionByNameOrId("clients")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	authRecord1, err := testApp.FindAuthRecordByEmail(usersCollection, "test@example.com")
+	if err != nil {
+		t.Fatal(err)
+	}
+	client1 := subscriptions.NewDefaultClient()
+	client1.Set(apis.RealtimeClientAuthKey, authRecord1)
+
+	authRecord2, err := testApp.FindAuthRecordByEmail(usersCollection, "test@example.com")
+	if err != nil {
+		t.Fatal(err)
+	}
+	client2 := subscriptions.NewDefaultClient()
+	client2.Set(apis.RealtimeClientAuthKey, authRecord2)
+
+	authRecord3, err := testApp.FindAuthRecordByEmail(clientsCollection, "test@example.com")
+	if err != nil {
+		t.Fatal(err)
+	}
+	client3 := subscriptions.NewDefaultClient()
+	client3.Set(apis.RealtimeClientAuthKey, authRecord3)
+
+	clientMocks := map[*core.Record]subscriptions.Client{
+		authRecord1: client1,
+		authRecord2: client2,
+		authRecord3: client3,
+	}
+	for _, client := range clientMocks {
+		testApp.SubscriptionsBroker().Register(client)
+	}
+
+	// change the secret of the users collection (should trigger unset)
+	usersCollection.AuthToken.Secret = strings.Repeat("a", 30)
+	err = testApp.Save(usersCollection)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// change something else of the clients collection (shouldn't trigger unset)
+	clientsCollection.ListRule = nil
+	err = testApp.Save(clientsCollection)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expectations := map[*core.Record]bool{
+		// record -> unset
+		authRecord1: true,
+		authRecord2: true,
+		authRecord3: false,
+	}
+	for record, expectedUnset := range expectations {
+		clientAuthRecord, _ := clientMocks[record].Get(apis.RealtimeClientAuthKey).(*core.Record)
+		unset := clientAuthRecord == nil
+		if unset != expectedUnset {
+			t.Fatalf("Expected unset state %v, got %v (%v)", expectedUnset, unset, clientAuthRecord)
+		}
+	}
+}
+
+func TestRealtimeAuthRecordUnsetOnCollectionDelete(t *testing.T) {
+	testApp, _ := tests.NewTestApp()
+	defer testApp.Cleanup()
+
+	// init realtime handlers
+	_, err := apis.NewRouter(testApp)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	usersCollection, err := testApp.FindCollectionByNameOrId("users")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	clientsCollection, err := testApp.FindCollectionByNameOrId("clients")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	authRecord1, err := testApp.FindAuthRecordByEmail(usersCollection, "test@example.com")
+	if err != nil {
+		t.Fatal(err)
+	}
+	client1 := subscriptions.NewDefaultClient()
+	client1.Set(apis.RealtimeClientAuthKey, authRecord1)
+
+	authRecord2, err := testApp.FindAuthRecordByEmail(usersCollection, "test@example.com")
+	if err != nil {
+		t.Fatal(err)
+	}
+	client2 := subscriptions.NewDefaultClient()
+	client2.Set(apis.RealtimeClientAuthKey, authRecord2)
+
+	authRecord3, err := testApp.FindAuthRecordByEmail(clientsCollection, "test@example.com")
+	if err != nil {
+		t.Fatal(err)
+	}
+	client3 := subscriptions.NewDefaultClient()
+	client3.Set(apis.RealtimeClientAuthKey, authRecord3)
+
+	clientMocks := map[*core.Record]subscriptions.Client{
+		authRecord1: client1,
+		authRecord2: client2,
+		authRecord3: client3,
+	}
+	for _, client := range clientMocks {
+		testApp.SubscriptionsBroker().Register(client)
+	}
+
+	// mock users collection delete event to avoid triggering constraints check
+	e := new(core.ModelEvent)
+	e.App = testApp
+	e.Type = core.ModelEventTypeDelete
+	e.Context = context.Background()
+	e.Model = usersCollection
+
+	err = testApp.OnModelAfterDeleteSuccess().Trigger(e)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expectations := map[*core.Record]bool{
+		// record -> unset
+		authRecord1: true,
+		authRecord2: true,
+		authRecord3: false,
+	}
+	for record, expectedUnset := range expectations {
+		clientAuthRecord, _ := clientMocks[record].Get(apis.RealtimeClientAuthKey).(*core.Record)
+		unset := clientAuthRecord == nil
+		if unset != expectedUnset {
+			t.Fatalf("Expected unset state %v, got %v (%v)", expectedUnset, unset, clientAuthRecord)
+		}
 	}
 }
 
@@ -551,7 +899,10 @@ func TestRealtimeCustomAuthModelDeleteEvent(t *testing.T) {
 	defer testApp.Cleanup()
 
 	// init realtime handlers
-	apis.NewRouter(testApp)
+	_, err := apis.NewRouter(testApp)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	authRecord1, err := testApp.FindAuthRecordByEmail("users", "test@example.com")
 	if err != nil {
@@ -608,7 +959,10 @@ func TestRealtimeCustomAuthModelUpdateEvent(t *testing.T) {
 	defer testApp.Cleanup()
 
 	// init realtime handlers
-	apis.NewRouter(testApp)
+	_, err := apis.NewRouter(testApp)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	authRecord, err := testApp.FindAuthRecordByEmail("users", "test@example.com")
 	if err != nil {

@@ -3,7 +3,7 @@ package apis
 import (
 	"net/http"
 
-	validation "github.com/go-ozzo/ozzo-validation/v4"
+	validation "github.com/pocketbase/ozzo-validation/v4"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tools/security"
 	"github.com/spf13/cast"
@@ -44,6 +44,13 @@ func recordConfirmVerification(e *core.RequestEvent) error {
 	return e.App.OnRecordConfirmVerificationRequest().Trigger(event, func(e *core.RecordConfirmVerificationRequestEvent) error {
 		if !wasVerified {
 			e.Record.SetVerified(true)
+
+			// similar to the OTP auth, we enforce an extra password reset
+			// guard as this way is less prone to pre-hijacking attacks
+			// in case the password auth is eventually enabled later
+			if !e.Record.Collection().PasswordAuth.Enabled {
+				e.Record.SetRandomPassword()
+			}
 
 			if err := e.App.Save(e.Record); err != nil {
 				return firstApiError(err, e.BadRequestError("An error occurred while saving the verified state.", err))

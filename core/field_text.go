@@ -8,9 +8,8 @@ import (
 	"regexp"
 	"strings"
 
-	validation "github.com/go-ozzo/ozzo-validation/v4"
-	"github.com/google/uuid"
 	"github.com/pocketbase/dbx"
+	validation "github.com/pocketbase/ozzo-validation/v4"
 	"github.com/pocketbase/pocketbase/core/validators"
 	"github.com/pocketbase/pocketbase/tools/security"
 	"github.com/spf13/cast"
@@ -73,11 +72,15 @@ type TextField struct {
 	// Hidden hides the field from the API response.
 	Hidden bool `form:"hidden" json:"hidden"`
 
+	// ---
+
 	// Presentable hints the Dashboard UI to use the underlying
 	// field record value in the relation preview label.
 	Presentable bool `form:"presentable" json:"presentable"`
 
-	// ---
+	// Help is an extra text explaining what the field is about.
+	// It is usually shown in Dashboard UI under the field input.
+	Help string `form:"help" json:"help"`
 
 	// Min specifies the minimum required string characters.
 	//
@@ -161,13 +164,6 @@ func (f *TextField) ColumnType(app App) string {
 		// note: the default is just a last resort fallback to avoid empty
 		// string values in case the record was inserted with raw sql and
 		// it is not actually used when operating with the db abstraction
-		/* SQLite:
-		return "TEXT PRIMARY KEY DEFAULT ('r'||lower(hex(randomblob(7)))) NOT NULL"
-		*/
-		// PostgreSQL:
-		if f.Pattern == security.PredefinedAutoGeneratePattern_uuidv7 {
-			return "UUID PRIMARY KEY DEFAULT uuid_generate_v7() NOT NULL"
-		}
 		return "TEXT PRIMARY KEY DEFAULT ('r'||lower(hex(randomblob(7)))) NOT NULL"
 	}
 
@@ -254,17 +250,9 @@ func (f *TextField) ValidatePlainValue(value string) error {
 	}
 
 	if f.Pattern != "" {
-		switch f.Pattern {
-		case security.PredefinedAutoGeneratePattern_uuidv7:
-			// validate uuid v7 format
-			if _, err := uuid.Parse(value); err != nil {
-				return validation.NewError("validation_invalid_format", "Invalid UUID format")
-			}
-		default:
-			match, _ := regexp.MatchString(f.Pattern, value)
-			if !match {
-				return validation.NewError("validation_invalid_format", "Invalid value format")
-			}
+		match, _ := regexp.MatchString(f.Pattern, value)
+		if !match {
+			return validation.NewError("validation_invalid_format", "Invalid value format.")
 		}
 	}
 
@@ -299,6 +287,7 @@ func (f *TextField) ValidateSettings(ctx context.Context, app App, collection *C
 			validation.By(DefaultFieldNameValidationRule),
 			validation.When(f.PrimaryKey, validation.In(idColumn).Error(`The primary key must be named "id".`)),
 		),
+		validation.Field(&f.Help, validation.By(DefaultFieldHelpValidationRule)),
 		validation.Field(&f.PrimaryKey, validation.By(f.checkOtherFieldsForPK(collection))),
 		validation.Field(&f.Min, validation.Min(0), validation.Max(maxSafeJSONInt)),
 		validation.Field(&f.Max, validation.Min(f.Min), validation.Max(maxSafeJSONInt)),
@@ -348,7 +337,7 @@ func (f *TextField) checkAutogeneratePattern(value any) error {
 		if err := f.ValidatePlainValue(generated); err != nil {
 			return validation.NewError(
 				"validation_invalid_autogenerate_pattern_value",
-				fmt.Sprintf("The provided autogenerate pattern could produce invalid field values, ex.: %q. Error: %v", generated, err),
+				fmt.Sprintf("The provided autogenerate pattern could produce invalid field values, ex.: %q", generated),
 			)
 		}
 	}

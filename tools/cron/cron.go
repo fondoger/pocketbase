@@ -14,6 +14,8 @@ import (
 	"slices"
 	"sync"
 	"time"
+
+	"github.com/pocketbase/pocketbase/tools/routine"
 )
 
 // Cron is a crontab-like struct for tasks/jobs scheduling.
@@ -191,7 +193,7 @@ func (c *Cron) Start() {
 		c.runDue(time.Now())
 
 		// run after each tick
-		go func() {
+		routine.FireAndForget(func() {
 			for {
 				select {
 				case <-c.tickerDone:
@@ -200,7 +202,7 @@ func (c *Cron) Start() {
 					c.runDue(t)
 				}
 			}
-		}()
+		})
 	})
 	c.mux.Unlock()
 }
@@ -222,7 +224,7 @@ func (c *Cron) runDue(t time.Time) {
 
 	for _, j := range c.jobs {
 		if j.schedule.IsDue(moment) {
-			go j.Run()
+			routine.FireAndForget(j.Run)
 		}
 	}
 }

@@ -5,7 +5,7 @@ import (
 	"errors"
 	"maps"
 
-	validation "github.com/go-ozzo/ozzo-validation/v4"
+	validation "github.com/pocketbase/ozzo-validation/v4"
 )
 
 var ErrUnsupportedValueType = validation.NewError("validation_unsupported_value_type", "Invalid or unsupported value type.")
@@ -37,4 +37,11 @@ func JoinValidationErrors(errA, errB error) error {
 	}
 
 	return errors.Join(errA, errB)
+}
+
+func cutStr(str string, max int) string {
+	if len(str) > max {
+		return str[:max] + "..."
+	}
+	return str
 }

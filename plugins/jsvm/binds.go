@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"io/fs"
 	"log/slog"
 	"net/http"
 	"os"
@@ -18,9 +19,9 @@ import (
 	"time"
 
 	"github.com/dop251/goja"
-	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/pocketbase/dbx"
+	validation "github.com/pocketbase/ozzo-validation/v4"
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/forms"
@@ -78,10 +79,11 @@ func hooksBinds(app core.App, loader *goja.Runtime, executors *vmsPool) {
 				}
 
 				err := executors.run(func(executor *goja.Runtime) error {
-					executor.Set("$app", goja.Undefined())
+					oldApp := executor.Get("$app")
 					executor.Set("__args", handlerArgs)
 					res, err := executor.RunProgram(pr)
 					executor.Set("__args", goja.Undefined())
+					executor.Set("$app", oldApp) // reset to its default for the executor
 
 					// check for returned Go error value
 					if resErr := checkGojaValueForError(app, res); resErr != nil {
@@ -191,10 +193,12 @@ func wrapHandlerFunc(executors *vmsPool, handler goja.Value) (func(*core.Request
 
 		wrappedHandler := func(e *core.RequestEvent) error {
 			return executors.run(func(executor *goja.Runtime) error {
+				oldApp := executor.Get("$app")
 				executor.Set("$app", e.App) // overwrite the global $app with the hook scoped instance
 				executor.Set("__args", []any{e})
 				res, err := executor.RunProgram(pr)
 				executor.Set("__args", goja.Undefined())
+				executor.Set("$app", oldApp)
 
 				// check for returned Go error value
 				if resErr := checkGojaValueForError(e.App, res); resErr != nil {
@@ -246,10 +250,12 @@ func wrapMiddlewares(executors *vmsPool, rawMiddlewares ...goja.Value) ([]*hook.
 				Priority: v.priority,
 				Func: func(e *core.RequestEvent) error {
 					return executors.run(func(executor *goja.Runtime) error {
+						oldApp := executor.Get("$app")
 						executor.Set("$app", e.App) // overwrite the global $app with the hook scoped instance
 						executor.Set("__args", []any{e})
 						res, err := executor.RunProgram(pr)
 						executor.Set("__args", goja.Undefined())
+						executor.Set("$app", oldApp)
 
 						// check for returned Go error value
 						if resErr := checkGojaValueForError(e.App, res); resErr != nil {
@@ -266,10 +272,12 @@ func wrapMiddlewares(executors *vmsPool, rawMiddlewares ...goja.Value) ([]*hook.
 			wrappedMiddlewares[i] = &hook.Handler[*core.RequestEvent]{
 				Func: func(e *core.RequestEvent) error {
 					return executors.run(func(executor *goja.Runtime) error {
+						oldApp := executor.Get("$app")
 						executor.Set("$app", e.App) // overwrite the global $app with the hook scoped instance
 						executor.Set("__args", []any{e})
 						res, err := executor.RunProgram(pr)
 						executor.Set("__args", goja.Undefined())
+						executor.Set("$app", oldApp)
 
 						// check for returned Go error value
 						if resErr := checkGojaValueForError(e.App, res); resErr != nil {
@@ -288,9 +296,13 @@ func wrapMiddlewares(executors *vmsPool, rawMiddlewares ...goja.Value) ([]*hook.
 	return wrappedMiddlewares, nil
 }
 
+// -------------------------------------------------------------------
+
 var cachedArrayOfTypes = store.New[reflect.Type, reflect.Type](nil)
 
-func baseBinds(vm *goja.Runtime) {
+// BindCore registers common core objects and functions such as sleep,
+// toString, DynamicModel, etc. into the provided runtime.
+func BindCore(vm *goja.Runtime) {
 	vm.SetFieldNameMapper(FieldMapper{})
 
 	// deprecated: use toString
@@ -658,7 +670,10 @@ func baseBinds(vm *goja.Runtime) {
 	})
 }
 
-func dbxBinds(vm *goja.Runtime) {
+// BindDbx registers $dbx.* namespaced object with dbx database builder related methods.
+//
+// See https://pocketbase.io/jsvm/modules/_dbx.html.
+func BindDbx(vm *goja.Runtime) {
 	obj := vm.NewObject()
 	vm.Set("$dbx", obj)
 
@@ -681,7 +696,10 @@ func dbxBinds(vm *goja.Runtime) {
 	obj.Set("notBetween", dbx.NotBetween)
 }
 
-func mailsBinds(vm *goja.Runtime) {
+// BindMails registers $mail.* namespaced object with common mail related helpers.
+//
+// See https://pocketbase.io/jsvm/modules/_mails.html.
+func BindMails(vm *goja.Runtime) {
 	obj := vm.NewObject()
 	vm.Set("$mails", obj)
 
@@ -692,7 +710,10 @@ func mailsBinds(vm *goja.Runtime) {
 	obj.Set("sendRecordAuthAlert", mails.SendRecordAuthAlert)
 }
 
-func securityBinds(vm *goja.Runtime) {
+// BindSecurity registers $security.* namespaced object with common security related helpers.
+//
+// See https://pocketbase.io/jsvm/modules/_security.html.
+func BindSecurity(vm *goja.Runtime) {
 	obj := vm.NewObject()
 	vm.Set("$security", obj)
 
@@ -735,10 +756,16 @@ func securityBinds(vm *goja.Runtime) {
 	})
 }
 
-func filesystemBinds(vm *goja.Runtime) {
+// BindFilesystem registers $filesystem.* namespaced object with
+// common filesystem package related helpers.
+//
+// See https://pocketbase.io/jsvm/modules/_filesystem.html.
+func BindFilesystem(vm *goja.Runtime) {
 	obj := vm.NewObject()
 	vm.Set("$filesystem", obj)
 
+	obj.Set("s3", filesystem.NewS3)
+	obj.Set("local", filesystem.NewLocal)
 	obj.Set("fileFromPath", filesystem.NewFileFromPath)
 	obj.Set("fileFromBytes", filesystem.NewFileFromBytes)
 	obj.Set("fileFromMultipart", filesystem.NewFileFromMultipart)
@@ -754,7 +781,11 @@ func filesystemBinds(vm *goja.Runtime) {
 	})
 }
 
-func filepathBinds(vm *goja.Runtime) {
+// BindFilepath registers $filepath.* namespaced object with
+// common std Go filepath package related exports.
+//
+// See https://pocketbase.io/jsvm/modules/_filepath.html.
+func BindFilepath(vm *goja.Runtime) {
 	obj := vm.NewObject()
 	vm.Set("$filepath", obj)
 
@@ -775,7 +806,11 @@ func filepathBinds(vm *goja.Runtime) {
 	obj.Set("walkDir", filepath.WalkDir)
 }
 
-func osBinds(vm *goja.Runtime) {
+// BindOS registers $os.* namespaced object with
+// common std Go os package related exports.
+//
+// See https://pocketbase.io/jsvm/modules/_os.html.
+func BindOS(vm *goja.Runtime) {
 	obj := vm.NewObject()
 	vm.Set("$os", obj)
 
@@ -801,19 +836,32 @@ func osBinds(vm *goja.Runtime) {
 	obj.Set("openInRoot", os.OpenInRoot)
 }
 
-func formsBinds(vm *goja.Runtime) {
+// BindForms registers various application form constructors.
+// These bindings are mostly used internally and/or preserved for backward compatibility with earlier versions.
+func BindForms(vm *goja.Runtime) {
 	registerFactoryAsConstructor(vm, "AppleClientSecretCreateForm", forms.NewAppleClientSecretCreate)
 	registerFactoryAsConstructor(vm, "RecordUpsertForm", forms.NewRecordUpsert)
 	registerFactoryAsConstructor(vm, "TestEmailSendForm", forms.NewTestEmailSend)
 	registerFactoryAsConstructor(vm, "TestS3FilesystemForm", forms.NewTestS3Filesystem)
 }
 
-func apisBinds(vm *goja.Runtime) {
+// BindApis registers $apis.* namespaced object with reusable Web API
+// handlers, middlewares and other related helpers.
+//
+// See https://pocketbase.io/jsvm/modules/_apis.html.
+func BindApis(vm *goja.Runtime) {
 	obj := vm.NewObject()
 	vm.Set("$apis", obj)
 
-	obj.Set("static", func(dir string, indexFallback bool) func(*core.RequestEvent) error {
-		return apis.Static(os.DirFS(dir), indexFallback)
+	obj.Set("static", func(dirOrFS any, indexFallback bool) func(*core.RequestEvent) error {
+		switch v := dirOrFS.(type) {
+		case fs.FS:
+			return apis.Static(v, indexFallback)
+		case string:
+			return apis.Static(os.DirFS(v), indexFallback)
+		default:
+			panic("$apis.static expects the first argument to be either a plain string path or fs.FS value")
+		}
 	})
 
 	// middlewares
@@ -840,7 +888,11 @@ func apisBinds(vm *goja.Runtime) {
 	registerFactoryAsConstructor(vm, "InternalServerError", router.NewInternalServerError)
 }
 
-func httpClientBinds(vm *goja.Runtime) {
+// BindHTTP registers $http.* namespaced object with common utils
+// for sending HTTP requests.
+//
+// See https://pocketbase.io/jsvm/modules/_http.html.
+func BindHTTP(vm *goja.Runtime) {
 	obj := vm.NewObject()
 	vm.Set("$http", obj)
 

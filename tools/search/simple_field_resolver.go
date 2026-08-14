@@ -10,15 +10,26 @@ import (
 	"github.com/pocketbase/pocketbase/tools/list"
 )
 
+type NullFallbackPreference int
+
+const (
+	NullFallbackAuto     NullFallbackPreference = 0
+	NullFallbackDisabled NullFallbackPreference = 1
+	NullFallbackEnforced NullFallbackPreference = 2
+)
+
 // ResolverResult defines a single FieldResolver.Resolve() successfully parsed result.
 type ResolverResult struct {
 	// Identifier is the plain SQL identifier/column that will be used
 	// in the final db expression as left or right operand.
 	Identifier string
 
-	// NoCoalesce instructs to not use COALESCE or NULL fallbacks
-	// when building the identifier expression.
-	NoCoalesce bool
+	// NullFallback specify the preference for how NULL or empty values
+	// should be resolved (default to "auto").
+	//
+	// Set to NullFallbackDisabled to prevent any COALESCE or NULL fallbacks.
+	// Set to NullFallbackEnforced to prefer COALESCE or NULL fallbacks when needed.
+	NullFallback NullFallbackPreference
 
 	// Params is a map with db placeholder->value pairs that will be added
 	// to the query when building both resolved operands/sides in a single expression.
@@ -26,7 +37,7 @@ type ResolverResult struct {
 
 	// MultiMatchSubQuery is an optional sub query expression that will be added
 	// in addition to the combined ResolverResult expression during build.
-	MultiMatchSubQuery dbx.Expression
+	MultiMatchSubQuery *MultiMatchSubquery
 
 	// AfterBuild is an optional function that will be called after building
 	// and combining the result of both resolved operands/sides in a single expression.
@@ -103,20 +114,9 @@ func (r *SimpleFieldResolver) Resolve(field string) (*ResolverResult, error) {
 	}
 
 	return &ResolverResult{
-		NoCoalesce: true,
-		/* SQLite:
+		NullFallback: NullFallbackDisabled,
 		Identifier: fmt.Sprintf(
 			"JSON_EXTRACT([[%s]], '%s')",
-			inflector.Columnify(parts[0]),
-			jsonPath.String(),
-		),
-		*/
-		// PostgreSQL:
-		// Note: we have to cast it to text because PostgreSQL always
-		// requires a determistic type for any expression. We will do
-		// more type casting while building the final db expression.
-		Identifier: fmt.Sprintf(
-			"JSON_QUERY([[%s]]::jsonb, '%s')::jsonb",
 			inflector.Columnify(parts[0]),
 			jsonPath.String(),
 		),

@@ -43,6 +43,13 @@ func RecordAuthResponse(e *core.RequestEvent, authRecord *core.Record, authMetho
 }
 
 func recordAuthResponse(e *core.RequestEvent, authRecord *core.Record, token string, authMethod string, meta any) error {
+	if authRecord.IsSuperuser() {
+		allowedIPs := e.App.Settings().SuperuserIPs
+		if len(allowedIPs) > 0 && !isIPInList(allowedIPs, e.RealIP()) {
+			return e.ForbiddenError("", errors.New("superuser IP is not whitelisted"))
+		}
+	}
+
 	originalRequestInfo, err := e.RequestInfo()
 	if err != nil {
 		return err
@@ -554,7 +561,7 @@ func firstApiError(errs ...error) *router.ApiError {
 	return router.NewInternalServerError("", errors.Join(errs...))
 }
 
-// execAfterSuccessTx ensures that fn is executed only after a succesul transaction.
+// execAfterSuccessTx ensures that fn is executed only after a successful transaction.
 //
 // If the current app instance is not a transactional or checkTx is false,
 // then fn is directly executed.

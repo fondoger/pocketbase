@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/gabriel-vasile/mimetype"
-	validation "github.com/go-ozzo/ozzo-validation/v4"
+	validation "github.com/pocketbase/ozzo-validation/v4"
 	"github.com/pocketbase/pocketbase/tools/filesystem"
 )
 
@@ -31,7 +31,7 @@ func UploadedFileSize(maxBytes int64) validation.RuleFunc {
 				"validation_file_size_limit",
 				"Failed to upload {{.file}} - the maximum allowed file size is {{.maxSize}} bytes.",
 			).SetParams(map[string]any{
-				"file":    v.OriginalName,
+				"file":    cutStr(v.OriginalName, 300),
 				"maxSize": maxBytes,
 			})
 		}
@@ -60,7 +60,7 @@ func UploadedFileMimeType(validTypes []string) validation.RuleFunc {
 
 		baseErr := validation.NewError(
 			"validation_invalid_mime_type",
-			fmt.Sprintf("Failed to upload %q due to unsupported file type.", v.OriginalName),
+			fmt.Sprintf("Failed to upload %q due to unsupported file type.", cutStr(v.OriginalName, 300)),
 		)
 
 		if len(validTypes) == 0 {

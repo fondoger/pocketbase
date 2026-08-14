@@ -13,8 +13,8 @@ import (
 	"sync"
 	"time"
 
-	validation "github.com/go-ozzo/ozzo-validation/v4"
-	"github.com/go-ozzo/ozzo-validation/v4/is"
+	validation "github.com/pocketbase/ozzo-validation/v4"
+	"github.com/pocketbase/ozzo-validation/v4/is"
 	"github.com/pocketbase/pocketbase/core/validators"
 	"github.com/pocketbase/pocketbase/tools/cron"
 	"github.com/pocketbase/pocketbase/tools/hook"
@@ -120,6 +120,10 @@ var (
 )
 
 type settings struct {
+	// SuperuserIPs defines an optional list of the superuser allowed
+	// individual IPs and subnets (in CIDR notation).
+	SuperuserIPs []string `form:"superuserIPs" json:"superuserIPs"`
+
 	SMTP         SMTPConfig         `form:"smtp" json:"smtp"`
 	Backups      BackupsConfig      `form:"backups" json:"backups"`
 	S3           S3Config           `form:"s3" json:"s3"`
@@ -143,6 +147,7 @@ func newDefaultSettings() *Settings {
 		isNew: true,
 		settings: settings{
 			Meta: MetaConfig{
+				AccentColor:   "#1055c9",
 				AppName:       "Acme",
 				AppURL:        "http://localhost:8090",
 				HideControls:  false,
@@ -252,6 +257,13 @@ func (s *Settings) DBExport(app App) (map[string]any, error) {
 	}
 	result["updated"] = now
 
+	// @todo remove with encoding/json/2
+	// serialize as empty array
+	//nolint:staticcheck
+	if s.settings.SuperuserIPs == nil {
+		s.settings.SuperuserIPs = []string{}
+	}
+
 	encoded, err := json.Marshal(s.settings)
 	if err != nil {
 		return nil, err
@@ -279,6 +291,7 @@ func (s *Settings) PostValidate(ctx context.Context, app App) error {
 	defer s.mu.RUnlock()
 
 	return validation.ValidateStructWithContext(ctx, s,
+		validation.Field(&s.SuperuserIPs, validation.Each(validation.Required, validation.By(validators.IPOrSubnet))),
 		validation.Field(&s.Meta),
 		validation.Field(&s.Logs),
 		validation.Field(&s.SMTP),
@@ -327,6 +340,8 @@ func (s *Settings) MarshalJSON() ([]byte, error) {
 	copy := s.settings
 	s.mu.RUnlock()
 
+	copy.SMTP.hidePassword = true
+
 	sensitiveFields := []*string{
 		&copy.SMTP.Password,
 		&copy.S3.Secret,
@@ -340,17 +355,29 @@ func (s *Settings) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	// @todo remove with encoding/json/2
+	// serialize as empty array
+	if copy.SuperuserIPs == nil {
+		copy.SuperuserIPs = []string{}
+	}
+
 	return json.Marshal(copy)
 }
 
 // -------------------------------------------------------------------
 
 type SMTPConfig struct {
+	// @todo temp workaround to avoid introducing breaking changes;
+	// consider refactoring and/or normalizing with the other Settings sensitive fields
+	//
+	// hidePassword specifies whether to hide the password field from the struct JSON serialization.
+	hidePassword bool
+
 	Enabled  bool   `form:"enabled" json:"enabled"`
 	Port     int    `form:"port" json:"port"`
 	Host     string `form:"host" json:"host"`
 	Username string `form:"username" json:"username"`
-	Password string `form:"password" json:"password,omitempty"`
+	Password string `form:"password" json:"password"`
 
 	// SMTP AUTH - PLAIN (default) or LOGIN
 	AuthMethod string `form:"authMethod" json:"authMethod"`
@@ -392,6 +419,22 @@ func (c SMTPConfig) Validate() error {
 	)
 }
 
+// MarshalJSON implements the [json.Marshaler] interface.
+func (c SMTPConfig) MarshalJSON() ([]byte, error) {
+	type alias SMTPConfig
+
+	if c.hidePassword {
+		v := struct {
+			alias
+			Password string `json:"password,omitempty"`
+		}{alias(c), ""}
+
+		return json.Marshal(v)
+	}
+
+	return json.Marshal(alias(c))
+}
+
 // -------------------------------------------------------------------
 
 type S3Config struct {
@@ -423,7 +466,7 @@ type BatchConfig struct {
 	// MaxRequests is the maximum allowed batch request to execute.
 	MaxRequests int `form:"maxRequests" json:"maxRequests"`
 
-	// Timeout is the the max duration in seconds to wait before cancelling the batch transaction.
+	// Timeout is the max duration in seconds to wait before cancelling the batch transaction.
 	Timeout int64 `form:"timeout" json:"timeout"`
 
 	// MaxBodySize is the maximum allowed batch request body size in bytes.
@@ -449,7 +492,7 @@ type BackupsConfig struct {
 	// Leave it empty to disable the auto backups functionality.
 	Cron string `form:"cron" json:"cron"`
 
-	// CronMaxKeep is the the max number of cron generated backups to
+	// CronMaxKeep is the max number of cron generated backups to
 	// keep before removing older entries.
 	//
 	// This field works only when the cron config has valid cron expression.
@@ -489,6 +532,11 @@ func checkCronExpression(value any) error {
 // -------------------------------------------------------------------
 
 type MetaConfig struct {
+	// @todo experimental
+	//
+	// AccentColor specify the UI "accent" color (HEX).
+	AccentColor string `form:"accentColor" json:"accentColor"`
+
 	AppName       string `form:"appName" json:"appName"`
 	AppURL        string `form:"appURL" json:"appURL"`
 	SenderName    string `form:"senderName" json:"senderName"`
@@ -499,7 +547,9 @@ type MetaConfig struct {
 // Validate makes MetaConfig validatable by implementing [validation.Validatable] interface.
 func (c MetaConfig) Validate() error {
 	return validation.ValidateStruct(&c,
+		validation.Field(&c.AccentColor, validation.Length(7, 7), is.HexColor),
 		validation.Field(&c.AppName, validation.Required, validation.Length(1, 255)),
+		// @todo when replacing the URL validator we may need a system migration to normalize values without protocol
 		validation.Field(&c.AppURL, validation.Required, is.URL),
 		validation.Field(&c.SenderName, validation.Required, validation.Length(1, 255)),
 		validation.Field(&c.SenderAddress, is.EmailFormat, validation.Required),
@@ -556,8 +606,9 @@ func (c TrustedProxyConfig) Validate() error {
 // -------------------------------------------------------------------
 
 type RateLimitsConfig struct {
-	Rules   []RateLimitRule `form:"rules" json:"rules"`
-	Enabled bool            `form:"enabled" json:"enabled"`
+	Rules       []RateLimitRule `form:"rules" json:"rules"`
+	ExcludedIPs []string        `form:"excludedIPs" json:"excludedIPs"`
+	Enabled     bool            `form:"enabled" json:"enabled"`
 }
 
 // FindRateLimitRule returns the first matching rule based on the provided labels.
@@ -602,6 +653,9 @@ func (c RateLimitsConfig) MarshalJSON() ([]byte, error) {
 	if c.Rules == nil {
 		c.Rules = []RateLimitRule{}
 	}
+	if c.ExcludedIPs == nil {
+		c.ExcludedIPs = []string{}
+	}
 
 	return json.Marshal(alias(c))
 }
@@ -613,6 +667,10 @@ func (c RateLimitsConfig) Validate() error {
 			&c.Rules,
 			validation.When(c.Enabled, validation.Required),
 			validation.By(checkUniqueRuleLabel),
+		),
+		validation.Field(
+			&c.ExcludedIPs,
+			validation.Each(validation.Required, validation.By(validators.IPOrSubnet)),
 		),
 	)
 }

@@ -245,29 +245,41 @@ type App interface {
 	// This method is a no-op if a table with the provided name doesn't exist.
 	//
 	// NB! Be aware that this method is vulnerable to SQL injection and the
-	// "tableName" argument must come only from trusted input!
-	DeleteTable(tableName string) error
+	// "dangerousTableName" argument must come only from trusted input!
+	DeleteTable(dangerousTableName string) error
 
 	// DeleteView drops the specified view name.
 	//
 	// This method is a no-op if a view with the provided name doesn't exist.
 	//
 	// NB! Be aware that this method is vulnerable to SQL injection and the
-	// "name" argument must come only from trusted input!
-	DeleteView(name string) error
+	// "dangerousViewName" argument must come only from trusted input!
+	DeleteView(dangerousViewName string) error
 
 	// SaveView creates (or updates already existing) persistent SQL view.
 	//
-	// NB! Be aware that this method is vulnerable to SQL injection and the
-	// "selectQuery" argument must come only from trusted input!
-	SaveView(name string, selectQuery string) error
+	// NB! Be aware that this method is vulnerable to SQL injection and
+	// its arguments must come only from trusted input!
+	SaveView(dangerousViewName string, dangerousSelectQuery string) error
 
 	// CreateViewFields creates a new FieldsList from the provided select query.
 	//
 	// There are some caveats:
 	// - The select query must have an "id" column.
 	// - Wildcard ("*") columns are not supported to avoid accidentally leaking sensitive data.
-	CreateViewFields(selectQuery string) (FieldsList, error)
+	//
+	// NB! Be aware that this method is vulnerable to SQL injection and the
+	// "dangerousSelectQuery" argument must come only from trusted input!
+	CreateViewFields(dangerousSelectQuery string) (FieldsList, error)
+
+	// DryRunView executes the provided query by creating a temporary view
+	// collection and returning a sample of the resulting query records (if valid).
+	//
+	// The same caveats from CreateViewFields apply here too.
+	//
+	// NB! Be aware that this method is vulnerable to SQL injection and the
+	// "dangerousSelectQuery" argument must come only from trusted input!
+	DryRunView(dangerousSelectQuery string, sampleSize int) (*DryRunViewResult, error)
 
 	// FindRecordByViewFile returns the original Record of the provided view collection file.
 	FindRecordByViewFile(viewCollectionModelOrIdentifier any, fileFieldName string, filename string) (*Record, error)
@@ -494,6 +506,11 @@ type App interface {
 	// FindFirstExternalAuthByExpr returns the first available (the most recent created)
 	// ExternalAuth model that satisfies the non-nil expression.
 	FindFirstExternalAuthByExpr(expr dbx.Expression) (*ExternalAuth, error)
+
+	// DeleteAllExternalAuthsByRecord deletes all ExternalAuth models associated with the provided record.
+	//
+	// Returns a combined error with the failed deletes.
+	DeleteAllExternalAuthsByRecord(authRecord *Record) error
 
 	// ---------------------------------------------------------------
 

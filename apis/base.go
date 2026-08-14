@@ -15,7 +15,7 @@ import (
 // StaticWildcardParam is the name of Static handler wildcard parameter.
 const StaticWildcardParam = "path"
 
-// NewRouter returns a new router instance loaded with the default app middlewares and api routes.
+// NewRouter returns a new router instance loaded with the default app middlewares and routes.
 func NewRouter(app core.App) (*router.Router[*core.RequestEvent], error) {
 	pbRouter := router.NewRouter(func(w http.ResponseWriter, r *http.Request) (*core.RequestEvent, router.EventCleanupFunc) {
 		event := new(core.RequestEvent)
@@ -31,9 +31,11 @@ func NewRouter(app core.App) (*router.Router[*core.RequestEvent], error) {
 	pbRouter.Bind(panicRecover())
 	pbRouter.Bind(rateLimit())
 	pbRouter.Bind(loadAuthToken())
+	pbRouter.Bind(superuserIPsWhitelist())
 	pbRouter.Bind(securityHeaders())
 	pbRouter.Bind(BodyLimit(DefaultMaxBodySize))
 
+	// API routes
 	apiGroup := pbRouter.Group("/api")
 	bindSettingsApi(app, apiGroup)
 	bindCollectionApi(app, apiGroup)
@@ -46,6 +48,10 @@ func NewRouter(app core.App) (*router.Router[*core.RequestEvent], error) {
 	bindBatchApi(app, apiGroup)
 	bindRealtimeApi(app, apiGroup)
 	bindHealthApi(app, apiGroup)
+	bindSQLApi(app, apiGroup)
+
+	// UI routes
+	bindUIExtensions(app)
 
 	return pbRouter, nil
 }
@@ -86,7 +92,7 @@ func MustSubFS(fsys fs.FS, dir string) fs.FS {
 
 // Static is a handler function to serve static directory content from fsys.
 //
-// If a file resource is missing and indexFallback is set, the request
+// If a file resource is missing and indexFallback is true, the request
 // will be forwarded to the base index.html (useful for SPA with pretty urls).
 //
 // NB! Expects the route to have a "{path...}" wildcard parameter.
@@ -94,7 +100,7 @@ func MustSubFS(fsys fs.FS, dir string) fs.FS {
 // Special redirects:
 //   - if "path" is a file that ends in index.html, it is redirected to its non-index.html version (eg. /test/index.html -> /test/)
 //   - if "path" is a directory that has index.html, the index.html file is rendered,
-//     otherwise if missing - returns 404 or fallback to the root index.html if indexFallback is set
+//     otherwise if missing - returns 404 or fallback to the root index.html if indexFallback is true
 //
 // Example:
 //

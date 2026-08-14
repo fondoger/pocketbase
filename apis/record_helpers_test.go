@@ -759,3 +759,39 @@ func TestRecordAuthResponseMFACheck(t *testing.T) {
 		}
 	})
 }
+
+func TestRecordAuthResponseSuperuserIPsWhitelistCheck(t *testing.T) {
+	app, _ := tests.NewTestApp()
+	defer app.Cleanup()
+
+	superuser, err := app.FindAuthRecordByEmail(core.CollectionNameSuperusers, "test@example.com")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	app.Settings().TrustedProxy.Headers = []string{"x-test-ip"}
+
+	event := new(core.RequestEvent)
+	event.App = app
+	event.Request = httptest.NewRequest(http.MethodGet, "/", nil)
+	event.Request.Header.Set("x-test-ip", "127.0.0.1")
+	event.Response = httptest.NewRecorder()
+
+	t.Run("non-whitelisted", func(t *testing.T) {
+		app.Settings().SuperuserIPs = []string{"0.0.0.0"}
+
+		err = apis.RecordAuthResponse(event, superuser, "example", nil)
+		if err == nil {
+			t.Fatal("Expected response error, got nil")
+		}
+	})
+
+	t.Run("whitelisted", func(t *testing.T) {
+		app.Settings().SuperuserIPs = []string{"0.0.0.0", "127.0.0.1"}
+
+		err = apis.RecordAuthResponse(event, superuser, "example", nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+	})
+}

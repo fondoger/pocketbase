@@ -60,6 +60,7 @@ type fileApi struct {
 }
 
 func (api *fileApi) fileToken(e *core.RequestEvent) error {
+	// extra check for just in case the handler is called in a different context
 	if e.Auth == nil {
 		return e.UnauthorizedError("Missing auth context.", nil)
 	}
@@ -113,6 +114,15 @@ func (api *fileApi) download(e *core.RequestEvent) error {
 
 		token := e.Request.URL.Query().Get("token")
 		authRecord, _ := e.App.FindAuthRecordByToken(token, core.TokenTypeFile)
+
+		// reset the auth state if it is superuser and it is not whitelisted
+		// (not critical because file tokens are short-lived but checked nonetheless as an extra precaution)
+		if authRecord != nil && authRecord.IsSuperuser() {
+			allowedIPs := e.App.Settings().SuperuserIPs
+			if len(allowedIPs) > 0 && !isIPInList(allowedIPs, e.RealIP()) {
+				authRecord = nil
+			}
+		}
 
 		// create a shallow copy of the cached request data and adjust it to the current auth record (if any)
 		requestInfo := *originalRequestInfo

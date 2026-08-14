@@ -42,11 +42,12 @@ import (
 
 	"github.com/pocketbase/pocketbase/tools/filesystem/blob"
 	"github.com/pocketbase/pocketbase/tools/filesystem/internal/s3blob/s3"
+	"github.com/pocketbase/pocketbase/tools/routine"
 )
 
 const defaultPageSize = 1000
 
-// New creates a new instance of the S3 driver backed by the the internal S3 client.
+// New creates a new instance of the S3 driver backed by the internal S3 client.
 func New(s3Client *s3.S3) (blob.Driver, error) {
 	if s3Client.Bucket == "" {
 		return nil, errors.New("s3blob.New: missing bucket name")
@@ -359,7 +360,7 @@ func (w *writer) Write(p []byte) (int, error) {
 // error uploading to S3.
 func (w *writer) open(r io.Reader, closePipeOnError bool) {
 	// This goroutine will keep running until Close, unless there's an error.
-	go func() {
+	routine.FireAndForget(func() {
 		defer func() {
 			close(w.donec)
 		}()
@@ -378,7 +379,7 @@ func (w *writer) open(r io.Reader, closePipeOnError bool) {
 			}
 			w.err = err
 		}
-	}()
+	})
 }
 
 // Close completes the writer and closes it. Any error occurring during write

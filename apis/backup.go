@@ -70,14 +70,19 @@ func backupDownload(e *core.RequestEvent) error {
 		return e.ForbiddenError("Insufficient permissions to access the resource.", err)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
-	defer cancel()
+	allowedIPs := e.App.Settings().SuperuserIPs
+	if len(allowedIPs) > 0 && !isIPInList(allowedIPs, e.RealIP()) {
+		return e.ForbiddenError("Insufficient permissions to access the resource.", nil)
+	}
 
 	fsys, err := e.App.NewBackupsFilesystem()
 	if err != nil {
 		return e.InternalServerError("Failed to load backups filesystem.", err)
 	}
 	defer fsys.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	defer cancel()
 
 	fsys.SetContext(ctx)
 

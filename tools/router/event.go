@@ -322,7 +322,7 @@ func (e *Event) InternalServerError(message string, errData any) *ApiError {
 // Binders
 // -------------------------------------------------------------------
 
-const DefaultMaxMemory = 32 << 20 // 32mb
+const DefaultMaxMemory = 16 << 20 // 16mb
 
 // BindBody unmarshal the request body into the provided dst.
 //
@@ -349,7 +349,7 @@ const DefaultMaxMemory = 32 << 20 // 32mb
 //
 //	   Title string `json:"title" form:"title"`
 //	   Total int    `json:"total" form:"total"`
-//	}
+//	}{}
 //	err := e.BindBody(&data)
 func (e *Event) BindBody(dst any) error {
 	if e.Request.ContentLength == 0 {

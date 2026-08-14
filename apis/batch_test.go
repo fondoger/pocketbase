@@ -224,7 +224,7 @@ func TestBatchRequest(t *testing.T) {
 			},
 		},
 		{
-			Name:   "mixed create/update/delete (rules failure)",
+			Name:   "mixed create/update/delete (non-superuser rule failure)",
 			Method: http.MethodPost,
 			URL:    "/api/batch",
 			Body: strings.NewReader(`{
@@ -281,6 +281,70 @@ func TestBatchRequest(t *testing.T) {
 				_, err = app.FindRecordById("demo2", "achvryl401bhse3")
 				if err != nil {
 					t.Fatal("Expected record to not be deleted")
+				}
+			},
+		},
+		{
+			Name:   "mixed create/update/delete (superuser rule failure)",
+			Method: http.MethodPost,
+			URL:    "/api/batch",
+			Headers: map[string]string{
+				// test@example.com, clients
+				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6ImdrMzkwcWVnczR5NDd3biIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoidjg1MXE0cjc5MHJoa25sIiwiZXhwIjoyNTI0NjA0NDYxLCJyZWZyZXNoYWJsZSI6dHJ1ZX0.0ONnm_BsvPRZyDNT31GN1CKUB6uQRxvVvQ-Wc9AZfG0",
+			},
+			Body: strings.NewReader(`{
+				"requests": [
+					{"method":"DELETE", "url":"/api/collections/demo2/records/achvryl401bhse3", "headers": {"Authorization": "ignored"}},
+					{"method":"PATCH", "url":"/api/collections/demo3/records/1tmknxy2868d869", "body": {"title": "batch_update"}, "headers": {"Authorization": "ignored"}},
+					{"method":"POST", "url":"/api/collections/_superusers/records", "body": {"email":"test_batch@example.com","password":"1234567890"}}
+				]
+			}`),
+			ExpectedStatus: 400,
+			ExpectedContent: []string{
+				`"data":{`,
+				`"requests":{`,
+				`"2":{"code":"batch_request_failed"`,
+				`403`,
+			},
+			NotExpectedContent: []string{
+				`"0":`,
+				`"1":`,
+			},
+			ExpectedEvents: map[string]int{
+				"*":                        0,
+				"OnBatchRequest":           1,
+				"OnModelUpdate":            1,
+				"OnModelUpdateExecute":     1,
+				"OnModelAfterUpdateError":  1,
+				"OnModelDelete":            1,
+				"OnModelDeleteExecute":     1,
+				"OnModelAfterDeleteError":  1,
+				"OnModelValidate":          1,
+				"OnRecordUpdateRequest":    1,
+				"OnRecordUpdate":           1,
+				"OnRecordUpdateExecute":    1,
+				"OnRecordAfterUpdateError": 1,
+				"OnRecordDeleteRequest":    1,
+				"OnRecordDelete":           1,
+				"OnRecordDeleteExecute":    1,
+				"OnRecordAfterDeleteError": 1,
+				"OnRecordEnrich":           1,
+				"OnRecordValidate":         1,
+			},
+			AfterTestFunc: func(t testing.TB, app *tests.TestApp, res *http.Response) {
+				_, err = app.FindRecordById("demo2", "achvryl401bhse3")
+				if err != nil {
+					t.Fatal("Expected record to not be deleted")
+				}
+
+				_, err = app.FindFirstRecordByFilter("demo3", `title="batch_update"`)
+				if err == nil {
+					t.Fatal("Expected record to not be updated")
+				}
+
+				_, err = app.FindAuthRecordByEmail(core.CollectionNameSuperusers, "test_batch@example.com")
+				if err == nil {
+					t.Fatal("Expected superuser to not be created")
 				}
 			},
 		},

@@ -23,6 +23,7 @@ import (
 	"github.com/pocketbase/pocketbase/tools/filesystem/internal/s3blob"
 	"github.com/pocketbase/pocketbase/tools/filesystem/internal/s3blob/s3"
 	"github.com/pocketbase/pocketbase/tools/list"
+	"github.com/pocketbase/pocketbase/tools/routine"
 
 	// explicit webp decoder because disintegration/imaging does not support webp
 	_ "golang.org/x/image/webp"
@@ -38,7 +39,7 @@ type System struct {
 	bucket *blob.Bucket
 }
 
-// NewS3 initializes an S3 filesystem instance.
+// NewS3 initializes a new S3 filesystem instance.
 //
 // NB! Make sure to call `Close()` after you are done working with it.
 func NewS3(
@@ -411,10 +412,20 @@ var inlineServeContentTypes = []string{
 
 // manualExtensionContentTypes is a map of file extensions to content types.
 var manualExtensionContentTypes = map[string]string{
-	".svg": "image/svg+xml",   // (see https://github.com/whatwg/mimesniff/issues/7)
-	".css": "text/css",        // (see https://github.com/gabriel-vasile/mimetype/pull/113)
-	".js":  "text/javascript", // (see https://github.com/pocketbase/pocketbase/issues/6597)
+	// https://github.com/whatwg/mimesniff/issues/7
+	".svg": "image/svg+xml",
+
+	// https://github.com/gabriel-vasile/mimetype/pull/113
+	".css": "text/css",
+
+	// https://github.com/pocketbase/pocketbase/issues/6597
+	".js":  "text/javascript",
 	".mjs": "text/javascript",
+
+	// https://github.com/pocketbase/pocketbase/discussions/7467
+	".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+	".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+	".pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
 }
 
 // forceAttachmentParam is the name of the request query parameter to
@@ -449,7 +460,7 @@ func (s *System) Serve(res http.ResponseWriter, req *http.Request, fileKey strin
 	// make an exception for specific content types and force a custom
 	// content type to send in the response so that it can be loaded properly
 	extContentType := realContentType
-	if ct, found := manualExtensionContentTypes[filepath.Ext(name)]; found {
+	if ct, found := manualExtensionContentTypes[filepath.Ext(fileKey)]; found {
 		extContentType = ct
 	}
 
@@ -486,7 +497,15 @@ var ThumbSizeRegex = regexp.MustCompile(`^(\d+)x(\d+)(t|b|f)?$`)
 // - WxHt (eg. 300x100t) - resize and crop to WxH viewbox (from top)
 // - WxHb (eg. 300x100b) - resize and crop to WxH viewbox (from bottom)
 // - WxHf (eg. 300x100f) - fit inside a WxH viewbox (without cropping)
-func (s *System) CreateThumb(originalKey string, thumbKey, thumbSize string) error {
+func (s *System) CreateThumb(originalKey, thumbKey, thumbSize string) error {
+	// note: the wrapping is an extra precaution since there were several
+	// golang.org/x/image panic related issues over the years
+	return routine.SafeWrap(func() error {
+		return s.createThumb(originalKey, thumbKey, thumbSize)
+	})()
+}
+
+func (s *System) createThumb(originalKey, thumbKey, thumbSize string) error {
 	sizeParts := ThumbSizeRegex.FindStringSubmatch(thumbSize)
 	if len(sizeParts) != 4 {
 		return errors.New("thumb size must be in WxH, WxHt, WxHb or WxHf format")

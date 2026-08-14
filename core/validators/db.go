@@ -7,7 +7,7 @@ import (
 	"slices"
 	"strings"
 
-	validation "github.com/go-ozzo/ozzo-validation/v4"
+	validation "github.com/pocketbase/ozzo-validation/v4"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/pocketbase/dbx"
 )
@@ -76,8 +76,7 @@ func NormalizeUniqueIndexError(err error, tableOrAlias string, fieldNames []stri
 		return err
 	}
 
-	// check for unique constraint failure
-	/* SQLite:
+	// Keep support for SQLite-style errors used by upstream callers and tests.
 	msg := strings.ToLower(err.Error())
 	if strings.Contains(msg, "unique constraint failed") {
 		// note: extra space to unify multi-columns lookup
@@ -97,10 +96,8 @@ func NormalizeUniqueIndexError(err error, tableOrAlias string, fieldNames []stri
 			return normalizedErrs
 		}
 	}
-	*/
 
-	// check for unique constraint failure
-	// PostgreSQL:
+	// PostgreSQL reports structured unique violations.
 	if pgErr, ok := err.(*pgconn.PgError); ok {
 		// The PostgreSQL 23505 UNIQUE VIOLATION error occurs when a unique constraint is violated.
 		if pgErr.Code == "23505" {

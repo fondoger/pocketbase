@@ -14,6 +14,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/pocketbase/pocketbase/tools/routine"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -339,7 +340,7 @@ func (u *Uploader) multipartUpload(ctx context.Context, initPart []byte, optReqF
 	if len(initPart) != 0 {
 		totalWorkers--
 		initPartNumber := u.lastPartNumber
-		g.Go(func() error {
+		g.Go(routine.SafeWrap(func() error {
 			mp, err := u.uploadPart(ctx, initPartNumber, initPart, optReqFuncs...)
 			if err != nil {
 				return err
@@ -350,13 +351,13 @@ func (u *Uploader) multipartUpload(ctx context.Context, initPart []byte, optReqF
 			u.mu.Unlock()
 
 			return nil
-		})
+		}))
 	}
 
 	totalWorkers = max(totalWorkers, 1)
 
 	for i := 0; i < totalWorkers; i++ {
-		g.Go(func() error {
+		g.Go(routine.SafeWrap(func() error {
 			for {
 				part, num, err := u.nextPart()
 				if err != nil {
@@ -377,7 +378,7 @@ func (u *Uploader) multipartUpload(ctx context.Context, initPart []byte, optReqF
 			}
 
 			return nil
-		})
+		}))
 	}
 
 	return g.Wait()

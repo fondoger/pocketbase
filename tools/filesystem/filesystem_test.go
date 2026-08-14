@@ -405,12 +405,12 @@ func TestFileSystemServe(t *testing.T) {
 		{
 			// svg exception
 			"image.svg",
-			"test_name.svg",
+			"test_name.abc",
 			nil,
 			nil,
 			false,
 			map[string]string{
-				"Content-Disposition":     "attachment; filename=test_name.svg",
+				"Content-Disposition":     "attachment; filename=test_name.abc",
 				"Content-Type":            "image/svg+xml",
 				"Content-Length":          "0",
 				"Content-Security-Policy": csp,
@@ -420,12 +420,12 @@ func TestFileSystemServe(t *testing.T) {
 		{
 			// css exception
 			"style.css",
-			"test_name.css",
+			"test_name",
 			nil,
 			nil,
 			false,
 			map[string]string{
-				"Content-Disposition":     "attachment; filename=test_name.css",
+				"Content-Disposition":     "attachment; filename=test_name",
 				"Content-Type":            "text/css",
 				"Content-Length":          "0",
 				"Content-Security-Policy": csp,
@@ -435,12 +435,12 @@ func TestFileSystemServe(t *testing.T) {
 		{
 			// js exception
 			"main.js",
-			"test_name.js",
+			"test_name.abc",
 			nil,
 			nil,
 			false,
 			map[string]string{
-				"Content-Disposition":     "attachment; filename=test_name.js",
+				"Content-Disposition":     "attachment; filename=test_name.abc",
 				"Content-Type":            "text/javascript",
 				"Content-Length":          "0",
 				"Content-Security-Policy": csp,
@@ -450,13 +450,58 @@ func TestFileSystemServe(t *testing.T) {
 		{
 			// mjs exception
 			"main.mjs",
-			"test_name.mjs",
+			"test_name.abc",
 			nil,
 			nil,
 			false,
 			map[string]string{
-				"Content-Disposition":     "attachment; filename=test_name.mjs",
+				"Content-Disposition":     "attachment; filename=test_name.abc",
 				"Content-Type":            "text/javascript",
+				"Content-Length":          "0",
+				"Content-Security-Policy": csp,
+				"Cache-Control":           cacheControl,
+			},
+		},
+		{
+			// xlsx exception
+			"dummy.xlsx",
+			"test_name.abc",
+			nil,
+			nil,
+			false,
+			map[string]string{
+				"Content-Disposition":     "attachment; filename=test_name.abc",
+				"Content-Type":            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+				"Content-Length":          "0",
+				"Content-Security-Policy": csp,
+				"Cache-Control":           cacheControl,
+			},
+		},
+		{
+			// docx exception
+			"dummy.docx",
+			"test_name.abc",
+			nil,
+			nil,
+			false,
+			map[string]string{
+				"Content-Disposition":     "attachment; filename=test_name.abc",
+				"Content-Type":            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+				"Content-Length":          "0",
+				"Content-Security-Policy": csp,
+				"Cache-Control":           cacheControl,
+			},
+		},
+		{
+			// pptx exception
+			"dummy.pptx",
+			"test_name.abc",
+			nil,
+			nil,
+			false,
+			map[string]string{
+				"Content-Disposition":     "attachment; filename=test_name.abc",
+				"Content-Type":            "application/vnd.openxmlformats-officedocument.presentationml.presentation",
 				"Content-Length":          "0",
 				"Content-Security-Policy": csp,
 				"Cache-Control":           cacheControl,
@@ -716,6 +761,9 @@ func TestFileSystemList(t *testing.T) {
 				"style.css",
 				"main.js",
 				"main.mjs",
+				"dummy.xlsx",
+				"dummy.docx",
+				"dummy.pptx",
 				"test/sub1.txt",
 				"test/sub2.txt",
 			},
@@ -1035,6 +1083,33 @@ func createTestDir(t *testing.T) string {
 	// mjs
 	{
 		file, err := os.OpenFile(filepath.Join(dir, "main.mjs"), os.O_WRONLY|os.O_CREATE, 0644)
+		if err != nil {
+			t.Fatal(err)
+		}
+		file.Close()
+	}
+
+	// "docx" (we are interested only in the extension)
+	{
+		file, err := os.OpenFile(filepath.Join(dir, "dummy.docx"), os.O_WRONLY|os.O_CREATE, 0644)
+		if err != nil {
+			t.Fatal(err)
+		}
+		file.Close()
+	}
+
+	// "xlsx" (we are interested only in the extension)
+	{
+		file, err := os.OpenFile(filepath.Join(dir, "dummy.xlsx"), os.O_WRONLY|os.O_CREATE, 0644)
+		if err != nil {
+			t.Fatal(err)
+		}
+		file.Close()
+	}
+
+	// "pptx" (we are interested only in the extension)
+	{
+		file, err := os.OpenFile(filepath.Join(dir, "dummy.pptx"), os.O_WRONLY|os.O_CREATE, 0644)
 		if err != nil {
 			t.Fatal(err)
 		}

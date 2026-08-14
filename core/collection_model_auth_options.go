@@ -5,8 +5,8 @@ import (
 	"strings"
 	"time"
 
-	validation "github.com/go-ozzo/ozzo-validation/v4"
-	"github.com/go-ozzo/ozzo-validation/v4/is"
+	validation "github.com/pocketbase/ozzo-validation/v4"
+	"github.com/pocketbase/ozzo-validation/v4/is"
 	"github.com/pocketbase/pocketbase/tools/auth"
 	"github.com/pocketbase/pocketbase/tools/list"
 	"github.com/pocketbase/pocketbase/tools/security"
@@ -60,7 +60,7 @@ func (m *Collection) setDefaultAuthOptions() {
 		},
 		MFA: MFAConfig{
 			Enabled:  false,
-			Duration: 1800, // 30min
+			Duration: 600, // 10min
 		},
 		OTP: OTPConfig{
 			Enabled:       false,
@@ -70,7 +70,7 @@ func (m *Collection) setDefaultAuthOptions() {
 		},
 		AuthToken: TokenConfig{
 			Secret:   security.RandomString(50),
-			Duration: 604800, // 7 days
+			Duration: 432000, // 5days
 		},
 		PasswordResetToken: TokenConfig{
 			Secret:   security.RandomString(50),
@@ -82,7 +82,7 @@ func (m *Collection) setDefaultAuthOptions() {
 		},
 		VerificationToken: TokenConfig{
 			Secret:   security.RandomString(50),
-			Duration: 259200, // 3days
+			Duration: 86400, // 1day
 		},
 		FileToken: TokenConfig{
 			Secret:   security.RandomString(50),

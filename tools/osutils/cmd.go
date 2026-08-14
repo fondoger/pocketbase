@@ -8,7 +8,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/go-ozzo/ozzo-validation/v4/is"
+	"github.com/pocketbase/ozzo-validation/v4/is"
 )
 
 // LaunchURL attempts to open the provided url in the user's default browser.

@@ -1,8 +1,9 @@
 package routine
 
 import (
+	"fmt"
 	"log"
-	"runtime/debug"
+	"runtime"
 	"sync"
 )
 
@@ -22,11 +23,28 @@ func FireAndForget(f func(), wg ...*sync.WaitGroup) {
 
 		defer func() {
 			if err := recover(); err != nil {
-				log.Printf("RECOVERED FROM PANIC (safe to ignore): %v", err)
-				log.Println(string(debug.Stack()))
+				log.Println("[FireAndForget] RECOVERED FROM PANIC:", err)
+
+				stack := make([]byte, 2<<10) // 2 KB
+				length := runtime.Stack(stack, false)
+				log.Println(string(stack[:length]))
 			}
 		}()
 
 		f()
 	}()
+}
+
+// SafeWrap wraps the provided function with auto panic recover handling
+// and returns any eventual panic as regular error.
+func SafeWrap(f func() error) func() error {
+	return func() (err error) {
+		defer func() {
+			if r := recover(); r != nil {
+				err = fmt.Errorf("[SafeWrap] recovered from panic: %v", r)
+			}
+		}()
+
+		return f()
+	}
 }

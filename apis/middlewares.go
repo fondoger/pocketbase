@@ -42,6 +42,9 @@ const (
 	DefaultLoadAuthTokenMiddlewarePriority = DefaultRateLimitMiddlewarePriority - 20
 	DefaultLoadAuthTokenMiddlewareId       = "pbLoadAuthToken"
 
+	DefaultSuperuserIPsWhitelistMiddlewarePriority = DefaultLoadAuthTokenMiddlewarePriority + 5
+	DefaultSuperuserIPsWhitelistMiddlewareId       = "pbSuperuserIPsWhitelist"
+
 	DefaultSecurityHeadersMiddlewarePriority = DefaultRateLimitMiddlewarePriority - 10
 	DefaultSecurityHeadersMiddlewareId       = "pbSecurityHeaders"
 
@@ -207,11 +210,13 @@ func loadAuthToken() *hook.Handler[*core.RequestEvent] {
 
 func getAuthTokenFromRequest(e *core.RequestEvent) string {
 	token := e.Request.Header.Get("Authorization")
-	if token != "" {
-		// the schema prefix is not required and it is only for
-		// compatibility with the defaults of some HTTP clients
-		token = strings.TrimPrefix(token, "Bearer ")
+
+	// the "Bearer" schema prefix is not required by PocketBase and it is
+	// supported only for compatibility with the defaults of some HTTP clients
+	if len(token) > 7 && strings.EqualFold(token[:7], "Bearer ") {
+		return token[7:]
 	}
+
 	return token
 }
 
@@ -291,6 +296,28 @@ func securityHeaders() *hook.Handler[*core.RequestEvent] {
 
 			// @todo consider a default HSTS?
 			// (see also https://webkit.org/blog/8146/protecting-against-hsts-abuse/)
+
+			return e.Next()
+		},
+	}
+}
+
+// superuserIPsWhitelist middleware checks the current authenticated superuser IP
+// against the configured SuperuserIPs whitelist setting.
+//
+// This middleware is registered by default for all routes.
+func superuserIPsWhitelist() *hook.Handler[*core.RequestEvent] {
+	return &hook.Handler[*core.RequestEvent]{
+		Id:       DefaultSuperuserIPsWhitelistMiddlewareId,
+		Priority: DefaultSuperuserIPsWhitelistMiddlewarePriority,
+		Func: func(e *core.RequestEvent) error {
+			if e.HasSuperuserAuth() {
+				ips := e.App.Settings().SuperuserIPs
+
+				if len(ips) > 0 && !isIPInList(ips, e.RealIP()) {
+					return e.ForbiddenError("", errors.New("superuser IP is not whitelisted"))
+				}
+			}
 
 			return e.Next()
 		},

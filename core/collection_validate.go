@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"strings"
 
-	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/pocketbase/dbx"
+	validation "github.com/pocketbase/ozzo-validation/v4"
 	"github.com/pocketbase/pocketbase/core/validators"
 	"github.com/pocketbase/pocketbase/tools/dbutils"
 	"github.com/pocketbase/pocketbase/tools/list"
@@ -314,11 +314,15 @@ func (cv *collectionValidator) checkViewQuery(value any) error {
 		return nil // nothing to check
 	}
 
-	if _, err := cv.app.CreateViewFields(v); err != nil {
-		return validation.NewError(
-			"validation_invalid_view_query",
-			fmt.Sprintf("Invalid query - %s", err.Error()),
-		)
+	_, err := cv.app.DryRunView(v, 10)
+	if err != nil {
+		rawErr := err.Error()
+		if len(rawErr) > 500 {
+			// restrict just as an extra precaution
+			rawErr = rawErr[:500]
+		}
+
+		return validation.NewError("validation_invalid_view_query", "Invalid query - "+rawErr)
 	}
 
 	return nil
