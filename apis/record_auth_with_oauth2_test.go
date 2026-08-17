@@ -90,11 +90,11 @@ func TestRecordAuthWithOAuth2(t *testing.T) {
 				`"data":{`,
 				`"provider":`,
 				`"code":`,
+				`"redirectURL":`,
 			},
 			NotExpectedContent: []string{
 				// should be optional
 				`"codeVerifier":`,
-				`"redirectURL":`,
 			},
 			ExpectedEvents: map[string]int{"*": 0},
 		},
@@ -110,11 +110,11 @@ func TestRecordAuthWithOAuth2(t *testing.T) {
 				`"data":{`,
 				`"provider":`,
 				`"code":`,
+				`"redirectURL":`,
 			},
 			NotExpectedContent: []string{
 				// should be optional
 				`"codeVerifier":`,
-				`"redirectURL":`,
 			},
 			ExpectedEvents: map[string]int{"*": 0},
 		},

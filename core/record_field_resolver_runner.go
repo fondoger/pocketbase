@@ -677,7 +677,7 @@ func (r *runner) processActiveProps() (*search.ResolverResult, error) {
 		} else {
 			jeAlias := "__je_" + newTableAlias
 
-			err := r.resolver.registerJoin(dbutils.JSONEach(prefixedFieldName), jeAlias, nil)
+			err := r.resolver.registerJoin(dbutils.JSONEach(prefixedFieldName), jeAlias, dbx.NewExp("TRUE"))
 			if err != nil {
 				return nil, err
 			}
@@ -721,6 +721,7 @@ func (r *runner) processActiveProps() (*search.ResolverResult, error) {
 				&search.Join{
 					TableName:  dbutils.JSONEach(prefixedFieldName2),
 					TableAlias: jeAlias2,
+					On:         dbx.NewExp("TRUE"),
 				},
 				&search.Join{
 					TableName:  inflector.Columnify(newCollectionName),
@@ -783,7 +784,7 @@ func (r *runner) finalizeActivePropsProcessing(collection *Collection, prop stri
 		jePair := r.activeTableAlias + "." + cleanFieldName
 		jeAlias := "__je_" + r.activeTableAlias + "_" + cleanFieldName + r.resolver.joinAliasSuffix
 
-		err := r.resolver.registerJoin(dbutils.JSONEach(jePair), jeAlias, nil)
+		err := r.resolver.registerJoin(dbutils.JSONEach(jePair), jeAlias, dbx.NewExp("TRUE"))
 		if err != nil {
 			return nil, err
 		}
@@ -803,6 +804,7 @@ func (r *runner) finalizeActivePropsProcessing(collection *Collection, prop stri
 			r.multiMatch.Joins = append(r.multiMatch.Joins, &search.Join{
 				TableName:  dbutils.JSONEach(jePair2),
 				TableAlias: jeAlias2,
+				On:         dbx.NewExp("TRUE"),
 			})
 			r.multiMatch.ValueIdentifier = fmt.Sprintf("[[%s.value]]", jeAlias2)
 

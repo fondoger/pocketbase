@@ -367,8 +367,8 @@ func TestProviderExecNonEmptyQuery(t *testing.T) {
 				"SELECT * FROM `test` WHERE ((NOT (`test1` IS NULL)) AND (((test2 IS NOT '' AND test2 IS NOT NULL)))) AND (test1 >= 2) ORDER BY `test1` ASC, `test2` DESC LIMIT " + fmt.Sprint(MaxPerPage),
 				*/
 				// PostgreSQL:
-				`SELECT COUNT(DISTINCT [[test.id]]) FROM "test" WHERE ((NOT ("test1" IS NULL)) AND (((test2::text IS DISTINCT FROM '' AND test2 IS NOT NULL)))) AND (test1 >= 2)`,
-				`SELECT * FROM "test" WHERE ((NOT ("test1" IS NULL)) AND (((test2::text IS DISTINCT FROM '' AND test2 IS NOT NULL)))) AND (test1 >= 2) ORDER BY "test1" ASC, "test2" DESC LIMIT ` + fmt.Sprint(MaxPerPage),
+				`SELECT COUNT(DISTINCT [[test.id]]) FROM "test" WHERE ((NOT ("test1" IS NULL)) AND (((test2::text IS DISTINCT FROM ''::text AND test2 IS NOT NULL)))) AND (test1 >= 2)`,
+				`SELECT * FROM "test" WHERE ((NOT ("test1" IS NULL)) AND (((test2::text IS DISTINCT FROM ''::text AND test2 IS NOT NULL)))) AND (test1 >= 2) ORDER BY "test1" ASC, "test2" DESC LIMIT ` + fmt.Sprint(MaxPerPage),
 			},
 		},
 		{
@@ -385,7 +385,7 @@ func TestProviderExecNonEmptyQuery(t *testing.T) {
 				"SELECT * FROM `test` WHERE ((NOT (`test1` IS NULL)) AND (((test2 IS NOT '' AND test2 IS NOT NULL)))) AND (test1 >= 2) ORDER BY `test1` ASC, `test2` DESC LIMIT " + fmt.Sprint(MaxPerPage),
 				*/
 				// PostgreSQL:
-				`SELECT * FROM "test" WHERE ((NOT ("test1" IS NULL)) AND (((test2::text IS DISTINCT FROM '' AND test2 IS NOT NULL)))) AND (test1 >= 2) ORDER BY "test1" ASC, "test2" DESC LIMIT ` + fmt.Sprint(MaxPerPage),
+				`SELECT * FROM "test" WHERE ((NOT ("test1" IS NULL)) AND (((test2::text IS DISTINCT FROM ''::text AND test2 IS NOT NULL)))) AND (test1 >= 2) ORDER BY "test1" ASC, "test2" DESC LIMIT ` + fmt.Sprint(MaxPerPage),
 			},
 		},
 		{
@@ -403,8 +403,8 @@ func TestProviderExecNonEmptyQuery(t *testing.T) {
 				"SELECT * FROM `test` WHERE (NOT (`test1` IS NULL)) AND (((test3 IS NOT '' AND test3 IS NOT NULL))) ORDER BY `test1` ASC, `test3` ASC LIMIT 10",
 				*/
 				// PostgreSQL:
-				`SELECT COUNT(DISTINCT [[test.id]]) FROM "test" WHERE (NOT ("test1" IS NULL)) AND (((test3::text IS DISTINCT FROM '' AND test3 IS NOT NULL)))`,
-				`SELECT * FROM "test" WHERE (NOT ("test1" IS NULL)) AND (((test3::text IS DISTINCT FROM '' AND test3 IS NOT NULL))) ORDER BY "test1" ASC, "test3" ASC LIMIT 10`,
+				`SELECT COUNT(DISTINCT [[test.id]]) FROM "test" WHERE (NOT ("test1" IS NULL)) AND (((test3::text IS DISTINCT FROM ''::text AND test3 IS NOT NULL)))`,
+				`SELECT * FROM "test" WHERE (NOT ("test1" IS NULL)) AND (((test3::text IS DISTINCT FROM ''::text AND test3 IS NOT NULL))) ORDER BY "test1" ASC, "test3" ASC LIMIT 10`,
 			},
 		},
 		{
@@ -421,7 +421,7 @@ func TestProviderExecNonEmptyQuery(t *testing.T) {
 				"SELECT * FROM `test` WHERE (NOT (`test1` IS NULL)) AND (((test3 IS NOT '' AND test3 IS NOT NULL))) ORDER BY `test1` ASC, `test3` ASC LIMIT 10",
 				*/
 				// PostgreSQL:
-				`SELECT * FROM "test" WHERE (NOT ("test1" IS NULL)) AND (((test3::text IS DISTINCT FROM '' AND test3 IS NOT NULL))) ORDER BY "test1" ASC, "test3" ASC LIMIT 10`,
+				`SELECT * FROM "test" WHERE (NOT ("test1" IS NULL)) AND (((test3::text IS DISTINCT FROM ''::text AND test3 IS NOT NULL))) ORDER BY "test1" ASC, "test3" ASC LIMIT 10`,
 			},
 		},
 		{
@@ -529,7 +529,7 @@ func TestProviderFilterAndSortLimits(t *testing.T) {
 		{
 			"<= max filter length",
 			[]FilterData{
-				"1=2",
+				"'1'='2'",
 				/* SQLite:
 				FilterData("1='" + strings.Repeat("a", MaxFilterLength-4) + "'"),
 				*/
@@ -544,7 +544,7 @@ func TestProviderFilterAndSortLimits(t *testing.T) {
 		{
 			"> max filter length",
 			[]FilterData{
-				"1=2",
+				"'1'='2'",
 				FilterData("1='" + strings.Repeat("a", MaxFilterLength-3) + "'"),
 			},
 			[]SortField{},
@@ -555,8 +555,8 @@ func TestProviderFilterAndSortLimits(t *testing.T) {
 		{
 			"<= max filter exprs",
 			[]FilterData{
-				"1=2",
-				"(1=1 || 1=1) && (1=1 || (1=1 || 1=1)) && (1=1)",
+				"'1'='2'",
+				"('1'='1' || '1'='1') && ('1'='1' || ('1'='1' || '1'='1')) && ('1'='1')",
 			},
 			[]SortField{},
 			6,
@@ -566,8 +566,8 @@ func TestProviderFilterAndSortLimits(t *testing.T) {
 		{
 			"> max filter exprs",
 			[]FilterData{
-				"1=2",
-				"(1=1 || 1=1) && (1=1 || (1=1 || 1=1)) && (1=1)",
+				"'1'='2'",
+				"('1'='1' || '1'='1') && ('1'='1' || ('1'='1' || '1'='1')) && ('1'='1')",
 			},
 			[]SortField{},
 			5,
@@ -638,7 +638,7 @@ func TestProviderFilterAndSortLimits(t *testing.T) {
 
 			hasErr := err != nil
 			if hasErr != s.expectError {
-				t.Fatalf("Expected hasErr %v, got %v", s.expectError, hasErr)
+				t.Fatalf("Expected hasErr %v, got %v (%v)", s.expectError, hasErr, err)
 			}
 		})
 	}
@@ -816,9 +816,27 @@ func createTestDB() (*testDB, func()) {
 
 func NewTestDBX() (db *testDB, cleanup func()) {
 	dbName := security.RandomString(5)
-	exec.Command("sh", "-c", fmt.Sprintf("PGPASSWORD=pass createdb -h 127.0.0.1 -U user %s", dbName)).Run()
+	exec.Command("sh", "-c", fmt.Sprintf("PGPASSWORD=admin createdb -h 127.0.0.1 -U postgres %s", dbName)).Run()
 
-	sqlDB, err := sql.Open("pgx", fmt.Sprintf("postgres://user:pass@localhost:5432/%s?sslmode=disable", dbName))
+	sqlDB, err := sql.Open("pgx", fmt.Sprintf("postgres://postgres:admin@localhost:5432/%s?sslmode=disable", dbName))
+	if err != nil {
+		panic(err)
+	}
+	_, err = sqlDB.Exec(`
+		CREATE OR REPLACE FUNCTION strftime(p_format text, p_time_value text, VARIADIC p_modifiers text[])
+		RETURNS text AS $$
+		DECLARE v_time timestamptz; v_modifier text; v_format text;
+		BEGIN
+			v_time := CASE WHEN p_time_value IS NULL OR p_time_value = '' OR lower(p_time_value) = 'now' THEN clock_timestamp() ELSE p_time_value::timestamptz END;
+			FOREACH v_modifier IN ARRAY p_modifiers LOOP
+				IF lower(v_modifier) NOT IN ('utc', 'localtime') THEN v_time := v_time + v_modifier::interval; END IF;
+			END LOOP;
+			v_format := replace(replace(replace(replace(replace(replace(replace(replace(replace(p_format, '%Y', 'YYYY'), '%m', 'MM'), '%d', 'DD'), '%H', 'HH24'), '%M', 'MI'), '%S', 'SS'), '%f', 'MS'), '%j', 'DDD'), '%w', 'D');
+			RETURN to_char(v_time AT TIME ZONE 'UTC', v_format);
+		EXCEPTION WHEN others THEN RETURN NULL;
+		END;
+		$$ LANGUAGE plpgsql VOLATILE;
+	`)
 	if err != nil {
 		panic(err)
 	}
@@ -828,7 +846,7 @@ func NewTestDBX() (db *testDB, cleanup func()) {
 		if err := sqlDB.Close(); err != nil {
 			panic(err)
 		}
-		exec.Command("sh", "-c", fmt.Sprintf("PGPASSWORD=pass dropdb --if-exists -h 127.0.0.1 -U user %s", dbName)).Run()
+		exec.Command("sh", "-c", fmt.Sprintf("PGPASSWORD=admin dropdb --if-exists -h 127.0.0.1 -U postgres %s", dbName)).Run()
 	}
 
 	return &testDB, cleanup

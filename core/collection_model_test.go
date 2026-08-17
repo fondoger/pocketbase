@@ -895,9 +895,9 @@ func TestCollectionIndexHelpers(t *testing.T) {
 	c.AddIndex("idx3", false, "colA", "")
 	c.AddIndex("idx3", false, "colB", "") // should overwrite the previous one
 
-	idx1 := "CREATE INDEX `idx1` ON `test` (colA,colB) WHERE colA != 1"
-	idx2 := "CREATE UNIQUE INDEX `idx2` ON `test` (colA)"
-	idx3 := "CREATE INDEX `idx3` ON `test` (colB)"
+	idx1 := `CREATE INDEX "idx1" ON "test" (colA,colB) WHERE colA != 1`
+	idx2 := `CREATE UNIQUE INDEX "idx2" ON "test" (colA)`
+	idx3 := `CREATE INDEX "idx3" ON "test" (colB)`
 
 	checkIndexes(t, c.Indexes, []string{idx1, idx2, idx3})
 

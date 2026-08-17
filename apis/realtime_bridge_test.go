@@ -52,7 +52,7 @@ func TestRealtimeBridge(t *testing.T) {
 	config := core.BaseAppConfig{
 		DataDir:          filepath.Join(path.Dir(currentFile), "..", "tests", "data"),
 		EncryptionEnv:    "pb_test_env",
-		PostgresURL:      "postgres://user:pass@127.0.0.1:5432/postgres?sslmode=disable",
+		PostgresURL:      "postgres://postgres:admin@127.0.0.1:5432/postgres?sslmode=disable",
 		PostgresDataDB:   "pb_test_" + security.RandomString(5),
 		PostgresAuxDB:    "pb_test_" + security.RandomString(5) + "_aux",
 		IsRealtimeBridge: true,
@@ -201,7 +201,7 @@ func TestRealtimeBridge_ChannelOffline(t *testing.T) {
 	config := core.BaseAppConfig{
 		DataDir:          filepath.Join(path.Dir(currentFile), "..", "tests", "data"),
 		EncryptionEnv:    "pb_test_env",
-		PostgresURL:      "postgres://user:pass@127.0.0.1:5432/postgres?sslmode=disable",
+		PostgresURL:      "postgres://postgres:admin@127.0.0.1:5432/postgres?sslmode=disable",
 		PostgresDataDB:   "pb_test_" + security.RandomString(5),
 		PostgresAuxDB:    "pb_test_" + security.RandomString(5) + "_aux",
 		IsRealtimeBridge: true,

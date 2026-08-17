@@ -171,6 +171,8 @@ func buildResolversExpr(
 	op fexpr.SignOp,
 	right *ResolverResult,
 ) (dbx.Expression, error) {
+	normalizePostgresJSONOperands(left, op, right)
+
 	var expr dbx.Expression
 
 	switch op {
@@ -249,13 +251,52 @@ func buildResolversExpr(
 	return expr, nil
 }
 
+func normalizePostgresJSONOperands(left *ResolverResult, op fexpr.SignOp, right *ResolverResult) {
+	leftJSON := strings.HasSuffix(left.Identifier, "::jsonb")
+	rightJSON := strings.HasSuffix(right.Identifier, "::jsonb")
+	if leftJSON == rightJSON {
+		return
+	}
+
+	jsonSide := left
+	scalarSide := right
+	if rightJSON {
+		jsonSide, scalarSide = right, left
+	}
+
+	switch op {
+	case fexpr.SignEq, fexpr.SignAnyEq, fexpr.SignNeq, fexpr.SignAnyNeq:
+		scalarSide.Identifier = postgresToJSONB(scalarSide)
+	case fexpr.SignLt, fexpr.SignAnyLt, fexpr.SignLte, fexpr.SignAnyLte,
+		fexpr.SignGt, fexpr.SignAnyGt, fexpr.SignGte, fexpr.SignAnyGte:
+		jsonSide.Identifier += "::numeric"
+	case fexpr.SignLike, fexpr.SignAnyLike, fexpr.SignNlike, fexpr.SignAnyNlike:
+		jsonSide.Identifier += "::text"
+	}
+}
+
+func postgresToJSONB(result *ResolverResult) string {
+	for _, value := range result.Params {
+		switch value.(type) {
+		case string, []byte:
+			return "to_jsonb(" + result.Identifier + "::text)"
+		case bool:
+			return "to_jsonb(" + result.Identifier + "::boolean)"
+		case float32, float64, int, int8, int16, int32, int64,
+			uint, uint8, uint16, uint32, uint64:
+			return "to_jsonb(" + result.Identifier + "::numeric)"
+		}
+	}
+	return "to_jsonb(" + result.Identifier + ")"
+}
+
 var normalizedIdentifiers = map[string]string{
 	// if `null` field is missing, treat `null` identifier as NULL token
 	"null": "NULL",
 	// if `true` field is missing, treat `true` identifier as TRUE token
-	"true": "1",
+	"true": "TRUE",
 	// if `false` field is missing, treat `false` identifier as FALSE token
-	"false": "0",
+	"false": "FALSE",
 }
 
 func resolveToken(token fexpr.Token, fieldResolver FieldResolver) (*ResolverResult, error) {
@@ -301,7 +342,9 @@ func resolveToken(token fexpr.Token, fieldResolver FieldResolver) (*ResolverResu
 		placeholder := "t" + security.PseudorandomString(8)
 
 		return &ResolverResult{
-			Identifier: "{:" + placeholder + "}",
+			// PostgreSQL cannot infer a numeric parameter type when both sides of
+			// a comparison are bound values (for example, `3 = 3`).
+			Identifier: "{:" + placeholder + "}::numeric",
 			Params:     dbx.Params{placeholder: cast.ToFloat64(token.Literal)},
 		}, nil
 	case fexpr.TokenFunction:
@@ -327,14 +370,12 @@ func resolveToken(token fexpr.Token, fieldResolver FieldResolver) (*ResolverResu
 // with a seek while the COALESCE will induce a table scan.
 func resolveEqualExpr(equal bool, left, right *ResolverResult) dbx.Expression {
 	equalOp := "="
-	nullEqualOp := "IS"
+	nullEqualOp := "IS NOT DISTINCT FROM"
 	concatOp := "OR"
 	nullExpr := "IS NULL"
 	if !equal {
-		// always use `IS NOT` instead of `!=` because direct non-equal comparisons
-		// to nullable column values that are actually NULL yields to NULL instead of TRUE, eg.:
-		// `'example' != nullableColumn` -> NULL even if nullableColumn row value is NULL
-		equalOp = "IS NOT"
+		// PostgreSQL's DISTINCT operator provides null-safe inequality.
+		equalOp = "IS DISTINCT FROM"
 		nullEqualOp = equalOp
 		concatOp = "AND"
 		nullExpr = "IS NOT NULL"
@@ -359,7 +400,7 @@ func resolveEqualExpr(equal bool, left, right *ResolverResult) dbx.Expression {
 
 	// both operands are empty
 	if isLeftEmpty && isRightEmpty {
-		return dbx.NewExp(fmt.Sprintf("'' %s ''", equalOp), mergeParams(left.Params, right.Params))
+		return dbx.NewExp(fmt.Sprintf("''::text %s ''::text", equalOp), mergeParams(left.Params, right.Params))
 	}
 
 	// direct compare since at least one of the operands is known to be non-empty
@@ -367,11 +408,11 @@ func resolveEqualExpr(equal bool, left, right *ResolverResult) dbx.Expression {
 	if isKnownNonEmptyIdentifier(left) || isKnownNonEmptyIdentifier(right) {
 		leftIdentifier := left.Identifier
 		if isLeftEmpty {
-			leftIdentifier = "''"
+			leftIdentifier = "''::text"
 		}
 		rightIdentifier := right.Identifier
 		if isRightEmpty {
-			rightIdentifier = "''"
+			rightIdentifier = "''::text"
 		}
 		return dbx.NewExp(
 			fmt.Sprintf("%s %s %s", leftIdentifier, equalOp, rightIdentifier),
@@ -383,7 +424,7 @@ func resolveEqualExpr(equal bool, left, right *ResolverResult) dbx.Expression {
 	// "" IS NOT b AND b IS NOT NULL
 	if isLeftEmpty {
 		return dbx.NewExp(
-			fmt.Sprintf("('' %s %s %s %s %s)", equalOp, right.Identifier, concatOp, right.Identifier, nullExpr),
+			fmt.Sprintf("(''::text %s %s::text %s %s %s)", equalOp, right.Identifier, concatOp, right.Identifier, nullExpr),
 			mergeParams(left.Params, right.Params),
 		)
 	}
@@ -392,7 +433,7 @@ func resolveEqualExpr(equal bool, left, right *ResolverResult) dbx.Expression {
 	// a IS NOT "" AND a IS NOT NULL
 	if isRightEmpty {
 		return dbx.NewExp(
-			fmt.Sprintf("(%s %s '' %s %s %s)", left.Identifier, equalOp, concatOp, left.Identifier, nullExpr),
+			fmt.Sprintf("(%s::text %s ''::text %s %s %s)", left.Identifier, equalOp, concatOp, left.Identifier, nullExpr),
 			mergeParams(left.Params, right.Params),
 		)
 	}
@@ -400,7 +441,7 @@ func resolveEqualExpr(equal bool, left, right *ResolverResult) dbx.Expression {
 	// fallback to a COALESCE comparison
 	return dbx.NewExp(
 		fmt.Sprintf(
-			"COALESCE(%s, '') %s COALESCE(%s, '')",
+			"COALESCE(%s::text, '') %s COALESCE(%s::text, '')",
 			left.Identifier,
 			equalOp,
 			right.Identifier,

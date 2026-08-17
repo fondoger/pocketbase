@@ -116,7 +116,7 @@ func (r *SimpleFieldResolver) Resolve(field string) (*ResolverResult, error) {
 	return &ResolverResult{
 		NullFallback: NullFallbackDisabled,
 		Identifier: fmt.Sprintf(
-			"JSON_EXTRACT([[%s]], '%s')",
+			"JSON_QUERY_OR_NULL([[%s]], '%s')::jsonb",
 			inflector.Columnify(parts[0]),
 			jsonPath.String(),
 		),

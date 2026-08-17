@@ -56,8 +56,8 @@ func (t *TestApp) Cleanup() {
 
 	// Drop the temporary Postgres dbs
 	if !t.KeepTestPostgresDB && (t.PostgresDataDB() != "" || t.PostgresAuxDB() != "") {
-		exec.Command("sh", "-c", fmt.Sprintf("PGPASSWORD=pass dropdb --if-exists -h 127.0.0.1 -U user %s", t.PostgresDataDB())).Run()
-		exec.Command("sh", "-c", fmt.Sprintf("PGPASSWORD=pass dropdb --if-exists -h 127.0.0.1 -U user %s", t.PostgresAuxDB())).Run()
+		exec.Command("sh", "-c", fmt.Sprintf("PGPASSWORD=admin dropdb --if-exists -h 127.0.0.1 -U postgres %s", t.PostgresDataDB())).Run()
+		exec.Command("sh", "-c", fmt.Sprintf("PGPASSWORD=admin dropdb --if-exists -h 127.0.0.1 -U postgres %s", t.PostgresAuxDB())).Run()
 	}
 }
 
@@ -89,12 +89,12 @@ func NewTestApp(optTestDataDir ...string) (*TestApp, error) {
 		testDataDir = optTestDataDir[0]
 	}
 
-	// docker run -d --rm --name postgres -e POSTGRES_USER=user -e POSTGRES_PASSWORD=pass -p 5432:5432 postgres:alpine
+	// docker run -d --rm --name postgres -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=admin -p 5432:5432 postgres:alpine
 	return NewTestAppWithConfig(core.BaseAppConfig{
 		DataDir:       testDataDir,
 		EncryptionEnv: "pb_test_env",
-		PostgresURL:   "postgres://user:pass@127.0.0.1:5432/postgres?sslmode=disable",
-		// IsDev:         true, // Turn it on in unit tests to see sql erros.
+		PostgresURL:   "postgres://postgres:admin@127.0.0.1:5432/postgres?sslmode=disable",
+		// IsDev:         true, // Turn it on in unit tests to see sql errors.
 	})
 }
 
@@ -859,10 +859,10 @@ func CopyTempPostgresDB(config core.BaseAppConfig) (string, string, error) {
 	}
 	// Run `cd tests/data && make dump`
 	commands := []any{
-		fmt.Sprintf("PGPASSWORD=pass createdb -h 127.0.0.1 -U user %s", dataDbName),
-		fmt.Sprintf("PGPASSWORD=pass createdb -h 127.0.0.1 -U user %s", auxiliaryDbName),
-		fmt.Sprintf("PGPASSWORD=pass psql -h 127.0.0.1 -U user -d %s < data.pg-dump.sql", dataDbName),
-		fmt.Sprintf("PGPASSWORD=pass psql -h 127.0.0.1 -U user -d %s < auxiliary.pg-dump.sql", auxiliaryDbName),
+		fmt.Sprintf("PGPASSWORD=admin createdb -h 127.0.0.1 -U postgres %s", dataDbName),
+		fmt.Sprintf("PGPASSWORD=admin createdb -h 127.0.0.1 -U postgres %s", auxiliaryDbName),
+		fmt.Sprintf("PGPASSWORD=admin psql -h 127.0.0.1 -U postgres -d %s < data.pg-dump.sql", dataDbName),
+		fmt.Sprintf("PGPASSWORD=admin psql -h 127.0.0.1 -U postgres -d %s < auxiliary.pg-dump.sql", auxiliaryDbName),
 	}
 	// Execute the commands
 	for _, cmd := range commands {

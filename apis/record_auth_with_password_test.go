@@ -505,7 +505,7 @@ func TestRecordAuthWithPassword(t *testing.T) {
 				}
 
 				users.MFA.Enabled = true
-				users.MFA.Rule = "1=2"
+				users.MFA.Rule = "true=false"
 
 				if err := app.Save(users); err != nil {
 					t.Fatal(err)

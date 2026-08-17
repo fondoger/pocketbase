@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	validation "github.com/pocketbase/ozzo-validation/v4"
 	"github.com/pocketbase/dbx"
+	validation "github.com/pocketbase/ozzo-validation/v4"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tools/hook"
 	"github.com/pocketbase/pocketbase/tools/picker"
@@ -202,6 +202,9 @@ func realtimeSetSubscriptions(e *core.RequestEvent) error {
 	if err != nil {
 		return e.NotFoundError("Missing or invalid client id.", err)
 	}
+	if clientIP, _ := client.Get(RealtimeClientIPKey).(string); clientIP != "" && clientIP != e.RealIP() {
+		return e.BadRequestError("The realtime client IP doesn't match the request IP.", nil)
+	}
 
 	// for now allow only guest->auth upgrades and any other auth change is forbidden
 	clientAuth, _ := client.Get(RealtimeClientAuthKey).(*core.Record)
@@ -253,7 +256,11 @@ func realtimeUpdateClientsAuth(app core.App, newAuthRecord *core.Record) error {
 				if clientAuth != nil &&
 					clientAuth.Id == newAuthRecord.Id &&
 					clientAuth.Collection().Name == newAuthRecord.Collection().Name {
-					client.Set(RealtimeClientAuthKey, newAuthRecord)
+					if clientAuth.TokenKey() != newAuthRecord.TokenKey() {
+						client.Unset(RealtimeClientAuthKey)
+					} else {
+						client.Set(RealtimeClientAuthKey, newAuthRecord)
+					}
 					if syncClient, ok := client.(IBridgedClient); ok {
 						syncClient.BroadcastChanges()
 					}
@@ -264,6 +271,27 @@ func realtimeUpdateClientsAuth(app core.App, newAuthRecord *core.Record) error {
 		})
 	}
 
+	return group.Wait()
+}
+
+func realtimeUnsetClientsAuthCollection(app core.App, collection *core.Collection, force bool) error {
+	chunks := app.SubscriptionsBroker().ChunkedClients(clientsChunkSize)
+	group := new(errgroup.Group)
+	for _, chunk := range chunks {
+		group.Go(func() error {
+			for _, client := range chunk {
+				clientAuth, _ := client.Get(RealtimeClientAuthKey).(*core.Record)
+				if clientAuth != nil && clientAuth.Collection().Id == collection.Id &&
+					(force || clientAuth.Collection().AuthToken.Secret != collection.AuthToken.Secret) {
+					client.Unset(RealtimeClientAuthKey)
+					if syncClient, ok := client.(IBridgedClient); ok {
+						syncClient.BroadcastChanges()
+					}
+				}
+			}
+			return nil
+		})
+	}
 	return group.Wait()
 }
 
@@ -295,6 +323,36 @@ func realtimeUnsetClientsAuthState(app core.App, authModel core.Model) error {
 }
 
 func bindRealtimeEvents(app core.App) {
+	// Collection token changes and deletion invalidate every active token issued
+	// for that auth collection.
+	unsetUpdatedCollectionAuth := func(e *core.CollectionEvent) error {
+		if e.Collection.IsAuth() {
+			var persistedSecret string
+			err := e.App.NonconcurrentDB().NewQuery(`
+				SELECT options::jsonb->'authToken'->>'secret'
+				FROM "_collections" WHERE id = {:id}
+			`).Bind(dbx.Params{"id": e.Collection.Id}).Row(&persistedSecret)
+			if err == nil && persistedSecret != e.Collection.AuthToken.Secret {
+				err = realtimeUnsetClientsAuthCollection(e.App, e.Collection, true)
+			}
+			if err != nil {
+				e.App.Logger().Warn("Failed to remove clients associated with an auth collection", slog.String("error", err.Error()))
+			}
+		}
+		return e.Next()
+	}
+	// Run before persistence while subscribed records still reference the
+	// previously loaded collection secret.
+	app.OnCollectionUpdateExecute().BindFunc(unsetUpdatedCollectionAuth)
+	app.OnCollectionAfterDeleteSuccess().BindFunc(func(e *core.CollectionEvent) error {
+		if e.Collection.IsAuth() {
+			if err := realtimeUnsetClientsAuthCollection(e.App, e.Collection, true); err != nil {
+				e.App.Logger().Warn("Failed to remove clients associated with a deleted auth collection", slog.String("error", err.Error()))
+			}
+		}
+		return e.Next()
+	})
+
 	// update the clients that has auth record association
 	app.OnModelAfterUpdateSuccess().Bind(&hook.Handler[*core.ModelEvent]{
 		Func: func(e *core.ModelEvent) error {
@@ -577,6 +635,9 @@ func realtimeBroadcastRecord(app core.App, action string, record *core.Record, d
 
 						// trigger the enrich hooks
 						enrichErr := triggerRecordEnrichHooks(app, requestInfo, []*core.Record{cleanRecord}, func() error {
+							if err := autoResolveRecordsFlags(app, []*core.Record{cleanRecord}, requestInfo); err != nil {
+								return err
+							}
 							// apply expand
 							rawExpand := options.Query[expandQueryParam]
 							if rawExpand != "" {

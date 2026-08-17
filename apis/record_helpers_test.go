@@ -294,12 +294,12 @@ func TestRecordAuthResponseAuthRuleCheck(t *testing.T) {
 		},
 		{
 			"false rule",
-			types.Pointer("1=2"),
+			types.Pointer("true=false"),
 			true,
 		},
 		{
 			"true rule",
-			types.Pointer("1=1"),
+			types.Pointer("true=true"),
 			false,
 		},
 	}
@@ -560,7 +560,7 @@ func TestRecordAuthResponseMFACheck(t *testing.T) {
 
 	t.Run("no mfa wanted (mfa rule check failure)", func(t *testing.T) {
 		resetMFAs(user)
-		user.Collection().MFA.Rule = "1=2"
+		user.Collection().MFA.Rule = "true=false"
 
 		err = apis.RecordAuthResponse(event, user, "example", nil)
 		if err != nil {
@@ -582,7 +582,7 @@ func TestRecordAuthResponseMFACheck(t *testing.T) {
 
 	t.Run("mfa wanted (mfa rule check success)", func(t *testing.T) {
 		resetMFAs(user)
-		user.Collection().MFA.Rule = "1=1"
+		user.Collection().MFA.Rule = "true=true"
 
 		err = apis.RecordAuthResponse(event, user, "example", nil)
 		if !errors.Is(err, apis.ErrMFA) {

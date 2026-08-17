@@ -1710,7 +1710,7 @@ func TestHooksBinds(t *testing.T) {
 			e.next()
 
 			// check hooks propagation and tags filtering
-			const recordA = $app.findFirstRecordByFilter("demo2", "1=1")
+			const recordA = $app.findFirstRecordByFilter("demo2", "true=true")
 			recordA.set("title", "update")
 			$app.save(recordA)
 			if (result.called != 2) {
@@ -1723,7 +1723,7 @@ func TestHooksBinds(t *testing.T) {
 			// check error handling
 			let hasErr = false
 			try {
-				const recordB = $app.findFirstRecordByFilter("demo1", "1=1")
+				const recordB = $app.findFirstRecordByFilter("demo1", "true=true")
 				recordB.set("text", "update")
 				$app.save(recordB)
 			} catch (err) {
@@ -1772,7 +1772,7 @@ func TestHooksExceptionUnwrapping(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	record, err := app.FindFirstRecordByFilter("demo1", "1=1")
+	record, err := app.FindFirstRecordByFilter("demo1", "true=true")
 	if err != nil {
 		t.Fatal(err)
 	}

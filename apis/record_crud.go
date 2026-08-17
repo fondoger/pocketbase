@@ -308,7 +308,9 @@ func recordCreate(responseWriteAfterTx bool, optFinalizer func(data any) error) 
 				// - https://github.com/jackc/pgx/issues/2307
 				typehint := ""
 				switch v.(type) {
-				case float64:
+				case int, int8, int16, int32, int64,
+					uint, uint8, uint16, uint32, uint64,
+					float32, float64:
 					typehint = "::numeric"
 				case bool:
 					typehint = "::boolean"

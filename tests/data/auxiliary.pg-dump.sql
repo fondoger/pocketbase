@@ -68,6 +68,27 @@ CREATE OR REPLACE FUNCTION json_valid(text) RETURNS boolean AS $$
 	END;
 	$$ LANGUAGE plpgsql IMMUTABLE;
 
+CREATE OR REPLACE FUNCTION json_query_or_null(p_input json, p_query text) RETURNS jsonb AS $$
+    SELECT jsonb_path_query_first(p_input::jsonb, p_query::jsonpath)
+$$ LANGUAGE sql IMMUTABLE;
+
+CREATE OR REPLACE FUNCTION strftime(p_format text, p_time_value text, VARIADIC p_modifiers text[])
+RETURNS text AS $$
+DECLARE v_time timestamptz; v_modifier text; v_format text;
+BEGIN
+    v_time := CASE WHEN p_time_value IS NULL OR p_time_value = '' OR lower(p_time_value) = 'now' THEN clock_timestamp() ELSE p_time_value::timestamptz END;
+    FOREACH v_modifier IN ARRAY p_modifiers LOOP
+        IF lower(v_modifier) NOT IN ('utc', 'localtime') THEN v_time := v_time + v_modifier::interval; END IF;
+    END LOOP;
+    v_format := replace(replace(replace(replace(replace(replace(replace(replace(replace(p_format, '%Y', 'YYYY'), '%m', 'MM'), '%d', 'DD'), '%H', 'HH24'), '%M', 'MI'), '%S', 'SS'), '%f', 'MS'), '%j', 'DDD'), '%w', 'D');
+    RETURN to_char(v_time AT TIME ZONE 'UTC', v_format);
+EXCEPTION WHEN others THEN RETURN NULL;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
+
+CREATE OR REPLACE FUNCTION strftime(text, text) RETURNS text AS $$ SELECT strftime($1, $2, VARIADIC ARRAY[]::text[]) $$ LANGUAGE sql VOLATILE;
+CREATE OR REPLACE FUNCTION strftime(text) RETURNS text AS $$ SELECT strftime($1, 'now', VARIADIC ARRAY[]::text[]) $$ LANGUAGE sql VOLATILE;
+
 --
 -- Name: _logs; Type: TABLE; Schema: public; Owner: user
 --
@@ -82,7 +103,7 @@ CREATE TABLE public._logs (
 );
 
 
-ALTER TABLE public._logs OWNER TO "user";
+ALTER TABLE public._logs OWNER TO postgres;
 
 --
 -- Name: _migrations; Type: TABLE; Schema: public; Owner: user
@@ -94,7 +115,7 @@ CREATE TABLE public._migrations (
 );
 
 
-ALTER TABLE public._migrations OWNER TO "user";
+ALTER TABLE public._migrations OWNER TO postgres;
 
 --
 -- Data for Name: _logs; Type: TABLE DATA; Schema: public; Owner: user

@@ -70,17 +70,38 @@ CREATE OR REPLACE FUNCTION json_valid(text) RETURNS boolean AS $$
 
 -- Create a json_query_or_null function that handles any types.
 CREATE OR REPLACE FUNCTION json_query_or_null(p_input jsonb, p_query text) RETURNS jsonb AS $$
-    SELECT JSON_QUERY(p_input, p_query)
+    SELECT jsonb_path_query_first(p_input, p_query::jsonpath)
+$$ LANGUAGE sql IMMUTABLE;
+
+CREATE OR REPLACE FUNCTION json_query_or_null(p_input json, p_query text) RETURNS jsonb AS $$
+    SELECT jsonb_path_query_first(p_input::jsonb, p_query::jsonpath)
 $$ LANGUAGE sql IMMUTABLE;
 
 -- Create a json_query_or_null function that handles any types.
 CREATE OR REPLACE FUNCTION json_query_or_null(p_input anyelement, p_query text) RETURNS jsonb AS $$
 BEGIN
-    RETURN JSON_QUERY(p_input::text::jsonb, p_query);
+    RETURN jsonb_path_query_first(p_input::text::jsonb, p_query::jsonpath);
 EXCEPTION WHEN others THEN
     RETURN NULL;
 END;
 $$ LANGUAGE plpgsql STABLE;
+
+CREATE OR REPLACE FUNCTION strftime(p_format text, p_time_value text, VARIADIC p_modifiers text[])
+RETURNS text AS $$
+DECLARE v_time timestamptz; v_modifier text; v_format text;
+BEGIN
+    v_time := CASE WHEN p_time_value IS NULL OR p_time_value = '' OR lower(p_time_value) = 'now' THEN clock_timestamp() ELSE p_time_value::timestamptz END;
+    FOREACH v_modifier IN ARRAY p_modifiers LOOP
+        IF lower(v_modifier) NOT IN ('utc', 'localtime') THEN v_time := v_time + v_modifier::interval; END IF;
+    END LOOP;
+    v_format := replace(replace(replace(replace(replace(replace(replace(replace(replace(p_format, '%Y', 'YYYY'), '%m', 'MM'), '%d', 'DD'), '%H', 'HH24'), '%M', 'MI'), '%S', 'SS'), '%f', 'MS'), '%j', 'DDD'), '%w', 'D');
+    RETURN to_char(v_time AT TIME ZONE 'UTC', v_format);
+EXCEPTION WHEN others THEN RETURN NULL;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
+
+CREATE OR REPLACE FUNCTION strftime(text, text) RETURNS text AS $$ SELECT strftime($1, $2, VARIADIC ARRAY[]::text[]) $$ LANGUAGE sql VOLATILE;
+CREATE OR REPLACE FUNCTION strftime(text) RETURNS text AS $$ SELECT strftime($1, 'now', VARIADIC ARRAY[]::text[]) $$ LANGUAGE sql VOLATILE;
 
 --
 -- Name: "_authOrigins"; Type: TABLE; Schema: public; Owner: user
@@ -96,7 +117,7 @@ CREATE TABLE public."_authOrigins" (
 );
 
 
-ALTER TABLE public."_authOrigins" OWNER TO "user";
+ALTER TABLE public."_authOrigins" OWNER TO postgres;
 
 --
 -- Name: _collections; Type: TABLE; Schema: public; Owner: user
@@ -120,7 +141,7 @@ CREATE TABLE public._collections (
 );
 
 
-ALTER TABLE public._collections OWNER TO "user";
+ALTER TABLE public._collections OWNER TO postgres;
 
 --
 -- Name: "_externalAuths"; Type: TABLE; Schema: public; Owner: user
@@ -137,7 +158,7 @@ CREATE TABLE public."_externalAuths" (
 );
 
 
-ALTER TABLE public."_externalAuths" OWNER TO "user";
+ALTER TABLE public."_externalAuths" OWNER TO postgres;
 
 --
 -- Name: _mfas; Type: TABLE; Schema: public; Owner: user
@@ -153,7 +174,7 @@ CREATE TABLE public._mfas (
 );
 
 
-ALTER TABLE public._mfas OWNER TO "user";
+ALTER TABLE public._mfas OWNER TO postgres;
 
 --
 -- Name: _migrations; Type: TABLE; Schema: public; Owner: user
@@ -165,7 +186,7 @@ CREATE TABLE public._migrations (
 );
 
 
-ALTER TABLE public._migrations OWNER TO "user";
+ALTER TABLE public._migrations OWNER TO postgres;
 
 --
 -- Name: _otps; Type: TABLE; Schema: public; Owner: user
@@ -182,7 +203,7 @@ CREATE TABLE public._otps (
 );
 
 
-ALTER TABLE public._otps OWNER TO "user";
+ALTER TABLE public._otps OWNER TO postgres;
 
 --
 -- Name: _params; Type: TABLE; Schema: public; Owner: user
@@ -195,7 +216,7 @@ CREATE TABLE public._params (
     value TEXT DEFAULT NULL -- Use TEXT because encrypted values are not valid JSON.
 );
 
-ALTER TABLE public._params OWNER TO "user";
+ALTER TABLE public._params OWNER TO postgres;
 
 --
 -- Name: _superusers; Type: TABLE; Schema: public; Owner: user
@@ -213,7 +234,7 @@ CREATE TABLE public._superusers (
 );
 
 
-ALTER TABLE public._superusers OWNER TO "user";
+ALTER TABLE public._superusers OWNER TO postgres;
 
 --
 -- Name: clients; Type: TABLE; Schema: public; Owner: user
@@ -233,7 +254,7 @@ CREATE TABLE public.clients (
 );
 
 
-ALTER TABLE public.clients OWNER TO "user";
+ALTER TABLE public.clients OWNER TO postgres;
 
 --
 -- Name: demo1; Type: TABLE; Schema: public; Owner: user
@@ -260,7 +281,7 @@ CREATE TABLE public.demo1 (
 );
 
 
-ALTER TABLE public.demo1 OWNER TO "user";
+ALTER TABLE public.demo1 OWNER TO postgres;
 
 --
 -- Name: demo2; Type: TABLE; Schema: public; Owner: user
@@ -275,7 +296,7 @@ CREATE TABLE public.demo2 (
 );
 
 
-ALTER TABLE public.demo2 OWNER TO "user";
+ALTER TABLE public.demo2 OWNER TO postgres;
 
 --
 -- Name: demo3; Type: TABLE; Schema: public; Owner: user
@@ -290,7 +311,7 @@ CREATE TABLE public.demo3 (
 );
 
 
-ALTER TABLE public.demo3 OWNER TO "user";
+ALTER TABLE public.demo3 OWNER TO postgres;
 
 --
 -- Name: demo4; Type: TABLE; Schema: public; Owner: user
@@ -316,7 +337,7 @@ CREATE TABLE public.demo4 (
 );
 
 
-ALTER TABLE public.demo4 OWNER TO "user";
+ALTER TABLE public.demo4 OWNER TO postgres;
 
 --
 -- Name: demo5; Type: TABLE; Schema: public; Owner: user
@@ -335,7 +356,7 @@ CREATE TABLE public.demo5 (
 );
 
 
-ALTER TABLE public.demo5 OWNER TO "user";
+ALTER TABLE public.demo5 OWNER TO postgres;
 
 --
 -- Name: nologin; Type: TABLE; Schema: public; Owner: user
@@ -355,7 +376,7 @@ CREATE TABLE public.nologin (
 );
 
 
-ALTER TABLE public.nologin OWNER TO "user";
+ALTER TABLE public.nologin OWNER TO postgres;
 
 --
 -- Name: sqlite_stat1; Type: TABLE; Schema: public; Owner: user
@@ -368,7 +389,7 @@ CREATE TABLE public.sqlite_stat1 (
 );
 
 
-ALTER TABLE public.sqlite_stat1 OWNER TO "user";
+ALTER TABLE public.sqlite_stat1 OWNER TO postgres;
 
 --
 -- Name: sqlite_stat4; Type: TABLE; Schema: public; Owner: user
@@ -384,7 +405,7 @@ CREATE TABLE public.sqlite_stat4 (
 );
 
 
-ALTER TABLE public.sqlite_stat4 OWNER TO "user";
+ALTER TABLE public.sqlite_stat4 OWNER TO postgres;
 
 --
 -- Name: users; Type: TABLE; Schema: public; Owner: user
@@ -407,7 +428,7 @@ CREATE TABLE public.users (
 );
 
 
-ALTER TABLE public.users OWNER TO "user";
+ALTER TABLE public.users OWNER TO postgres;
 
 --
 -- Data for Name: "_authOrigins"; Type: TABLE DATA; Schema: public; Owner: user

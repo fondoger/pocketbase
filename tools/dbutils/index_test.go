@@ -42,6 +42,18 @@ func TestParseIndex(t *testing.T) {
 				},
 			},
 		},
+		// PostgreSQL catalog definition with an explicit index method
+		{
+			`CREATE UNIQUE INDEX indexname ON public.tablename USING btree (col1)`,
+			dbutils.Index{
+				Unique:    true,
+				IndexName: "indexname",
+				TableName: "public.tablename",
+				Columns: []dbutils.IndexColumn{
+					{Name: "col1"},
+				},
+			},
+		},
 		// all fields
 		{
 			`CREATE UNIQUE INDEX IF NOT EXISTS "schemaname".[indexname] on 'tablename' (

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tools/dbutils"
 )
@@ -23,19 +22,7 @@ func init() {
 				continue
 			}
 
-			masterIndexes := []struct {
-				Name string `db:"name"`
-				SQL  string `db:"sql"`
-			}{}
-
-			err := txApp.DB().Select("name", "sql").
-				From("sqlite_master").
-				AndWhere(dbx.HashExp{
-					"type":     "index",
-					"tbl_name": collection.Name,
-				}).
-				AndWhere(dbx.NewExp("sql IS NOT NULL AND name NOT LIKE 'sqlite_autoindex_%'")).
-				All(&masterIndexes)
+			masterIndexes, err := txApp.TableIndexes(collection.Name)
 			if err != nil {
 				return err
 			}
@@ -49,8 +36,8 @@ func init() {
 
 			// find missing master indexes
 		masterLoop:
-			for _, masterIndex := range masterIndexes {
-				mParsed := dbutils.ParseIndex(masterIndex.SQL)
+			for masterIndexName, masterIndexSQL := range masterIndexes {
+				mParsed := dbutils.ParseIndex(masterIndexSQL)
 				mParsed.SchemaName = ""
 				mParsed.TableName = collection.Name
 
@@ -63,7 +50,7 @@ func init() {
 					}
 				}
 
-				missingParsedIndexes[masterIndex.Name] = mParsed
+				missingParsedIndexes[masterIndexName] = mParsed
 			}
 
 		missingIndexesLoop:
@@ -72,7 +59,7 @@ func init() {
 
 				// it shouldn't be possible but for just in case if there is an edge case the regex doesn't cover
 				if missingSQL == "" {
-					return fmt.Errorf("failed to build sqlite_master index: %v", missing)
+					return fmt.Errorf("failed to build database index: %v", missing)
 				}
 
 				// drop the missing index to recreate later

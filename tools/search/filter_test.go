@@ -56,7 +56,7 @@ func TestFilterDataBuildExpr(t *testing.T) {
 			"empty string vs null",
 			"'' = null && null != ''",
 			false,
-			"('' = '' AND '' IS NOT '')",
+			"(''::text = ''::text AND ''::text IS DISTINCT FROM ''::text)",
 		},
 		{
 			"like with 2 columns",
@@ -98,7 +98,7 @@ func TestFilterDataBuildExpr(t *testing.T) {
 			"nested json no coalesce",
 			"test5.a = test5.b || test5.c != test5.d",
 			false,
-			"(JSON_EXTRACT([[test5]], '$.a') IS JSON_EXTRACT([[test5]], '$.b') OR JSON_EXTRACT([[test5]], '$.c') IS NOT JSON_EXTRACT([[test5]], '$.d'))",
+			"(JSON_QUERY_OR_NULL([[test5]], '$.a')::jsonb IS NOT DISTINCT FROM JSON_QUERY_OR_NULL([[test5]], '$.b')::jsonb OR JSON_QUERY_OR_NULL([[test5]], '$.c')::jsonb IS DISTINCT FROM JSON_QUERY_OR_NULL([[test5]], '$.d')::jsonb)",
 		},
 		{
 			"macros",
@@ -125,19 +125,19 @@ func TestFilterDataBuildExpr(t *testing.T) {
 			"complex expression",
 			"((test1 > 1) || (test2 != 2)) && test3 ~ '%%example' && test4_sub = null",
 			false,
-			"(([[test1]] > {:TEST} OR [[test2]] IS NOT {:TEST}) AND [[test3]] LIKE {:TEST} ESCAPE '\\' AND ([[test4_sub]] = '' OR [[test4_sub]] IS NULL))",
+			"(([[test1]] > {:TEST} OR [[test2]] IS DISTINCT FROM {:TEST}) AND [[test3]] LIKE {:TEST} ESCAPE '\\' AND ([[test4_sub]]::text = ''::text OR [[test4_sub]] IS NULL))",
 		},
 		{
 			"combination of special literals (null, true, false)",
 			"test1=true && test2 != false && null = test3 || null != test4_sub",
 			false,
-			"([[test1]] = 1 AND [[test2]] IS NOT 0 AND ('' = [[test3]] OR [[test3]] IS NULL) OR ('' IS NOT [[test4_sub]] AND [[test4_sub]] IS NOT NULL))",
+			"([[test1]] = TRUE AND [[test2]] IS DISTINCT FROM FALSE AND (''::text = [[test3]]::text OR [[test3]] IS NULL) OR (''::text IS DISTINCT FROM [[test4_sub]]::text AND [[test4_sub]] IS NOT NULL))",
 		},
 		{
 			"all operators",
 			"(test1 = test2 || test2 != test3) && (test2 ~ 'example' || test2 !~ '%%abc') && 'switch1%%' ~ test1 && 'switch2' !~ test2 && test3 > 1 && test3 >= 0 && test3 <= 4 && 2 < 5",
 			false,
-			"((COALESCE([[test1]], '') = COALESCE([[test2]], '') OR COALESCE([[test2]], '') IS NOT COALESCE([[test3]], '')) AND ([[test2]] LIKE {:TEST} ESCAPE '\\' OR [[test2]] NOT LIKE {:TEST} ESCAPE '\\') AND {:TEST} LIKE ('%' || [[test1]] || '%') ESCAPE '\\' AND {:TEST} NOT LIKE ('%' || [[test2]] || '%') ESCAPE '\\' AND [[test3]] > {:TEST} AND [[test3]] >= {:TEST} AND [[test3]] <= {:TEST} AND {:TEST} < {:TEST})",
+			"((COALESCE([[test1]]::text, '') = COALESCE([[test2]]::text, '') OR COALESCE([[test2]]::text, '') IS DISTINCT FROM COALESCE([[test3]]::text, '')) AND ([[test2]] LIKE {:TEST} ESCAPE '\\' OR [[test2]] NOT LIKE {:TEST} ESCAPE '\\') AND {:TEST} LIKE ('%' || [[test1]] || '%') ESCAPE '\\' AND {:TEST} NOT LIKE ('%' || [[test2]] || '%') ESCAPE '\\' AND [[test3]] > {:TEST} AND [[test3]] >= {:TEST} AND [[test3]] <= {:TEST} AND {:TEST} < {:TEST})",
 		},
 		{
 			"geoDistance function",
@@ -242,7 +242,7 @@ func TestFilterDataBuildExprWithParams(t *testing.T) {
 		t.Fatalf("Expected 1 query, got %d", len(calledQueries))
 	}
 
-	expectedQuery := `SELECT * WHERE ([[test1]] = 1 OR [[test2]] = 0 OR [[test3a]] = 123.456 OR [[test3b]] = 123.456 OR ([[test4]] = '' OR [[test4]] IS NULL) OR [[test5]] = '""' OR [[test6]] = 'simple' OR [[test7]] = '''single_quotes''' OR [[test8]] = '"double_quotes"' OR [[test9]] = '''"quote_with_backslash\' OR [[test10]] = '2023-01-01 00:00:00 +0000 UTC' OR [[test11]] = '["a","''quote","\"quote"]' OR [[test12]] = '{"a":123,"b":"quote\""}' OR [[test13]] = 'a`
+	expectedQuery := `SELECT * WHERE ([[test1]] = TRUE OR [[test2]] = FALSE OR [[test3a]] = 123.456 OR [[test3b]] = 123.456 OR ([[test4]]::text = ''::text OR [[test4]] IS NULL) OR [[test5]] = '""' OR [[test6]] = 'simple' OR [[test7]] = '''single_quotes''' OR [[test8]] = '"double_quotes"' OR [[test9]] = '''"quote_with_backslash\' OR [[test10]] = '2023-01-01 00:00:00 +0000 UTC' OR [[test11]] = '["a","''quote","\"quote"]' OR [[test12]] = '{"a":123,"b":"quote\""}' OR [[test13]] = 'a`
 	expectedQuery += "\nb')"
 	if expectedQuery != calledQueries[0] {
 		t.Fatalf("Expected query \n%s, \ngot \n%s", expectedQuery, calledQueries[0])

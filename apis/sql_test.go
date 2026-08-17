@@ -47,7 +47,7 @@ func TestSQLRun(t *testing.T) {
 			ExpectedContent: []string{
 				`"execTime":`,
 				`"affectedRows":0`,
-				`"columns":[{"name":"1","type":"","nullable":true}]`,
+				`"columns":[{"name":"?column?","type":"INT4","nullable":false}]`,
 				`"rows":[["1"]]`,
 			},
 			ExpectedEvents: map[string]int{"*": 0},
@@ -81,7 +81,7 @@ func TestSQLRun(t *testing.T) {
 			ExpectedContent: []string{
 				`"data":{}`,
 				`Raw error:`,
-				`SQL logic error`,
+				`SQLSTATE 42601`,
 			},
 			ExpectedEvents: map[string]int{"*": 0},
 		},
@@ -114,7 +114,7 @@ func TestSQLRun(t *testing.T) {
 			ExpectedContent: []string{
 				`"execTime":`,
 				`"affectedRows":0`,
-				`"columns":[{"name":"id","type":"","nullable":true}]`,
+				`"columns":[{"name":"id","type":"TEXT","nullable":false}]`,
 				`"rows":[["aaa`,
 			},
 			ExpectedEvents: map[string]int{"*": 0},
@@ -189,7 +189,7 @@ func TestSQLRun(t *testing.T) {
 			ExpectedContent: []string{
 				`"data":{}`,
 				`Raw error:`,
-				`SQL logic error`,
+				`SQLSTATE 42601`,
 			},
 			ExpectedEvents: map[string]int{"*": 0},
 		},
@@ -202,13 +202,10 @@ func TestSQLRun(t *testing.T) {
 				// superusers, test@example.com
 				"Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6InN5d2JoZWNuaDQ2cmhtMCIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoicGJjXzMxNDI2MzU4MjMiLCJleHAiOjI1MjQ2MDQ0NjEsInJlZnJlc2hhYmxlIjp0cnVlfQ.UXgO3j-0BumcugrFjbd7j0M4MQvbrLggLlcu_YNGjoY",
 			},
-			ExpectedStatus: 200,
+			ExpectedStatus: 400,
 			ExpectedContent: []string{
-				`"execTime":`,
-				`"affectedRows":0`,
-				// only the result of the last query should be returned
-				`"columns":[{"name":"2","type":"","nullable":true}]`,
-				`"rows":[["2"]]`,
+				`"data":{}`,
+				`cannot insert multiple commands into a prepared statement`,
 			},
 			ExpectedEvents: map[string]int{"*": 0},
 		},

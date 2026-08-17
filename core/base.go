@@ -74,7 +74,7 @@ type BaseAppConfig struct {
 	DataMaxIdleConns int
 	AuxMaxOpenConns  int
 	AuxMaxIdleConns  int
-	PostgresURL      string // eg: "postgres://user:pass@localhost:5432?sslmode=disable"
+	PostgresURL      string // eg: "postgres://postgres:admin@localhost:5432?sslmode=disable"
 	PostgresDataDB   string // eg: "pb-data"
 	PostgresAuxDB    string // eg: "pb-auxiliary"
 	IsRealtimeBridge bool
@@ -210,6 +210,10 @@ type BaseApp struct {
 //
 // To initialize the app, you need to call `app.Bootstrap()`.
 func NewBaseApp(config BaseAppConfig) *BaseApp {
+	if config.PostgresURL == "" {
+		config.PostgresURL = "postgres://postgres:admin@127.0.0.1:5432/postgres?sslmode=disable"
+	}
+
 	app := &BaseApp{
 		settings:            newDefaultSettings(),
 		store:               store.New[string, any](nil),
@@ -249,12 +253,12 @@ func NewBaseAppForTest(config BaseAppConfig) (*BaseApp, func()) {
 	var testAuxDB = "pb_test_" + randomStr + "_auxiliary_db"
 	var testDataDB = "pb_test_" + randomStr + "_data_db"
 
-	exec.Command("sh", "-c", "PGPASSWORD=pass dropdb -h localhost -p 5432 -U user "+testAuxDB).Run()
-	exec.Command("sh", "-c", "PGPASSWORD=pass dropdb -h localhost -p 5432 -U user "+testDataDB).Run()
-	exec.Command("sh", "-c", "PGPASSWORD=pass createdb -h localhost -p 5432 -U user "+testAuxDB).Run()
-	exec.Command("sh", "-c", "PGPASSWORD=pass createdb -h localhost -p 5432 -U user "+testDataDB).Run()
+	exec.Command("sh", "-c", "PGPASSWORD=admin dropdb -h localhost -p 5432 -U postgres "+testAuxDB).Run()
+	exec.Command("sh", "-c", "PGPASSWORD=admin dropdb -h localhost -p 5432 -U postgres "+testDataDB).Run()
+	exec.Command("sh", "-c", "PGPASSWORD=admin createdb -h localhost -p 5432 -U postgres "+testAuxDB).Run()
+	exec.Command("sh", "-c", "PGPASSWORD=admin createdb -h localhost -p 5432 -U postgres "+testDataDB).Run()
 
-	config.PostgresURL = "postgres://user:pass@localhost:5432/postgres?sslmode=disable"
+	config.PostgresURL = "postgres://postgres:admin@localhost:5432/postgres?sslmode=disable"
 	config.PostgresAuxDB = testAuxDB
 	config.PostgresDataDB = testDataDB
 
@@ -262,8 +266,8 @@ func NewBaseAppForTest(config BaseAppConfig) (*BaseApp, func()) {
 
 	cleanup := func() {
 		defer app.ResetBootstrapState()
-		defer exec.Command("sh", "-c", "PGPASSWORD=pass dropdb -h localhost -p 5432 -U user "+app.config.PostgresDataDB).Run()
-		defer exec.Command("sh", "-c", "PGPASSWORD=pass dropdb -h localhost -p 5432 -U user "+app.config.PostgresAuxDB).Run()
+		defer exec.Command("sh", "-c", "PGPASSWORD=admin dropdb -h localhost -p 5432 -U postgres "+app.config.PostgresDataDB).Run()
+		defer exec.Command("sh", "-c", "PGPASSWORD=admin dropdb -h localhost -p 5432 -U postgres "+app.config.PostgresAuxDB).Run()
 	}
 
 	return app, cleanup

@@ -46,7 +46,7 @@ func TestBaseAppLoggerLevelDevPrint(t *testing.T) {
 
 			app, cleanup := NewBaseAppForTest(BaseAppConfig{
 				DataDir:     testDataDir,
-				PostgresURL: "postgres://user:pass@localhost:5432/postgres?sslmode=disable",
+				PostgresURL: "postgres://postgres:admin@localhost:5432/postgres?sslmode=disable",
 				IsDev:       s.isDev,
 			})
 			defer cleanup()
