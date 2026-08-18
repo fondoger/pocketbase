@@ -1579,74 +1579,74 @@ func TestCollectionSaveViewWrapping(t *testing.T) {
 	// note: some of the queries use "limit 0" because the tested field value could be empty
 	// which will trigger the extra sample records validation that are not important for this test
 	scenarios := []struct {
-		name     string
-		query    string
-		expected string
+		name    string
+		query   string
+		wrapped bool
 	}{
 		{
 			"no wrapping - id field",
 			"select id, bool from demo1",
-			"CREATE VIEW `test_wrapping` AS SELECT * FROM (select id, bool from demo1)",
+			false,
 		},
 		{
 			"no wrapping - text field",
 			"select text as id, bool from demo1 limit 0",
-			"CREATE VIEW `test_wrapping` AS SELECT * FROM (select text as id, bool from demo1 limit 0)",
+			false,
 		},
 		{
 			"no wrapping - relation field",
 			"select rel_one as id, bool from demo1 limit 0",
-			"CREATE VIEW `test_wrapping` AS SELECT * FROM (select rel_one as id, bool from demo1 limit 0)",
+			false,
 		},
 		{
 			"no wrapping - select field",
 			"select select_many as id, bool from demo1 limit 0",
-			"CREATE VIEW `test_wrapping` AS SELECT * FROM (select select_many as id, bool from demo1 limit 0)",
+			false,
 		},
 		{
 			"no wrapping - email field",
 			"select email as id, bool from demo1 limit 0",
-			"CREATE VIEW `test_wrapping` AS SELECT * FROM (select email as id, bool from demo1 limit 0)",
+			false,
 		},
 		{
 			"no wrapping - datetime field",
 			"select datetime as id, bool from demo1 limit 0",
-			"CREATE VIEW `test_wrapping` AS SELECT * FROM (select datetime as id, bool from demo1 limit 0)",
+			false,
 		},
 		{
 			"no wrapping - url field",
 			"select url as id, bool from demo1 limit 0",
-			"CREATE VIEW `test_wrapping` AS SELECT * FROM (select url as id, bool from demo1 limit 0)",
+			false,
 		},
 		{
 			"wrapping - bool field",
 			"select bool as id, text as txt, url from demo1 limit 0",
-			"CREATE VIEW `test_wrapping` AS SELECT * FROM (SELECT CAST(`id` as TEXT) `id`,`txt`,`url` FROM (select bool as id, text as txt, url from demo1 limit 0))",
+			true,
 		},
 		{
 			"wrapping - bool field (different order)",
 			"select text as txt, url, bool as id from demo1 limit 0",
-			"CREATE VIEW `test_wrapping` AS SELECT * FROM (SELECT `txt`,`url`,CAST(`id` as TEXT) `id` FROM (select text as txt, url, bool as id from demo1 limit 0))",
+			true,
 		},
 		{
 			"wrapping - json field",
 			"select json as id, text, url from demo1 limit 0",
-			"CREATE VIEW `test_wrapping` AS SELECT * FROM (SELECT CAST(`id` as TEXT) `id`,`text`,`url` FROM (select json as id, text, url from demo1 limit 0))",
+			true,
 		},
 		{
 			"wrapping - numeric id",
 			"select 1 as id",
-			"CREATE VIEW `test_wrapping` AS SELECT * FROM (SELECT CAST(`id` as TEXT) `id` FROM (select 1 as id))",
+			true,
 		},
 		{
 			"wrapping - expresion",
 			"select ('test') as id",
-			"CREATE VIEW `test_wrapping` AS SELECT * FROM (SELECT CAST(`id` as TEXT) `id` FROM (select ('test') as id))",
+			false, // PostgreSQL infers the literal as text
 		},
 		{
 			"no wrapping - cast as text",
 			"select cast('test' as text) as id",
-			"CREATE VIEW `test_wrapping` AS SELECT * FROM (select cast('test' as text) as id)",
+			false,
 		},
 	}
 
@@ -1665,15 +1665,17 @@ func TestCollectionSaveViewWrapping(t *testing.T) {
 
 			var sql string
 
-			rowErr := app.ConcurrentDB().NewQuery("SELECT sql FROM sqlite_master WHERE type='view' AND name={:name}").
+			rowErr := app.ConcurrentDB().NewQuery("SELECT pg_get_viewdef({:name}::regclass, true)").
 				Bind(dbx.Params{"name": viewName}).
 				Row(&sql)
 			if rowErr != nil {
 				t.Fatalf("Failed to retrieve view sql: %v", rowErr)
 			}
 
-			if sql != s.expected {
-				t.Fatalf("Expected query \n%v, \ngot \n%v", s.expected, sql)
+			hasTextCast := strings.Contains(strings.ToLower(sql), "id::text") ||
+				strings.Contains(strings.ToLower(sql), "(id)::text")
+			if hasTextCast != s.wrapped {
+				t.Fatalf("Expected wrapped=%v, got view definition:\n%s", s.wrapped, sql)
 			}
 		})
 	}

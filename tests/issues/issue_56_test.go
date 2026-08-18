@@ -59,7 +59,7 @@ func TestIssue56_FilterByJsonField(t *testing.T) {
 		},
 		{
 			`json_column.numValue > 50`, 1,
-			`SELECT COUNT(*) AS "count" FROM "test_issue_56" WHERE JSON_QUERY_OR_NULL([[test_issue_56.json_column]], '$.numValue')::jsonb::numeric > 50`,
+			`SELECT COUNT(*) AS "count" FROM "test_issue_56" WHERE JSON_QUERY_OR_NULL([[test_issue_56.json_column]], '$.numValue')::jsonb::numeric > 50::numeric`,
 		},
 		{
 			`json_column.strValue = "Hello, World!"`, 1,

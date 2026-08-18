@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/tools/search"
 )
@@ -50,7 +51,7 @@ func TestFilterDataBuildExpr(t *testing.T) {
 			"simple expression",
 			"test1 > 1",
 			false,
-			"[[test1]] > {:TEST}",
+			"[[test1]] > {:TEST}::numeric",
 		},
 		{
 			"empty string vs null",
@@ -125,7 +126,7 @@ func TestFilterDataBuildExpr(t *testing.T) {
 			"complex expression",
 			"((test1 > 1) || (test2 != 2)) && test3 ~ '%%example' && test4_sub = null",
 			false,
-			"(([[test1]] > {:TEST} OR [[test2]] IS DISTINCT FROM {:TEST}) AND [[test3]] LIKE {:TEST} ESCAPE '\\' AND ([[test4_sub]]::text = ''::text OR [[test4_sub]] IS NULL))",
+			"(([[test1]] > {:TEST}::numeric OR [[test2]] IS DISTINCT FROM {:TEST}::numeric) AND [[test3]] LIKE {:TEST} ESCAPE '\\' AND ([[test4_sub]]::text = ''::text OR [[test4_sub]] IS NULL))",
 		},
 		{
 			"combination of special literals (null, true, false)",
@@ -137,13 +138,13 @@ func TestFilterDataBuildExpr(t *testing.T) {
 			"all operators",
 			"(test1 = test2 || test2 != test3) && (test2 ~ 'example' || test2 !~ '%%abc') && 'switch1%%' ~ test1 && 'switch2' !~ test2 && test3 > 1 && test3 >= 0 && test3 <= 4 && 2 < 5",
 			false,
-			"((COALESCE([[test1]]::text, '') = COALESCE([[test2]]::text, '') OR COALESCE([[test2]]::text, '') IS DISTINCT FROM COALESCE([[test3]]::text, '')) AND ([[test2]] LIKE {:TEST} ESCAPE '\\' OR [[test2]] NOT LIKE {:TEST} ESCAPE '\\') AND {:TEST} LIKE ('%' || [[test1]] || '%') ESCAPE '\\' AND {:TEST} NOT LIKE ('%' || [[test2]] || '%') ESCAPE '\\' AND [[test3]] > {:TEST} AND [[test3]] >= {:TEST} AND [[test3]] <= {:TEST} AND {:TEST} < {:TEST})",
+			"((COALESCE([[test1]]::text, '') = COALESCE([[test2]]::text, '') OR COALESCE([[test2]]::text, '') IS DISTINCT FROM COALESCE([[test3]]::text, '')) AND ([[test2]] LIKE {:TEST} ESCAPE '\\' OR [[test2]] NOT LIKE {:TEST} ESCAPE '\\') AND {:TEST} LIKE ('%' || [[test1]] || '%') ESCAPE '\\' AND {:TEST} NOT LIKE ('%' || [[test2]] || '%') ESCAPE '\\' AND [[test3]] > {:TEST}::numeric AND [[test3]] >= {:TEST}::numeric AND [[test3]] <= {:TEST}::numeric AND {:TEST}::numeric < {:TEST}::numeric)",
 		},
 		{
 			"geoDistance function",
 			"geoDistance(1,2,3,4) < 567",
 			false,
-			"(6371 * acos(cos(radians({:TEST})) * cos(radians({:TEST})) * cos(radians({:TEST}) - radians({:TEST})) + sin(radians({:TEST})) * sin(radians({:TEST})))) < {:TEST}",
+			"(6371 * acos(cos(radians({:TEST}::numeric)) * cos(radians({:TEST}::numeric)) * cos(radians({:TEST}::numeric) - radians({:TEST}::numeric)) + sin(radians({:TEST}::numeric)) * sin(radians({:TEST}::numeric)))) < {:TEST}::numeric",
 		},
 	}
 
@@ -181,11 +182,11 @@ func TestFilterDataBuildExpr(t *testing.T) {
 
 func TestFilterDataBuildExprWithParams(t *testing.T) {
 	// create a dummy db
-	sqlDB, err := sql.Open("sqlite", "file::memory:?cache=shared")
+	sqlDB, err := sql.Open("pgx", "postgres://postgres:admin@127.0.0.1:5432/postgres?sslmode=disable")
 	if err != nil {
 		t.Fatal(err)
 	}
-	db := dbx.NewFromDB(sqlDB, "sqlite")
+	db := dbx.NewFromDB(sqlDB, "pgx")
 
 	calledQueries := []string{}
 	db.QueryLogFunc = func(ctx context.Context, t time.Duration, sql string, rows *sql.Rows, err error) {
@@ -242,7 +243,7 @@ func TestFilterDataBuildExprWithParams(t *testing.T) {
 		t.Fatalf("Expected 1 query, got %d", len(calledQueries))
 	}
 
-	expectedQuery := `SELECT * WHERE ([[test1]] = TRUE OR [[test2]] = FALSE OR [[test3a]] = 123.456 OR [[test3b]] = 123.456 OR ([[test4]]::text = ''::text OR [[test4]] IS NULL) OR [[test5]] = '""' OR [[test6]] = 'simple' OR [[test7]] = '''single_quotes''' OR [[test8]] = '"double_quotes"' OR [[test9]] = '''"quote_with_backslash\' OR [[test10]] = '2023-01-01 00:00:00 +0000 UTC' OR [[test11]] = '["a","''quote","\"quote"]' OR [[test12]] = '{"a":123,"b":"quote\""}' OR [[test13]] = 'a`
+	expectedQuery := `SELECT * WHERE ([[test1]] = TRUE OR [[test2]] = FALSE OR [[test3a]] = 123.456::numeric OR [[test3b]] = 123.456::numeric OR ([[test4]]::text = ''::text OR [[test4]] IS NULL) OR [[test5]] = '""' OR [[test6]] = 'simple' OR [[test7]] = '''single_quotes''' OR [[test8]] = '"double_quotes"' OR [[test9]] = '''"quote_with_backslash\' OR [[test10]] = '2023-01-01 00:00:00 +0000 UTC' OR [[test11]] = '["a","''quote","\"quote"]' OR [[test12]] = '{"a":123,"b":"quote\""}' OR [[test13]] = 'a`
 	expectedQuery += "\nb')"
 	if expectedQuery != calledQueries[0] {
 		t.Fatalf("Expected query \n%s, \ngot \n%s", expectedQuery, calledQueries[0])
@@ -280,11 +281,11 @@ func TestFilterDataBuildExprWithLimit(t *testing.T) {
 
 func TestLikeParamsWrapping(t *testing.T) {
 	// create a dummy db
-	sqlDB, err := sql.Open("sqlite", "file::memory:?cache=shared")
+	sqlDB, err := sql.Open("pgx", "postgres://postgres:admin@127.0.0.1:5432/postgres?sslmode=disable")
 	if err != nil {
 		t.Fatal(err)
 	}
-	db := dbx.NewFromDB(sqlDB, "sqlite")
+	db := dbx.NewFromDB(sqlDB, "pgx")
 
 	calledQueries := []string{}
 	db.QueryLogFunc = func(ctx context.Context, t time.Duration, sql string, rows *sql.Rows, err error) {

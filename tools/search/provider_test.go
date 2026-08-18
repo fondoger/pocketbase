@@ -17,7 +17,6 @@ import (
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/tools/list"
 	"github.com/pocketbase/pocketbase/tools/security"
-	_ "modernc.org/sqlite"
 )
 
 func TestNewProvider(t *testing.T) {
@@ -367,8 +366,8 @@ func TestProviderExecNonEmptyQuery(t *testing.T) {
 				"SELECT * FROM `test` WHERE ((NOT (`test1` IS NULL)) AND (((test2 IS NOT '' AND test2 IS NOT NULL)))) AND (test1 >= 2) ORDER BY `test1` ASC, `test2` DESC LIMIT " + fmt.Sprint(MaxPerPage),
 				*/
 				// PostgreSQL:
-				`SELECT COUNT(DISTINCT [[test.id]]) FROM "test" WHERE ((NOT ("test1" IS NULL)) AND (((test2::text IS DISTINCT FROM ''::text AND test2 IS NOT NULL)))) AND (test1 >= 2)`,
-				`SELECT * FROM "test" WHERE ((NOT ("test1" IS NULL)) AND (((test2::text IS DISTINCT FROM ''::text AND test2 IS NOT NULL)))) AND (test1 >= 2) ORDER BY "test1" ASC, "test2" DESC LIMIT ` + fmt.Sprint(MaxPerPage),
+				`SELECT COUNT(DISTINCT [[test.id]]) FROM "test" WHERE ((NOT ("test1" IS NULL)) AND (((test2::text IS DISTINCT FROM ''::text AND test2 IS NOT NULL)))) AND (test1 >= 2::numeric)`,
+				`SELECT * FROM "test" WHERE ((NOT ("test1" IS NULL)) AND (((test2::text IS DISTINCT FROM ''::text AND test2 IS NOT NULL)))) AND (test1 >= 2::numeric) ORDER BY "test1" ASC, "test2" DESC LIMIT ` + fmt.Sprint(MaxPerPage),
 			},
 		},
 		{
@@ -385,7 +384,7 @@ func TestProviderExecNonEmptyQuery(t *testing.T) {
 				"SELECT * FROM `test` WHERE ((NOT (`test1` IS NULL)) AND (((test2 IS NOT '' AND test2 IS NOT NULL)))) AND (test1 >= 2) ORDER BY `test1` ASC, `test2` DESC LIMIT " + fmt.Sprint(MaxPerPage),
 				*/
 				// PostgreSQL:
-				`SELECT * FROM "test" WHERE ((NOT ("test1" IS NULL)) AND (((test2::text IS DISTINCT FROM ''::text AND test2 IS NOT NULL)))) AND (test1 >= 2) ORDER BY "test1" ASC, "test2" DESC LIMIT ` + fmt.Sprint(MaxPerPage),
+				`SELECT * FROM "test" WHERE ((NOT ("test1" IS NULL)) AND (((test2::text IS DISTINCT FROM ''::text AND test2 IS NOT NULL)))) AND (test1 >= 2::numeric) ORDER BY "test1" ASC, "test2" DESC LIMIT ` + fmt.Sprint(MaxPerPage),
 			},
 		},
 		{

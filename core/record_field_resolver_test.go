@@ -698,9 +698,15 @@ func TestRecordFieldResolverUpdateQuery(t *testing.T) {
 
 			rawQuery := query.AndWhere(expr).Build().SQL()
 
+			expectSQL := s.expectQuery
+			postgresKey := strings.ReplaceAll(s.name, " ", "_")
+			if postgresSQL, ok := postgresRecordFieldResolverQueries[postgresKey]; ok {
+				expectSQL = postgresSQL
+			}
+
 			// replace TEST placeholder with .+ regex pattern
 			expectQuery := strings.ReplaceAll(
-				"^"+regexp.QuoteMeta(s.expectQuery)+"$",
+				"^"+regexp.QuoteMeta(expectSQL)+"$",
 				"TEST",
 				`\w+`,
 			)
@@ -763,11 +769,11 @@ func TestRecordFieldResolverResolveCollectionFields(t *testing.T) {
 		{"rel_one_cascade.demo4_via_rel_one_cascade.rel_one_cascade.demo4_via_rel_one_cascade.id", false, "[[demo4_rel_one_cascade_demo4_via_rel_one_cascade_rel_one_cascade_demo4_via_rel_one_cascade.id]]"},
 
 		// json_extract
-		{"json_array.0", false, "(CASE WHEN json_valid([[demo4.json_array]]) THEN JSON_EXTRACT([[demo4.json_array]], '$[0]') ELSE JSON_EXTRACT(json_object('pb', [[demo4.json_array]]), '$.pb[0]') END)"},
-		{"json_object.a.b.c", false, "(CASE WHEN json_valid([[demo4.json_object]]) THEN JSON_EXTRACT([[demo4.json_object]], '$.a.b.c') ELSE JSON_EXTRACT(json_object('pb', [[demo4.json_object]]), '$.pb.a.b.c') END)"},
+		{"json_array.0", false, "JSON_QUERY_OR_NULL([[demo4.json_array]], '$[0]')::jsonb"},
+		{"json_object.a.b.c", false, "JSON_QUERY_OR_NULL([[demo4.json_object]], '$.a.b.c')::jsonb"},
 
 		// max relations limit shouldn't apply for json paths
-		{"json_object.a.b.c.e.f.g.h.i.j.k.l.m.n.o.p", false, "(CASE WHEN json_valid([[demo4.json_object]]) THEN JSON_EXTRACT([[demo4.json_object]], '$.a.b.c.e.f.g.h.i.j.k.l.m.n.o.p') ELSE JSON_EXTRACT(json_object('pb', [[demo4.json_object]]), '$.pb.a.b.c.e.f.g.h.i.j.k.l.m.n.o.p') END)"},
+		{"json_object.a.b.c.e.f.g.h.i.j.k.l.m.n.o.p", false, "JSON_QUERY_OR_NULL([[demo4.json_object]], '$.a.b.c.e.f.g.h.i.j.k.l.m.n.o.p')::jsonb"},
 
 		// @request.auth relation join
 		{"@request.auth.rel", false, "[[__auth_users.rel]]"},

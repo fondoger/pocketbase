@@ -319,7 +319,7 @@ func TestDropIndexWithoutTableName(t *testing.T) {
 	app, _ := tests.NewTestApp()
 	defer app.Cleanup()
 
-	properIndex := "CREATE INDEX `new_test_idx2` ON `new_test` (`test`)"
+	properIndex := `CREATE INDEX "new_test_idx2" ON "new_test" ("test")`
 	indexWithoutTableName := "CREATE INDEX `new_test_idx2` ON `` (`test`)"
 
 	dummyCollection := core.NewBaseCollection("new_test")

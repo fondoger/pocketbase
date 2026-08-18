@@ -276,14 +276,28 @@ func normalizePostgresJSONOperands(left *ResolverResult, op fexpr.SignOp, right 
 }
 
 func postgresToJSONB(result *ResolverResult) string {
+	identifier := strings.TrimSpace(result.Identifier)
+	if strings.EqualFold(identifier, "NULL") {
+		return identifier
+	}
+
 	for _, value := range result.Params {
 		switch value.(type) {
 		case string, []byte:
+			if strings.HasSuffix(identifier, "::text") {
+				return "to_jsonb(" + identifier + ")"
+			}
 			return "to_jsonb(" + result.Identifier + "::text)"
 		case bool:
+			if strings.HasSuffix(identifier, "::boolean") {
+				return "to_jsonb(" + identifier + ")"
+			}
 			return "to_jsonb(" + result.Identifier + "::boolean)"
 		case float32, float64, int, int8, int16, int32, int64,
 			uint, uint8, uint16, uint32, uint64:
+			if strings.HasSuffix(identifier, "::numeric") {
+				return "to_jsonb(" + identifier + ")"
+			}
 			return "to_jsonb(" + result.Identifier + "::numeric)"
 		}
 	}

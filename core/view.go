@@ -36,8 +36,18 @@ func (app *BaseApp) DeleteView(dangerousViewName string) error {
 // its arguments must come only from trusted input!
 func (app *BaseApp) SaveView(dangerousViewName string, dangerousSelectQuery string) error {
 	return app.RunInTransaction(func(txApp App) error {
+		dependentViews, err := findDependentViews(txApp, dangerousViewName)
+		if err != nil {
+			return err
+		}
+		for i := len(dependentViews) - 1; i >= 0; i-- {
+			if err := txApp.DeleteView(dependentViews[i].Name); err != nil {
+				return err
+			}
+		}
+
 		// delete old view (if exists)
-		err := txApp.DeleteView(dangerousViewName)
+		err = txApp.DeleteView(dangerousViewName)
 		if err != nil {
 			return err
 		}
@@ -65,6 +75,12 @@ func (app *BaseApp) SaveView(dangerousViewName string, dangerousSelectQuery stri
 			txApp.DeleteView(dangerousViewName)
 
 			return err
+		}
+
+		for _, dependent := range dependentViews {
+			if _, err := txApp.DB().NewQuery(dependent.SQL).Execute(); err != nil {
+				return fmt.Errorf("failed to restore dependent view %q: %w", dependent.Name, err)
+			}
 		}
 
 		return nil
